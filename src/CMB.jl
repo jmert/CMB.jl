@@ -3,5 +3,8 @@ module CMB
 
     include("harmonics.jl")
     @reexport using .Harmonics
+
+    include("pixelcovariance.jl")
+    @reexport using .PixelCovariance
 end
 

@@ -2,7 +2,8 @@ module CMBTests
     using Base.Test
 
     const MODULES = Dict(
-        "harmonics" => :Harmonics)
+        "harmonics"       => :Harmonics,
+        "pixelcovariance" => :PixelCovariance)
     const TESTLIST = Dict{typeof(""), Function}()
 
     export load!, loadall!, runtests
