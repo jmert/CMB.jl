@@ -13,20 +13,27 @@ module Healpix
         return 4*nside - 1
     end
 
-    @generated function _pix2ring_ring{nside}(::Type{Val{nside}}, p)
-        npix   = 12nside^2
-        nrings = 4nside - 1
+    @generated function _pix2ring_ring_north{nside}(::Type{Val{nside}}, p)
         north_cap_done =  2nside^2 - 2nside
-        north_eq_done  =  6nside^2 + 2nside
         return quote
             $(Expr(:meta, :inline))
-            isnorth = p < $north_eq_done
-            p = ifelse(isnorth, p, $npix-1 - p)
             r = ifelse(p < $north_cap_done,
                        trunc(Int,sqrt((p+1)/2 - sqrt((p+1)>>1))) + 1,
                        div(p - $north_cap_done, $(4nside)) + $nside
                       )
-            return ifelse(isnorth, r, $nrings - r + 1)
+            return r
+        end
+    end
+    @generated function _pix2ring_ring{nside}(::Type{Val{nside}}, p)
+        npix   = 12nside^2
+        nrings = 4nside - 1
+        north_eq_done  =  6nside^2 + 2nside
+        return quote
+            $(Expr(:meta, :inline))
+            isnorth = p < $north_eq_done
+            p = ifelse(isnorth, p, $(npix-1) - p)
+            r = _pix2ring_ring_north(Val{$nside}, p)
+            return ifelse(isnorth, r, $(nrings+1) - r)
         end
     end
     @inline pix2ring_ring(nside::I, p) where I<:Integer = _pix2ring_ring(Val{nside}, p)
