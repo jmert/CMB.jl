@@ -10,5 +10,13 @@ module Healpix
     # Known ring start and ends for each ring
     @test all(pix2ring_ring.(4, p_start_nside4) .== 1:15)
     @test all(pix2ring_ring.(4, p_end_nside4)   .== 1:15)
+
+    # Make sure ring start and ends agree on their z value
+    @test all(pix2z_ring.(4,p_start_nside4) .== pix2z_ring.(4,p_end_nside4))
+
+    # Type inference doesn't handle the nside -> Val{nside} transformation
+    # without losing type stability, so these currently fail.
+    @test_broken @inferred pix2ring_ring(4, 0)
+    @test_broken @inferred pix2z_ring(4, 0)
 end
 
