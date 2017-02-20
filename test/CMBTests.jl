@@ -2,40 +2,37 @@ module CMBTests
     using Base.Test
 
     const MODULES = Dict(
-        "harmonics"       => :Harmonics,
-        "healpix"         => :Healpix,
-        "pixelcovariance" => :PixelCovariance)
-    const TESTLIST = Dict{typeof(""), Function}()
+        "harmonics" => "Harmonics",
+        "healpix" => "HEALPix",
+        "pixelcovariance" => "Pixel-Pixel Covariance"
+       )
+    TESTLIST = Dict{typeof(""), typeof("")}()
 
     export load!, loadall!, runtests
 
-    ###################
-    # HELPER FUNCTIONS
-    ###################
-
-    function load!(testlist::Dict, id::AbstractString)
-        modsym = MODULES[id]
-        modpath = joinpath(dirname(@__FILE__), "$(id).jl");
-        # Include the file and have it processed within this module
-        eval(CMBTests, :( include($modpath) ))
-        # Add the list of tests to run to the list
-        testlist[id] = eval(CMBTests, modsym).runtests
+    function load!(testlist, id)
+        testlist[id] = MODULES[id]
     end
     load!(id::AbstractString) = load!(TESTLIST, id)
 
-    function loadall!(testlist::Dict; verbose::Bool=true)
-        for id in keys(MODULES)
-            verbose && print("loading group $(repr(id))..."); tic();
-            load!(testlist, id)
-            verbose && println("done (took $(toq()) seconds)")
+    function loadall!(testlist)
+        for tt in MODULES
+            push!(testlist, tt)
         end
         testlist
     end
-    loadall!(; kwargs...) = loadall!(TESTLIST; kwargs...)
+    loadall!() = loadall!(TESTLIST)
 
     function runtests()
-        @testset "$id" for id in keys(TESTLIST)
-            TESTLIST[id]()
+        @testset "CMB" begin
+            @testset "$desc" for (id,desc) in TESTLIST
+                modpath = joinpath(dirname(@__FILE__), "$(id).jl")
+                # Include the file and have it processed within this module
+                print("running $desc tests... ")
+                tic()
+                eval(CMBTests, :(include($modpath)) )
+                toc()
+            end
         end
     end
 end
