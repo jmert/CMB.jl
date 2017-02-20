@@ -22,7 +22,7 @@ module Healpix
             isnorth = p < $north_eq_done
             p = ifelse(isnorth, p, $npix-1 - p)
             r = ifelse(p < $north_cap_done,
-                       trunc(Int,sqrt((p+1)/2 - sqrt(trunc(Int,(p+1)/2))) + 1),
+                       trunc(Int,sqrt((p+1)/2 - sqrt((p+1)>>1))) + 1,
                        div(p - $north_cap_done, $(4nside)) + $nside
                       )
             return ifelse(isnorth, r, $nrings - r + 1)
