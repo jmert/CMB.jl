@@ -3,6 +3,7 @@ module CMBTests
 
     const MODULES = Dict(
         "harmonics"       => :Harmonics,
+        "healpix"         => :Healpix,
         "pixelcovariance" => :PixelCovariance)
     const TESTLIST = Dict{typeof(""), Function}()
 
