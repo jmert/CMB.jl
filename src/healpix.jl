@@ -6,7 +6,7 @@
 module Healpix
     export
         nside2npix, nside2nring,
-        pix2ring_ring, pix2ringidx_ring, pix2z_ring
+        pix2ring_ring, pix2ringidx_ring, pix2z_ring, pix2theta_ring, pix2phi_ring
 
     @inline function nside2npix(nside::N) where N<:Integer
         @boundscheck (ispow2(nside) || throw(DomainError()))
@@ -119,4 +119,21 @@ module Healpix
         end
     end
     @inline pix2z_ring(nside::I, p) where I<:Integer = pix2z_ring(Val{nside}, p)
+
+    @inline pix2theta_ring(nside::I, p) where I<:Integer = acos(pix2z_ring(nside,p))
+
+    @generated function pix2phi_ring{nside}(::Type{Val{nside}}, p)
+        nring = nside2nring(nside)
+        return quote
+            i = _pix2ring_ring(Val{$nside}, p)
+            j = pix2ringidx_ring(Val{$nside}, p)
+            ϕ = @pixel_region_ring(p, $nside,
+                    $(pi/2)/i * (j - 0.5),
+                    $(pi/2/nside) * (j - 0.5(1 + mod(i-$nside,2))),
+                    $(pi/2)/i * (j - 0.5)
+                   )
+            return ϕ
+        end
+    end
+    @inline pix2phi_ring(nside::I, p) where I<:Integer = pix2phi_ring(Val{nside}, p)
 end
