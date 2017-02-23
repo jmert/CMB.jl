@@ -8,11 +8,17 @@ module Healpix
         nside2npix, nside2nring,
         pix2ring_ring, pix2ringidx_ring, pix2z_ring, pix2theta_ring, pix2phi_ring
 
+    """
+        nside2npix(nside)
+    """
     @inline function nside2npix(nside::N) where N<:Integer
         @boundscheck (ispow2(nside) || throw(DomainError()))
         return 12*nside*nside
     end
 
+    """
+        nside2nrgin(nside)
+    """
     @inline function nside2nring(nside::N) where N<:Integer
         @boundscheck (ispow2(nside) || throw(DomainError()))
         return 4*nside - 1
@@ -62,6 +68,11 @@ module Healpix
         end
     end
 
+    """
+        pix2ring_ring(nside, p)
+    """
+    function pix2ring_ring end
+
     @generated function pix2ring_ring{nside}(::Type{Val{nside}}, p)
         npix = nside2npix(nside)
         nrings = nside2nring(nside)
@@ -82,6 +93,11 @@ module Healpix
         end
     end
     @inline pix2ring_ring(nside::I, p) where I<:Integer = pix2ring_ring(Val{nside}, p)
+
+    """
+        pix2ringidx_ring(nside, p)
+    """
+    function pix2ringidx_ring end
 
     @generated function pix2ringidx_ring{nside}(::Type{Val{nside}}, p)
         npix = nside2npix(nside)
@@ -105,6 +121,11 @@ module Healpix
     @inline pix2ringidx_ring(nside::I, p) where I<:Integer =
         pix2ringidx_ring(Val{nside}, p)
 
+    """
+        pix2z_ring(nside, p)
+    """
+    function pix2z_ring end
+
     @generated function pix2z_ring{nside}(::Type{Val{nside}}, p)
         north_cap_done = 2nside^2 - 2nside
         return quote
@@ -120,7 +141,17 @@ module Healpix
     end
     @inline pix2z_ring(nside::I, p) where I<:Integer = pix2z_ring(Val{nside}, p)
 
+    """
+        pix2theta_ring(nside, p)
+    """
+    function pix2theta_ring end
+
     @inline pix2theta_ring(nside::I, p) where I<:Integer = acos(pix2z_ring(nside,p))
+
+    """
+        pix2phi_ring(nside, p)
+    """
+    function pix2phi_ring end
 
     @generated function pix2phi_ring{nside}(::Type{Val{nside}}, p)
         nring = nside2nring(nside)

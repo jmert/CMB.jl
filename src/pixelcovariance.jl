@@ -72,6 +72,16 @@ module PixelCovariance
         size(fxx) >= (length(x),lmax+1) || throw(DimensionMismatch())
     end
 
+    """
+        F10(lmax::Integer, pl, x)
+    """
+    function F10 end
+
+    """
+        F10!(f10::Matrix, lmax::Integer, pl, x)
+    """
+    function F10! end
+
     @propagate_inbounds function F10(lmax::Integer, pl, x::Number)
         @boundscheck _chkbounds_FXX(lmax, pl, x)
         f10 = Array{eltype(x)}(1, lmax+1)
@@ -113,6 +123,16 @@ module PixelCovariance
 
         return f10
     end
+
+    """
+        F12(lmax::Integer, pl2, x)
+    """
+    function F12 end
+
+    """
+        F12!(f12::Matrix, lmax::Integer, pl2, x)
+    """
+    function F12! end
 
     @propagate_inbounds function F12(lmax::Integer, pl2, x::Number)
         @boundscheck _chkbounds_FXX(lmax, pl2, x)
@@ -156,6 +176,16 @@ module PixelCovariance
 
         return f12
     end
+
+    """
+        F22(lmax::Integer, pl2, x)
+    """
+    function F22 end
+
+    """
+        F22!(f22::Matrix, lmax::Integer, pl2, x)
+    """
+    function F22! end
 
     @propagate_inbounds function F22(lmax::Integer, pl2, x::Number)
         @boundscheck _chkbounds_FXX(lmax, pl2, x)
