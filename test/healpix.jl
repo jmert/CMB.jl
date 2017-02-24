@@ -21,8 +21,8 @@ module Healpix
 
     # Type inference doesn't handle the nside -> Val{nside} transformation
     # without losing type stability, so these currently fail.
-    @test_broken @inferred pix2ring_ring(4, 0)
-    @test_broken @inferred pix2ringidx(4, 0)
-    @test_broken @inferred pix2z_ring(4, 0)
+    @test_broken 1 == @inferred pix2ring_ring(4, 0)
+    @test_broken 1 == @inferred pix2ringidx_ring(4, 0)
+    @test_broken 0.0 == @inferred pix2z_ring(4, 88)
 end
 
