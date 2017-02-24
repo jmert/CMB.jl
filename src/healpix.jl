@@ -8,29 +8,37 @@ module Healpix
         nside2npix, nside2nring,
         pix2ring_ring, pix2ringidx_ring, pix2z_ring, pix2theta_ring, pix2phi_ring
 
-    """
+    doc"""
         nside2npix(nside)
+
+    Returns the number of pixels in an ``N_\mathrm{side} = ```nside` HEALPix map.
     """
     @inline function nside2npix(nside::N) where N<:Integer
         @boundscheck (ispow2(nside) || throw(DomainError()))
         return 12*nside*nside
     end
 
-    """
-        nside2nrgin(nside)
+    doc"""
+        nside2nring(nside)
+
+    Returns the number of isolatitude rings in an ``N_\mathrm{side} = ```nside` HEALPix map.
     """
     @inline function nside2nring(nside::N) where N<:Integer
         @boundscheck (ispow2(nside) || throw(DomainError()))
         return 4*nside - 1
     end
 
-    # The HEALPix grid is divided into three main sections:
-    #   1. North polar cap
-    #   2. Equatorial belt
-    #   3. South polar cap
-    # Since checking whether a pixel exist in each of these regions is going to be a
-    # common activity, it'll be convenient to have a macro which generates the correct
-    # three-way conditionals.
+    doc"""
+        pixel_region_ring(pix, nisde, northcap, equatorial, southcap)
+
+    Based on the ring-ordered pixel `p` and ``N_\mathrm{side}=```nside`, branches to select
+    one of the expressions `northcap`, `equatorial`, and `southcap` for each of the northern
+    cap, equatorial belt, and southern cap regions of a HEALPix map.
+
+    The comparisons expand to an `ifelse` chain with comparison values interpolated in as
+    constants. The use of `ifelse` provides branchless code at the cost of unconditionally
+    evaluating all three expressions before selecting the value to return.
+    """
     macro pixel_region_ring(pix, nside, northcap, equatorial, southcap)
         north_cap_done  =  2nside^2 - 2nside
         equatorial_done = 10nside^2 + 2nside
@@ -68,8 +76,12 @@ module Healpix
         end
     end
 
-    """
+    doc"""
         pix2ring_ring(nside, p)
+
+    For a ring-ordered pixel `p` in an ``N_\mathrm{side}=```nside` map, returns the index of
+    the isolatitude ring containing the pixel in the range 1 to
+    [`nside2nring(nside)`](@ref nside2nring).
     """
     function pix2ring_ring end
 
