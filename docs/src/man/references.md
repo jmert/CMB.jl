@@ -15,6 +15,16 @@
   DOI: [10.1086/427976](http://dx.doi.org/10.1086/427976).
   arXiv: [astro-ph/0409513](https://arxiv.org/abs/astro-ph/0409513)
 
-  - Erratum: The equatorial-belt longitude ``\phi`` equation (Eq 9) should read
-    ``s = (i - N_\mathrm{side}) \operatorname{mod} 2 + 1``
+  - Erratum: The equatorial-belt longitude ``\phi`` equation (Eq 9) should have the
+    ``+1`` outside the modulus:
+    ```math
+      s = (i - N_\mathrm{side}) \operatorname{mod} 2 + 1
+    ```
 
+### [Pixel Covariance](@id bib-pixelcovariance)
+
+* M. Tegmark and A. de Oliveira-Costa. “How to measure CMB polarization power spectra
+  without losing information”
+  In: *Physical Review D* 64, 063001 (Sep 2001)
+  DOI: [10.1103/PhysRevD.64.063001](http://dx.doi.org/10.1103/PhysRevD.64.063001)
+  arXiv: [astro-ph/0012120](https://arxiv.org/abs/astro-ph/0012120)
