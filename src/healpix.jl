@@ -168,6 +168,7 @@ module Healpix
     @generated function pix2phi_ring{nside}(::Type{Val{nside}}, p)
         nring = nside2nring(nside)
         return quote
+            $(Expr(:meta, :inline))
             i = _pix2ring_ring(Val{$nside}, p)
             j = pix2ringidx_ring(Val{$nside}, p)
             ϕ = @pixel_region_ring(p, $nside,
