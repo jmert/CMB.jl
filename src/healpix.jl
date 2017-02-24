@@ -59,14 +59,19 @@ module Healpix
     @generated function _pix2ring_ring{nside}(::Type{Val{nside}}, p)
         npix = nside2npix(nside)
         nrings = nside2nring(nside)
-        fsqrt = @fastmath sqrt
+        # Force use of a square root which doesn't check for negative values.
+        sqrt = @fastmath sqrt
+        # As used below, any Integer pixel value is transformed in such a way that
+        # we know it'll be within range of an Int, so use the unsafe truncation method to
+        # avoid the extra branch (and function call).
+        trunc = unsafe_trunc
         return quote
             $(Expr(:meta, :inline))
             p′ = @pixel_region_ring(p, $nside, p, p, $(npix-1)-p)
             # We can reuse the same computation with two separate interpretations for the
             # polar caps. For the northern cap, this counts rings from the North Pole,
             # while for the southern cap, from the South Pole.
-            i′ = trunc(Int, $fsqrt((p′+1)/2 - $fsqrt(convert(Float64,(p′+1)>>1)))) + 1
+            i′ = $trunc(Int, $sqrt((p′+1)/2 - $sqrt(convert(Float64,(p′+1)>>1)))) + 1
             i = @pixel_region_ring(p, $nside,
                     i′,
                     div(p - $(2nside*(nside-1)), $(4nside)) + $nside,
@@ -88,14 +93,19 @@ module Healpix
     @generated function pix2ring_ring{nside}(::Type{Val{nside}}, p)
         npix = nside2npix(nside)
         nrings = nside2nring(nside)
-        fsqrt = @fastmath sqrt
+        # Force use of a square root which doesn't check for negative values.
+        sqrt = @fastmath sqrt
+        # As used below, any Integer pixel value is transformed in such a way that
+        # we know it'll be within range of an Int, so use the unsafe truncation method to
+        # avoid the extra branch (and function call).
+        trunc = unsafe_trunc
         return quote
             $(Expr(:meta, :inline))
             p′ = @pixel_region_ring(p, $nside, p, p, $(npix-1)-p)
             # We can reuse the same computation with two separate interpretations for the
             # polar caps. For the northern cap, this counts rings from the North Pole,
             # while for the southern cap, from the South Pole.
-            i′ = trunc(Int, $fsqrt((p′+1)/2 - $fsqrt(convert(Float64,(p′+1)>>1)))) + 1
+            i′ = $trunc(Int, $sqrt((p′+1)/2 - $sqrt(convert(Float64,(p′+1)>>1)))) + 1
             i = @pixel_region_ring(p, $nside,
                     i′,
                     div(p - $(2nside*(nside-1)), $(4nside)) + $nside,
@@ -113,7 +123,12 @@ module Healpix
 
     @generated function pix2ringidx_ring{nside}(::Type{Val{nside}}, p)
         npix = nside2npix(nside)
-        fsqrt = @fastmath sqrt
+        # Force use of a square root which doesn't check for negative values.
+        sqrt = @fastmath sqrt
+        # As used below, any Integer pixel value is transformed in such a way that
+        # we know it'll be within range of an Int, so use the unsafe truncation method to
+        # avoid the extra branch (and function call).
+        trunc = unsafe_trunc
         return quote
             $(Expr(:meta, :inline))
             p′ = @pixel_region_ring(p, $nside, p, p, $(npix-1)-p)
@@ -121,7 +136,7 @@ module Healpix
             # reuse the same computation with two separate interpretations. For the
             # northern cap, this counts rings from the North Pole, while for the southern
             # cap, from the South Pole.
-            i = trunc(Int, $fsqrt((p′+1)/2 - $fsqrt(convert(Float64,(p′+1)>>1)))) + 1
+            i = $trunc(Int, $sqrt((p′+1)/2 - $sqrt(convert(Float64,(p′+1)>>1)))) + 1
             j = @pixel_region_ring(p, $nside,
                     p′ + 1 - 2i*(i-1),
                     mod(p′ - $(2nside*(nside-1)), $(4nside)) + 1,
