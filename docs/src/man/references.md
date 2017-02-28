@@ -1,5 +1,12 @@
 # References
 
+### [Coordinate systems and conventions](@id bib-coordinates)
+
+* J. P. Hamaker and J. D. Bregman. “Understanding radio polarimetry. III.
+  Interpreting the IAU/IEEE definitions of the Stokes parameters.”
+  In: *Astronomy and Astrophysics, Supplement Series* 117 (May 1996) pp. 161–165.
+  DOI: [10.1051/aas:1996147](https://doi.org/10.1051/aas:1996147)
+
 ### [Legendre functions](@id bib-legendre)
 
 * T. Limpanuparb and J. Milthorpe. “Associated Legendre Polynomials and Spherical Harmonics

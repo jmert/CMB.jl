@@ -3,6 +3,7 @@
 ## User Manual and Documentation
 ```@contents
 Pages = [
+    "man/coordinates.md",
     "man/references.md"
 ]
 Depth = 1
