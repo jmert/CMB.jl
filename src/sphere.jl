@@ -6,18 +6,31 @@ module Sphere
 export
     bearing, distance, cosdistance
 
+# Fast-path the isapprox tolerance for Float32 and Float64. The computation appears to be
+# too complex to constant-fold automatically, so we do it manually for these two most
+# important case.
+@eval rtepspi(::Type{Float32}) = $(sqrt(eps(convert(Float32,π))))
+@eval rtepspi(::Type{Float64}) = $(sqrt(eps(convert(Float64,π))))
+# Fallback for all other floating point values.
+rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
+
+# Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
+# this implementation. (Probably related to the keyword-argument penalty?)
+local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
+
 doc"""
     bearing(θ₁, ϕ₁, θ₂, ϕ₂) -> α
 
-Calculates at the coordinate $(\theta_1, \phi_1)$ the bearing angle $\alpha$ between North
-and the great circle connecting $(\theta_1, \phi_1)$ to $(\theta_2,\phi_2)$. Coordinates are
-to be given in radians where $\theta$ is the colatitude angle from the North Pole and $\phi$
-is the azimuthal angle.
+Calculates at the coordinate $(θ_1, ϕ_1)$ the bearing angle $α$ between North and the great
+circle connecting $(θ_1, ϕ_1)$ to $(θ_2,ϕ_2)$. Coordinates are to be given in radians where
+$θ$ is the colatitude angle from the North Pole and $ϕ$ is the azimuthal angle.
 """
-@inline function bearing{T<:Number}(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T)
+function bearing end
+
+bearing(θ₁, ϕ₁, θ₂, ϕ₂) = bearing(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
+
+function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
-    # Defining a local isapprox seems to produce far fewer instruction than Base.isapprox.
-    local ≈(x::T, y::T) = @fastmath (x==y || abs(x-y) < sqrt(eps(π)))
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -33,24 +46,26 @@ is the azimuthal angle.
     end
 
     ϕ₂₁ = ϕ₂ - ϕ₁
-    α = atan2(-sin(ϕ₂₁), cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂))
-    return mod(α, π)
+    α = @fastmath atan2(-sin(ϕ₂₁), cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂))
+    return @fastmath mod(α, π)
 end
+
 
 doc"""
     distance(θ₁, ϕ₁, θ₂, ϕ₂) -> σ
 
-Calculates the inner angle $\sigma$ between unit vectors pointing from the center of the
-sphere to the two points $(\theta_1,\phi_1)$ and $(\theta_2,\phi_2)$ on its surface, where
-$\theta$ is the colatitude angle from the North Pole and $\phi$ is the azimuthal angle, both
-in radians.
+Calculates the inner angle $σ$ between unit vectors pointing from the center of the sphere
+to the two points $(θ_1,ϕ_1)$ and $(θ_2,ϕ_2)$ on its surface, where $θ$ is the colatitude
+angle from the North Pole and $ϕ$ is the azimuthal angle, both in radians.
 
 See also [`cosdistance`](@ref)
 """
-@inline function distance{T<:Number}(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T)
-    const π = convert(T, Base.π)
-    # Defining a local isapprox seems to produce far fewer instruction than Base.isapprox.
-    const ≈(x::T, y::T) = @fastmath (x==y || abs(x-y) < sqrt(eps(π)))
+function distance end
+
+distance(θ₁, ϕ₁, θ₂, ϕ₂) = distance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
+
+function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
+    local π = convert(T, Base.π)
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -67,23 +82,24 @@ See also [`cosdistance`](@ref)
         return π
     end
 
-    return 2.0*asin(sqrt(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2))
+    return @fastmath 2.0*asin(sqrt(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2))
 end
 
 doc"""
     cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) -> z
 
 Calculates the cosine of the inner angle $z$ between unit vectors pointing from the center
-of the sphere to the two points $(\theta_1,\phi_1)$ and $(\theta_2,\phi_2)$ on its surface,
-where $\theta$ is the colatitude angle from the North Pole and $\phi$ is the azimuthal
-angle, both in radians.
+of the sphere to the two points $(θ_1,ϕ_1)$ and $(θ_2,ϕ_2)$ on its surface, where $θ$ is the
+colatitude angle from the North Pole and $ϕ$ is the azimuthal angle, both in radians.
 
 See also [`distance`](@ref)
 """
-@inline function cosdistance{T<:Number}(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T)
+function cosdistance end
+
+cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) = cosdistance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
+
+function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
-    # Defining a local isapprox seems to produce far fewer instruction than Base.isapprox.
-    local ≈(x::T, y::T) = @fastmath (x==y || abs(x-y) < sqrt(eps(π)))
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -100,7 +116,7 @@ See also [`distance`](@ref)
         return -one(T)
     end
 
-    return one(T) - 2*(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2)
+    return @fastmath one(T) - 2*(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2)
 end
 
 end
