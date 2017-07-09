@@ -7,65 +7,23 @@ measure CMB polarization power spectra without losing information”*
 arXiv:astro-ph/0012120v3
 """
 module PixelCovariance
-    export Pl2, Pl2!, F10, F10!, F12, F12!, F22, F22!
+    export Pl2!, F10, F10!, F12, F12!, F22, F22!
 
     import Base.@boundscheck, Base.@propagate_inbounds
-    # Reuse Pl bounds checking when bounds checking for FXX
-    import ..Harmonics.Legendre._chkbounds_Pl
 
-    doc"""
-        Pl2(lmax, x)
-
-    Returns the Legendre functions up to degree `lmax` evaluated at `x` for
-    order `m = 2`.
     """
-    function Pl2 end
+    Computes the Legendre polynomials ``P_ℓ^2(x)`` for ``0 ≤ ℓ ≤`` `lmax`.
 
-    function Pl2(lmax::Integer, x::Number)
-        pl = Array{eltype(x)}(1, lmax+1)
-        @inbounds Pl2!(pl, lmax, x)
-        return reshape(pl, lmax+1)
-    end
-    function Pl2(lmax::Integer, x::Vector{T} where T<:Number)
-        pl = Array{eltype(x)}(length(x), lmax+1)
-        @inbounds Pl2!(pl, lmax, x)
-        return pl
-    end
-
-    @inline function _chkbounds_Pl2(pl2, lmax, x)
-        lmax >= 2 || throw(DimensionMismatch("lmax must be >= 2"))
-        size(pl2) >= (length(x),lmax+1) || throw(DimensionMismatch())
-    end
-
-    doc"""
-        Pl2!(pl, lmax, x)
-
-    Fills `pl` with the Legendre functions up to degree `lmax` evaluated at `x`
-    for order `m = 2`.
+        Pl2!(P::Vector, lmax, x) -> P
     """
-    @propagate_inbounds function Pl2!(pl2::Matrix{T1} where T1<:Number, lmax::Integer, x::Union{T2,Vector{T2}} where T2<:Number)
-        @boundscheck _chkbounds_Pl2(pl2, lmax, x)
-        const U = promote_type(eltype(pl2), eltype(x), Float64)
+    function Pl2! end
 
-        @inbounds begin
-            pl2[:,3] .= 3 .* (1.0 .- x.*x)
-            lmax == 2 && return pl2
-
-            pl2[:,4] .= 5.*x .* pl2[:,3]
-            lmax == 3 && return pl2
-
-            for ℓ=4:lmax
-                const onebyℓm2 = U(1) / (ℓ - 2)
-                pl2[:,ℓ+1] = onebyℓm2.*(2ℓ.-1).*x.*pl2[:,ℓ] .- onebyℓm2.*(ℓ.+1).*pl2[:,ℓ-1]
-            end
-        end
-
-        return pl2
-    end
+    @inline Pl2!(P::Vector{T}, lmax::Integer, x::T) where {T<:Real} =
+        LegendreP!(LegendreUnitNorm(), P, lmax, 2, x)
 
     @inline function _chkbounds_FXX(lmax, pl, x)
         lmax >= 2 || throw(DimensionMismatch("lmax must be greater than 1"))
-        _chkbounds_Pl(pl,  lmax, x)
+        (size(pl,1) ≥ lmax+1 && size(pl,2) > lmax+1) || throw(BoundsError())
     end
     @inline function _chkbounds_FXX(fxx, lmax, pl, x)
         _chkbounds_FXX(lmax, pl, x)
