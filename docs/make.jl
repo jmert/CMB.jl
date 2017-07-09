@@ -5,6 +5,7 @@ makedocs(
     format = :html,
     sitename = "CMB Analysis",
     authors = "Justin Willmert",
+    modules = [CMB],
     pages = [
         "CMB.jl Documentation" => "index.md",
         "Manual" => [

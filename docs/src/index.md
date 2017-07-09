@@ -1,6 +1,6 @@
 # CMB.jl Documentation
 
-## Manual Outline
+## User Manual and Documentation
 ```@contents
 Pages = [
     "man/references.md"
@@ -8,7 +8,7 @@ Pages = [
 Depth = 1
 ```
 
-## Library Outline
+## Library API Reference
 ```@contents
 Pages = [
     "lib/public.md",

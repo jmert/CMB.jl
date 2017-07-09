@@ -1,3 +1,9 @@
+```@meta
+DocTestSetup = quote
+    using CMB
+end
+```
+
 # Public Documentation
 
 ## Contents
