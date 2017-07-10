@@ -6,46 +6,76 @@ used throughout the documentation system.
 ## Spherical coordinates
 
 Specifying the location on a unit sphere requires two values, and there are two common
-choices: latitude/longitude (familiar from maps) and colatitude/azimuth (typically used
-in math and physics).
+choices: latitude/longitude (familiar from geographic maps) and colatitude/azimuth
+(typically used in math and physics).
 
 ### [Latitude and Longitude coordinates](@id latloncoords)
 
-* A position on the sphere is given by a pair of latitude and longitude coordinates
-  $(\delta,\lambda)$.
-  The latitude $\delta$ measures the angle north or south of the equator
-  ($-\frac{\pi}{2} \le \delta \le \frac{\pi}{2}$).
-  The longitude $\lambda$ measure the angle east or west of the prime meridian
-  ($-\pi \le \lambda \le \pi$).
+A position on the sphere is given by a pair of latitude and longitude coordinates
+$(\delta,\lambda)$.
+The latitude $\delta$ measures the angle north or south of the equator with (in radians)
+$-\frac{\pi}{2} \le \delta \le \frac{\pi}{2}$.
+The longitude $\lambda$ measure the angle east or west of the prime meridian
+with $-\pi \le \lambda \le \pi$ (again in radians).
 
-* ```math
-    \hat{\mathbf{r}}
-    = \begin{pmatrix} x \\ y \\ z \end{pmatrix}
-    = \begin{pmatrix}
-        \cos\delta \cos\lambda \\
-        \cos\delta \sin\lambda \\
-        \sin\delta
-    \end{pmatrix}
-  ```
+The canonical transformation from these spherical coordinates and the Cartesian
+coordinates $(x,y,z)$ is given by
+
+```math
+\begin{pmatrix} x \\ y \\ z \end{pmatrix}
+= \begin{pmatrix}
+    \cos\delta \cos\lambda \\
+    \cos\delta \sin\lambda \\
+    \sin\delta
+\end{pmatrix}
+```
+
+and the reverse transform is given by
+
+```math
+\begin{pmatrix} r \\ \delta \\ \phi \end{pmatrix}
+= \begin{pmatrix}
+    1 \\
+    \sin^{-1}(z) \\
+    \tan^{-1}(y/x)
+\end{pmatrix}
+```
+
+where in both relations we have assumed a unit sphere with radius 1.
 
 ### [Colatitude and Azimuth coordinates](@id colatazcoords)
 
-* A position on the sphere is given by a pair of colatitude and azimith coordinates
-  $(\theta,\phi)$.
-  The colatitude $\theta$ measures the angle south of the North Pole
-  ($0 \le \theta \le \pi$).
-  The azimuth $\phi$ measure the angle east of the prime meridian
-  ($0 \le \lambda \le 2\pi$).
+A position on the sphere is given by a pair of colatitude and azimuth
+coordinates $(\theta,\phi)$.
+The colatitude $\theta$ measures the angle south of the North Pole with (in
+radians) $0 \le \theta \le \pi$.
+The azimuth $\phi$ measures the angle east of the prime meridian with
+$0 \le \phi \le 2\pi$ (again in radians).
 
-* ```math
-    \hat{\mathbf{r}}
-    = \begin{pmatrix} x \\ y \\ z \end{pmatrix}
-    = \begin{pmatrix}
-        \sin\theta \cos\phi \\
-        \sin\theta \sin\phi \\
-        \cos\theta
-    \end{pmatrix}
-  ```
+The canonical transformation from these spherical coordinates and the Cartesian
+coordinates $(x,y,z)$ is given by
+
+```math
+\begin{pmatrix} x \\ y \\ z \end{pmatrix}
+= \begin{pmatrix}
+    \sin\theta \cos\phi \\
+    \sin\theta \sin\phi \\
+    \cos\theta
+\end{pmatrix}
+```
+
+and the reverse transform is given by
+
+```math
+\begin{pmatrix} r \\ \theta \\ \phi \end{pmatrix}
+= \begin{pmatrix}
+    1 \\
+    \cos^{-1}(z) \\
+    \tan^{-1}(y/x)
+\end{pmatrix}
+```
+
+where in both relations we have assumed a unit sphere with radius 1.
 
 ## [Stokes Parameters](@id stokesparms)
 
