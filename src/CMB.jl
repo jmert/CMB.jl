@@ -9,5 +9,8 @@ module CMB
 
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
+
+    include("sphere.jl")
+    @reexport using .Sphere
 end
 

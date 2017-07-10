@@ -29,3 +29,9 @@ Public = false
 Modules = [CMB.PixelCovariance]
 Public = false
 ```
+
+## Sphere Functions
+```@autodocs
+Modules = [CMB.Sphere]
+Public = false
+```
