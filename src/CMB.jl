@@ -4,6 +4,9 @@ module CMB
     include("healpix.jl")
     @reexport using .Healpix
 
+    include("legendre.jl")
+    @reexport using .Legendre
+
     include("harmonics.jl")
     @reexport using .Harmonics
 

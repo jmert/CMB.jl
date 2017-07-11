@@ -2,6 +2,7 @@ module CMBTests
     using Base.Test
 
     const MODULES = Dict(
+        "legendre" => "Legendre",
         "harmonics" => "Harmonics",
         "healpix" => "HEALPix",
         "pixelcovariance" => "Pixel-Pixel Covariance"
