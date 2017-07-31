@@ -61,8 +61,8 @@ numpixels(m::RingPixelizedMap) = length(m.pixels)
 function ringlength(m::RingPixelizedMap, r::Int)
     n = numrings(m)
     r > n && throw(BoundsError())
-    j = (r==n) ? numpixels(m) : m.ringptr[i+1]
-    return j - m.ringptr[i] + 1
+    j = (r==n) ? numpixels(m)+1 : m.ringptr[r+1]
+    return j - m.ringptr[r]
 end
 
 let RI, PI, RPI
@@ -81,6 +81,33 @@ let RI, PI, RPI
     Base.done(I::RI{Tp,Tr},  state) where {Tp,Tr} = state > numrings(I.m)
     Base.done(I::PI{Tp,Tr},  state) where {Tp,Tr} = state > numpixels(I.m)
     Base.done(I::RPI{Tp,Tr}, state) where {Tp,Tr} = state ≥ ringlength(I.m, I.r)
+end
+
+function Base.convert(::Type{RingPixelizedMap}, m::RingPixelizedMap)
+    return RingPixelizedMap(copy(m.pixels), copy(m.rings), copy(m.ringptr))
+end
+
+function Base.convert(::Type{RingPixelizedMap}, m::M) where M<:AbstractPixelizedMap
+    Tp = pixeltype(M)
+    Tr = ringtype(M)
+    nring = numrings(m)
+    npix = numpixels(m)
+
+    pixels = Vector{Tp}(npix)
+    rings = Vector{Tr}(nring)
+    ringptr = Vector{Int64}(nring)
+
+    pixoff = 1
+    @inbounds for (i,r) in enumerate(eachring(m))
+        rings[i] = r
+        for p in eachringpixel(m, r)
+            pixels[pixoff] = p
+            pixoff += 1
+        end
+        ringptr[i] = i==1 ? 1 : ringptr[i-1] + ringlength(m, r)
+    end
+
+    return RingPixelizedMap{Tp,Tr}(pixels, rings, ringptr)
 end
 
 end
