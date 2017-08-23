@@ -10,7 +10,7 @@ module CMB
     include("healpix.jl")
     @reexport using .Healpix
 
-    include("mapping.jl")
+    include("mapping/mapping.jl")
     @reexport using .Mapping
 
     include("pixelcovariance.jl")
@@ -18,7 +18,5 @@ module CMB
 
     include("sphere.jl")
     @reexport using .Sphere
-
-    include("mapdefn.jl")
 end
 
