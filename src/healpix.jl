@@ -11,7 +11,7 @@ module Healpix
         pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi
 
     using MacroTools
-    using MacroTools: flatten, ismatch, postwalk, striplines
+    using MacroTools: flatten, match, ismatch, postwalk, striplines
 
     import Base: broadcast, broadcast!
 
@@ -36,30 +36,65 @@ module Healpix
     the kernel function is invoked on each iteration.
     """
     macro healpixkernel(funcexpr)
-        funcexpr = flatten(shortdef(striplines(funcexpr)))
+        funcexpr = flatten(shortdef(funcexpr))
         @capture(funcexpr, fn_(nside_, pix_) = body_)
 
         kfn = Symbol("_$(fn)_kernel")
 
-        kernmap = Symbol[:nside2npix, :nside2nring, :nside2npixcap,
-                :nside2npixequ, :nside2pixarea]
-        iscacheable(x) = begin
+        # List of special functions we know we can trivially transform
+        kernmap = Symbol[
+                :nside2npix, :nside2nring, :nside2npixcap,
+                :nside2npixequ, :nside2pixarea
+            ]
+
+        # Mapping from the replacement expressions to the generated symbol
+        cachemap = Dict{Any,Symbol}()
+
+        # Identifies callable expressions where the function is in kernmap and the only
+        # argument is exactly nside.
+        isnside2fn(x) = begin
                 isexpr(x, :call) || return false
                 y = namify(x)
                 y in kernmap || return false
-                ismatch(:($y($nside)), x)
+                ismatch(:($y($nside)), x) || return false
+                return true
             end
-        getcachename(x) = Symbol(replace(string(namify(x)), "nside2", ""))
+
+        # Permit arbitrary caching by parsing a "macro" of the form
+        #   @cache(expr)
+        # which is then lifted out of the kernel function.
+        iscachemacro(x) = begin
+                isexpr(x, :macrocall) || return false
+                namify(x) == Symbol("@cache") || return false
+                return true
+            end
+
+        makecache(x) = begin
+                if isnside2fn(x)
+                    ex = x
+                elseif iscachemacro(x)
+                    m = MacroTools.match(:(@cache(args_)), x)
+                    ex = m[:args]
+                else
+                    # Break out early if we didn't encounter a cacheable state.
+                    return x
+                end
+                # At this point, ex is the expression that we actually want to
+                # cache and use for later.
+                if ex in keys(cachemap)
+                    sym = cachemap[x]
+                else
+                    sym = gensym(namify(ex))
+                    cachemap[ex] = sym
+                end
+                return sym
+            end
 
         cacheargs = Symbol[]
-        body = MacroTools.postwalk(
-            x -> ~iscacheable(x) ? x : begin
-                y = getcachename(x)
-                y in cacheargs || push!(cacheargs, y)
-                y
-            end, body)
+        body = MacroTools.postwalk(makecache, body)
 
-        setup = Expr[:($n = $(Symbol("nside2$n"))($nside)) for n in cacheargs]
+        setup = Expr[:($v = $ex) for (ex,v) in cachemap]
+        cacheargs = values(cachemap)
 
         @eval begin
             @inline function $kfn($pix, $nside, $(cacheargs...))
@@ -73,12 +108,12 @@ module Healpix
                 return $kfn($pix, $nside, $(cacheargs...))
             end
 
-            function Base.broadcast(::typeof($fn), $nside, $pix)
+            function Base.broadcast(::typeof($fn), $nside::Integer, $pix)
                 $(setup...)
                 return $kfn.($pix, $nside, $(cacheargs...))
             end
 
-            function Base.broadcast!(::typeof($fn), A::AbstractArray, $nside, $pix)
+            function Base.broadcast!(::typeof($fn), A::AbstractArray, $nside::Integer, $pix)
                 $(setup...)
                 return A .= $kfn.($pix, $nside, $(cacheargs...))
             end
@@ -134,10 +169,10 @@ module Healpix
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
             i′ = trunc(Int, sqrt((p′+1)/2 - sqrt(convert(Float64,(p′+1)>>1)))) + 1
-            z′ = 1.0 - i′^2 / (3nside^2)
+            z′ = 1.0 - i′^2 / @cache(3nside^2)
         else
             i′ = div(p′-nside2npixcap(nside), 4nside) + nside
-            z′ = 4/3 - 2i′ / (3nside)
+            z′ = 4/3 - 2i′ / @cache(3nside)
         end
         z = p < nside2npixequ(nside) ? z′ : -z′
         return z
@@ -147,10 +182,10 @@ module Healpix
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
             i′ = trunc(Int, sqrt((p′+1)/2 - sqrt(convert(Float64,(p′+1)>>1)))) + 1
-            z′ = 1.0 - i′^2 / (3nside^2)
+            z′ = 1.0 - i′^2 / @cache(3nside^2)
         else
             i′ = div(p′-nside2npixcap(nside), 4nside) + nside
-            z′ = 4/3 - 2i′ / (3nside)
+            z′ = 4/3 - 2i′ / @cache(3nside)
         end
         z = p < nside2npixequ(nside) ? z′ : -z′
         return acos(z)
@@ -166,7 +201,7 @@ module Healpix
             i′,j′ = divrem(p′-nside2npixcap(nside), 4nside)
             i′ += nside
             j′ += 1
-            ϕ′ = (π/2/nside) * (j′ - 0.5*(1 + rem(i′-nside,2)))
+            ϕ′ = @cache(π/2/nside) * (j′ - 0.5*(1 + rem(i′-nside,2)))
         end
         ϕ = p < nside2npix(nside)-nside2npixcap(nside) ? ϕ′ : (2π - ϕ′)
         return ϕ
