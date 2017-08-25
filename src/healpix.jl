@@ -1,8 +1,11 @@
-#
-# See "HEALPix: A Framework for High-Resolution Discretization and Fast Analysis of Data
-# Distributed on the Sphere" Górski, Hivon, & Banday et al (2005) ApJ 622:759–771
-# arXiv: astro-ph/0409513
-#
+"""
+A module of functions implementing function which interact with the HEALPix pixel
+definitions. In most cases, only the RING ordering functions are being provided.
+
+See "HEALPix: A Framework for High-Resolution Discretization and Fast Analysis of Data
+Distributed on the Sphere" Górski, Hivon, & Banday et al (2005) ApJ 622:759–771
+arXiv: astro-ph/0409513
+"""
 module Healpix
     export
         nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2npixarea,
@@ -36,7 +39,7 @@ module Healpix
     the kernel function is invoked on each iteration.
     """
     macro healpixkernel(funcexpr)
-        funcexpr = flatten(shortdef(funcexpr))
+        funcexpr = flatten(shortdef(striplines(funcexpr)))
         @capture(funcexpr, fn_(nside_, pix_) = body_)
 
         kfn = Symbol("_$(fn)_kernel")
@@ -96,7 +99,7 @@ module Healpix
         setup = Expr[:($v = $ex) for (ex,v) in cachemap]
         cacheargs = values(cachemap)
 
-        @eval begin
+        quote
             @inline function $kfn($pix, $nside, $(cacheargs...))
                 @fastmath begin
                     $body
@@ -119,7 +122,7 @@ module Healpix
             end
 
             Base.@__doc__ $fn
-        end
+        end |> esc
     end
 
     Base.@pure npix2nside(npix)     = trunc(Int, sqrt(npix/12))
@@ -140,6 +143,116 @@ module Healpix
     Base.@pure isnorth(r, p) = p < nside2npixequ(r)
     Base.@pure issouth(r, p) = p ≥ nside2npixequ(r)
 
+    # The function definitions are short enough that I wanted to keep them visually together
+    # without having the documentation break them up. Add documentation now
+
+    """
+        npix2nside(npix) -> Nside
+
+    Returns the equivalent `Nside` corresponding to the number of pixels `npix`. Note that no
+    validation is performed, so non-conformant values of `npix` will give non-conformant
+    Nside values.
+    """ npix2nside(npix)
+
+    """
+        nside2npix(nside) -> N
+
+    Returns the total number of pixels `N` in an `nside` HEALPix map.
+
+    N.B.: HEALPix pixel indexing is 0-based, so valid pixel values are in the range
+    0:(N-1).
+    """ nside2npix
+
+    """
+        nside2nring(nside) -> N
+
+    Returns the number of iso-latitude rings `N` in the `nside` HEALPix map.
+    """ nside2nring
+
+    """
+        nside2npixcap(nside) -> N
+
+    Returns the number of pixels `N` in the polar caps for the given `nside` HEALPix map.
+    """ nside2npixcap
+
+    """
+        nside2npixequ(nside) -> N
+
+    Returns the number of pixels `N` in the northern hemisphere, including the equatorial
+    ring, for the given `nside` HEALPix map.
+    """ nside2npixequ
+
+    """
+        nside2pixarea(nside) -> σ
+
+    Returns the surface area `σ` (in steradiands) of each pixel in the given `nside` HEALPix
+    map.
+    """ nside2pixarea
+
+    """
+        isnorthcap(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the northern polar cap for an `nside`
+    HEALPix map.
+    """ isnorthcap
+
+    """
+        issouthcap(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the southern polar cap for an `nside`
+    HEALPix map.
+    """ issouthcap
+
+    """
+        iscap(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in either polar cap for an `nside` HEALPix
+    map.
+    """ iscap
+
+    """
+        isnorthequbelt(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the northern equatorial belt (including the
+    equatorial ring) for an `nside` HEALPix map.
+    """ isnorthequbelt
+
+    """
+        issouthequbelt(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the southern equatorial belt (excluding the
+    equatorial ring) for an `nside` HEALPix map.
+    """ issouthequbelt
+
+    """
+        isequbelt(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the equatorial belt for an `nside` HEALPix
+    map.
+    """ isequbelt
+
+    """
+        isnorth(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the northern hemisphere (including the
+    equatorial ring) for an `nside` HEALPix map.
+    """ isnorth
+
+    """
+        issouth(nside, pix) -> TF
+
+    Test for whether the given pixel `pix` is in the southern hemisphere (excluding the
+    equatorial ring) for an `nside` HEALPix map.
+    """ issouth
+
+    ####
+
+    """
+        pix2ring(nside, p) -> i
+
+    Computes the ring index `i` for the given pixel `p`. `nside` is the Nside resolution
+    factor.
+    """
     @healpixkernel function pix2ring(nside, p)
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
@@ -151,6 +264,12 @@ module Healpix
         return i
     end
 
+    """
+        pix2ringidx(nside, p) -> j
+
+    Computes the index `j` within the ring for the given pixel `p`. `nside` is the Nside
+    resolution factor.
+    """
     @healpixkernel function pix2ringidx(nside, p)
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
@@ -165,6 +284,12 @@ module Healpix
         return j
     end
 
+    """
+        pix2z(nside, p) -> z
+
+    Computes the cosine of the colatitude `z` for the given pixel `p`. `nside` is the Nside
+    resolution factor.
+    """
     @healpixkernel function pix2z(nside, p)
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
@@ -178,6 +303,12 @@ module Healpix
         return z
     end
 
+    """
+        pix2theta(nside, p) -> θ
+
+    Computes the colatitude `θ` for the given pixel `p`. `nside` is the Nside resolution
+    factor.
+    """
     @healpixkernel function pix2theta(nside, p)
         p′ = p < nside2npixequ(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
@@ -191,6 +322,12 @@ module Healpix
         return acos(z)
     end
 
+    """
+        pix2phi(nside, p) -> ϕ
+
+    Computes the azimuth `ϕ` for the given pixel `p`. `nside` is the Nside resolution
+    factor.
+    """
     @healpixkernel function pix2phi(nside, p)
         p′ = p < nside2npix(nside)-nside2npixcap(nside) ? p : (nside2npix(nside)-1) - p
         if p′ < nside2npixcap(nside)
