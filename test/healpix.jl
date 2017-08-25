@@ -8,21 +8,19 @@ module Healpix
     p_end_nside4   = [3;11;23;39;55;71;87;103;119;135;151;167;179;187;191]
 
     # Known ring start and ends for each ring
-    @test all(pix2ring_ring.(4, p_start_nside4) .== 1:15)
-    @test all(pix2ring_ring.(4, p_end_nside4)   .== 1:15)
+    @test all(pix2ring.(4, p_start_nside4) .== 1:15)
+    @test all(pix2ring.(4, p_end_nside4)   .== 1:15)
 
     # Start of each ring is always 1
-    @test all(pix2ringidx_ring.(4, p_start_nside4) .== 1)
+    @test all(pix2ringidx.(4, p_start_nside4) .== 1)
     # End of rings vary based on whether in a cap or the equatorial belt
-    @test all(pix2ringidx_ring.(4, p_end_nside4) .== [4;8;12;16ones(Int,9);12;8;4])
+    @test all(pix2ringidx.(4, p_end_nside4) .== [4;8;12;16ones(Int,9);12;8;4])
 
     # Make sure pixels at starts and ends of rings agree on their z value
-    @test all(pix2z_ring.(4,p_start_nside4) .== pix2z_ring.(4,p_end_nside4))
+    @test all(pix2z.(4,p_start_nside4) .== pix2z.(4,p_end_nside4))
 
-    # Type inference doesn't handle the nside -> Val{nside} transformation
-    # without losing type stability, so these currently fail.
-    @test 1 == @inferred pix2ring_ring(4, 0)
-    @test 1 == @inferred pix2ringidx_ring(4, 0)
-    @test 0.0 == @inferred pix2z_ring(4, 88)
+    @test 1 == @inferred pix2ring(4, 0)
+    @test 1 == @inferred pix2ringidx(4, 0)
+    @test 0.0 == @inferred pix2z(4, 88)
 end
 
