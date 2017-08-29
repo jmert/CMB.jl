@@ -14,7 +14,7 @@ Pages = ["public.md"]
 ## Harmonics
 ### Legendre Functions
 ```@autodocs
-Modules = [CMB.Harmonics.Legendre]
+Modules = [CMB.Legendre]
 Private = false
 ```
 
