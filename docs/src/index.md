@@ -3,6 +3,7 @@
 ## User Manual and Documentation
 ```@contents
 Pages = [
+    "man/sample.md",
     "man/coordinates.md",
     "man/references.md"
 ]

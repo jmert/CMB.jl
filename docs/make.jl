@@ -9,6 +9,7 @@ makedocs(
     pages = [
         "CMB.jl Documentation" => "index.md",
         "Manual" => [
+            "Sample Computation" => "man/sample.md",
             "Coordinate Systems" => "man/coordinates.md",
             "References" => "man/references.md"
         ],
