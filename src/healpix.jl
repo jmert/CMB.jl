@@ -11,12 +11,21 @@ module Healpix
         npix2nside, nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2npixarea,
         isnorth, issouth, isnorthcap, issouthcap, iscap,
         isequbelt, isnorthequbelt, issouthequbelt,
-        pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi
+        pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi,
+        UNSEEN
 
     using MacroTools
     using MacroTools: flatten, match, ismatch, postwalk, striplines
 
     import Base: broadcast, broadcast!
+
+    """
+        const UNSEEN = -1.6375e+30
+
+    Special value recognized by the libhealpix/healpy routines as an unobserved/masked
+    pixel.
+    """
+    const UNSEEN = -1.6375e+30
 
     """
         macro healpixkernel(funcexpr)

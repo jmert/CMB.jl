@@ -18,5 +18,7 @@ module CMB
 
     include("sphere.jl")
     @reexport using .Sphere
+
+    include("bkutils.jl")
 end
 
