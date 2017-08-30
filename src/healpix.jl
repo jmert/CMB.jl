@@ -8,7 +8,7 @@ arXiv: astro-ph/0409513
 """
 module Healpix
     export
-        nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2npixarea,
+        npix2nside, nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2npixarea,
         isnorth, issouth, isnorthcap, issouthcap, iscap,
         isequbelt, isnorthequbelt, issouthequbelt,
         pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi
