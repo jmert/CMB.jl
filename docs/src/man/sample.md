@@ -82,33 +82,51 @@ savefig("center_pix_azimuths.png"); close(gcf()) # hide
 ```
 ![](center_pix_azimuths.png)
 
+Make the reddened spectrum...
 ```@example guide
 ℓ = collect(0:700)
 Cl = @. (2π / (ℓ*(ℓ+1)))
 Cl[1] = 0.0 # division by zero, so get rid of the NaN
 nothing # hide
 ```
+Make the input spectrum be a TT + BB (no EE) spectrum:
+```@example guide
+spec = hcat(Cl, zeros(size(Cl)), Cl)
+```
 
 ```@example guide
 # Setup to comput the TT covariance
 coeff = PixelCovariance.PixelCovarianceCoeff{Float64}(700)
-distP = Vector{Float64}(701)
+covF = Matrix{Float64}(701,4)
 nothing # hide
 ```
 
 ```@example guide
 covTT = similar(σ)
-for (i,z) in enumerate(σ)
-    LegendreP!(coeff.λ, distP, 700, 0, z)
+covQQ = similar(σ)
+covUU = similar(σ)
+@inbounds for (i,z) in enumerate(σ)
+    PixelCovarianceF!(coeff, covF, 700, z)
     # Sum over all ℓ in this pixel
-    val = zero(eltype(distP))
-    for ll in length(distP):-1:1
-        val += coeff.η[ll] * Cl[ll] * distP[ll]
+    vals = zeros(eltype(covF), 4)
+    for ll in size(covF,1):-1:1
+        # TT
+        vals[1] += spec[ll,1]*covF[ll,1]
+        # QQ
+        vals[2] += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
+        # UU
+        vals[3] += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
     end
-    covTT[i] = val
+    covTT[i] = vals[1]
+    covQQ[i] = cij[i]*vals[2]*cji[i] + sij[i]*vals[3]*sji[i]
+    covUU[i] = sij[i]*vals[2]*sji[i] + cij[i]*vals[3]*cji[i]
 end
 
-plot_healpix_map(expand_obspix(covTT); cmap="magma", title="TT pixel-pixel covariance")
+fig = figure(figsize=(16,4))
+plot_healpix_map(expand_obspix(covTT); sub=(1,3,1), cmap="magma", title="TT pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covQQ); sub=(1,3,2), cmap="magma", title="QQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covUU); sub=(1,3,3), cmap="magma", title="UU pixel-pixel covariance")
+
 savefig("center_pix_covTT.png"); close(gcf()) # hide
 nothing # hide
 ```
