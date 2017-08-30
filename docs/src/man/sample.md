@@ -105,27 +105,32 @@ nothing # hide
 covTT = similar(σ)
 covQQ = similar(σ)
 covUU = similar(σ)
+covQU = similar(σ)
+covUQ = similar(σ)
 @inbounds for (i,z) in enumerate(σ)
     PixelCovarianceF!(coeff, covF, 700, z)
     # Sum over all ℓ in this pixel
-    vals = zeros(eltype(covF), 4)
+    tt = zero(eltype(covF))
+    qq = zero(eltype(covF))
+    uu = zero(eltype(covF))
     for ll in size(covF,1):-1:1
-        # TT
-        vals[1] += spec[ll,1]*covF[ll,1]
-        # QQ
-        vals[2] += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
-        # UU
-        vals[3] += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
+        tt += spec[ll,1]*covF[ll,1]
+        qq += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
+        uu += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
     end
-    covTT[i] = vals[1]
-    covQQ[i] = cij[i]*vals[2]*cji[i] + sij[i]*vals[3]*sji[i]
-    covUU[i] = sij[i]*vals[2]*sji[i] + cij[i]*vals[3]*cji[i]
+    covTT[i] =  tt
+    covQQ[i] =  cij[i]*qq*cji[i] + sij[i]*uu*sji[i]
+    covUU[i] =  sij[i]*qq*sji[i] + cij[i]*uu*cji[i]
+    covQU[i] = -cij[i]*qq*sji[i] + sij[i]*uu*cji[i]
+    covUQ[i] = -sij[i]*qq*cji[i] + cij[i]*uu*sji[i]
 end
 
-fig = figure(figsize=(16,4))
-plot_healpix_map(expand_obspix(covTT); sub=(1,3,1), cmap="magma", title="TT pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covQQ); sub=(1,3,2), cmap="magma", title="QQ pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covUU); sub=(1,3,3), cmap="magma", title="UU pixel-pixel covariance")
+fig = figure(figsize=(16,16))
+plot_healpix_map(expand_obspix(covTT); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covQQ); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covQU); sub=(3,3,6), cmap="magma", title="QU pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covUQ); sub=(3,3,8), cmap="magma", title="UQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covUU); sub=(3,3,9), cmap="magma", title="UU pixel-pixel covariance")
 
 savefig("center_pix_covTT.png"); close(gcf()) # hide
 nothing # hide
