@@ -1,30 +1,10 @@
-```@setup guide
-using CMB
-using FITSIO
-using PyPlot
-using PyCall
-@pyimport healpy
-```
-
 # Sample Computation
 
 ```@example guide
-function plot_map(hmapin; fig=nothing, cmap="hot", kwds...)
-    # healpy complains about the NaN values, so overwrite NaN with the HEALPix sentinel value
-    # UNSEEN
-    hmap = copy(hmapin)
-    hmap[isnan.(hmap)] .= healpy.UNSEEN
-    if fig === nothing
-        # Default to something relatively appropriately sized
-        hfig = PyPlot.figure(figsize=[8,4])
-    end
-    # Plot the figure
-    hax = healpy.gnomview(hmap, fig=hfig[:number], rot=[0, -60],
-                          reso=15, xsize=236, ysize=120,
-                          cmap=cmap; kwds...)
-    return hax
-end
-nothing # hide
+using CMB
+using CMB.BKUtils: plot_healpix_map
+using FITSIO
+using PyPlot
 ```
 
 ```@setup guide
@@ -42,26 +22,34 @@ apmask = read(hmask[2], "AP_MASK")
 ```@example guide
 hmask = FITS("~/bk14_mask_cel_n0512.fits")
 apmask = read(hmask[2], "AP_MASK")
-plot_map(apmask; min=0)
-savefig("bk14_apmask.png") # hide
+plot_healpix_map(apmask; min=0, cmap="hot", title="BK14 Apodization Mask")
+savefig("bk14_apmask.png"); close(gcf()) # hide
 nothing # hide
 ```
 ![](bk14_apmask.png)
 
 ```@example guide
 obsmask = (~).(isnan.(apmask))
-plot_map(float(obsmask); cmap="gray")
-savefig("bk14_binary_mask.png") # hide
+plot_healpix_map(float(obsmask); cmap="gray", title="Observed Pixel Mask")
+savefig("bk14_binary_mask.png"); close(gcf()) # hide
 nothing # hide
 ```
 ![](bk14_binary_mask.png)
 
 ```@example guide
 obspix = find(obsmask);
+@eval function expand_obspix(v)
+    f = Vector{Float64}($(length(obsmask)))
+    fill!(f, Healpix.UNSEEN)
+    f[$obspix] .= v
+    return f
+end
 nothing # hide
 ```
 
 ```@example guide
+using PyCall
+@pyimport healpy
 pix = healpy.ang2pix(512, deg2rad(90-(-57.5)), 0.0)
 ```
 
@@ -73,15 +61,8 @@ pix = healpy.ang2pix(512, deg2rad(90-(-57.5)), 0.0)
 ```
 
 ```@example guide
-tmp = Vector{Float64}(nside2npix(512));
-tmp .= NaN;
-nothing # hide
-```
-
-```@example guide
-tmp[obspix] .= σ
-plot_map(tmp, cmap="hot")
-savefig("center_pix_distance.png") # hide
+plot_healpix_map(expand_obspix(σ), cmap="magma", title="Cosine of angular pixel separation")
+savefig("center_pix_distance.png"); close(gcf()) # hide
 ```
 ![](center_pix_distance.png)
 
@@ -92,9 +73,12 @@ cij = cos.(2.*αij)
 sij = sin.(2.*αij)
 cji = cos.(2.*αji)
 sji = sin.(2.*αji)
-tmp[obspix] .= sji
-plot_map(tmp, cmap="jet")
-savefig("center_pix_azimuths.png") # hide
+fig = figure(figsize=(12,8))
+plot_healpix_map(expand_obspix(cij); fig=fig, cmap="magma", sub=(2,2,1), title="cos(2α_ij)", cbar=false)
+plot_healpix_map(expand_obspix(sij); fig=fig, cmap="magma", sub=(2,2,2), title="sin(2α_ij)", cbar=false)
+plot_healpix_map(expand_obspix(cji); fig=fig, cmap="magma", sub=(2,2,3), title="cos(2α_ji)")
+plot_healpix_map(expand_obspix(sji); fig=fig, cmap="magma", sub=(2,2,4), title="sin(2α_ji)")
+savefig("center_pix_azimuths.png"); close(gcf()) # hide
 ```
 ![](center_pix_azimuths.png)
 
@@ -124,9 +108,8 @@ for (i,z) in enumerate(σ)
     covTT[i] = val
 end
 
-tmp[obspix] .= covTT
-plot_map(tmp, cmap="magma")
-savefig("center_pix_covTT.png") # hide
+plot_healpix_map(expand_obspix(covTT); cmap="magma", title="TT pixel-pixel covariance")
+savefig("center_pix_covTT.png"); close(gcf()) # hide
 nothing # hide
 ```
 ![](center_pix_covTT.png)
