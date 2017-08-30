@@ -1,6 +1,9 @@
 module CMB
     import Reexport.@reexport
 
+    include("sphere.jl")
+    @reexport using .Sphere
+
     include("legendre.jl")
     @reexport using .Legendre
 
@@ -15,9 +18,6 @@ module CMB
 
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
-
-    include("sphere.jl")
-    @reexport using .Sphere
 
     include("bkutils.jl")
 end

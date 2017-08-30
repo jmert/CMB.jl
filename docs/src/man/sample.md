@@ -51,6 +51,8 @@ nothing # hide
 using PyCall
 @pyimport healpy
 pix = healpy.ang2pix(512, deg2rad(90-(-57.5)), 0.0)
+pix = first(pix) # healpy returns a 0-dimensional array
+pixind = first(find(obspix .== pix))
 ```
 
 ```@example guide
@@ -94,46 +96,24 @@ Make the input spectrum be a TT + BB (no EE) spectrum:
 spec = hcat(Cl, zeros(size(Cl)), Cl)
 ```
 
-```@example guide
-# Setup to comput the TT covariance
-coeff = PixelCovariance.PixelCovarianceCoeff{Float64}(700)
-covF = Matrix{Float64}(701,4)
-nothing # hide
-```
+The [`pixelcovariance`](@ref) function makes use of the angular separation and
+bearing angles to compute the pixel-pixel covariance terms according to
+Tegmark, et. al. and sum over the input spectrum. It then returns terms
+appropriate for a single column of each of the pixel-pixel covariance block
+submatrices.
 
+Each of these block columns can be visualized as a map:
 ```@example guide
-covTT = similar(σ)
-covQQ = similar(σ)
-covUU = similar(σ)
-covQU = similar(σ)
-covUQ = similar(σ)
-@inbounds for (i,z) in enumerate(σ)
-    PixelCovarianceF!(coeff, covF, 700, z)
-    # Sum over all ℓ in this pixel
-    tt = zero(eltype(covF))
-    qq = zero(eltype(covF))
-    uu = zero(eltype(covF))
-    for ll in size(covF,1):-1:1
-        tt += spec[ll,1]*covF[ll,1]
-        qq += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
-        uu += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
-    end
-    covTT[i] =  tt
-    covQQ[i] =  cij[i]*qq*cji[i] + sij[i]*uu*sji[i]
-    covUU[i] =  sij[i]*qq*sji[i] + cij[i]*uu*cji[i]
-    covQU[i] = -cij[i]*qq*sji[i] + sij[i]*uu*cji[i]
-    covUQ[i] = -sij[i]*qq*cji[i] + cij[i]*uu*sji[i]
-end
-
+covcol = PixelCovariance.pixelcovariance(512, obspix, pixind, spec)
 fig = figure(figsize=(16,16))
-plot_healpix_map(expand_obspix(covTT); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covQQ); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covQU); sub=(3,3,6), cmap="magma", title="QU pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covUQ); sub=(3,3,8), cmap="magma", title="UQ pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covUU); sub=(3,3,9), cmap="magma", title="UU pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covcol[:TT]); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covcol[:QQ]); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covcol[:QU]); sub=(3,3,6), cmap="magma", title="QU pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covcol[:UQ]); sub=(3,3,8), cmap="magma", title="UQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covcol[:UU]); sub=(3,3,9), cmap="magma", title="UU pixel-pixel covariance")
 
-savefig("center_pix_covTT.png"); close(gcf()) # hide
+savefig("center_pix_cov.png"); close(gcf()) # hide
 nothing # hide
 ```
-![](center_pix_covTT.png)
+![](center_pix_cov.png)
 

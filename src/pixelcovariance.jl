@@ -12,6 +12,10 @@ module PixelCovariance
     # For computing the Legendre terms
     import ..Legendre: LegendreUnitCoeff, LegendreP!
 
+    # For pixelcovariance() wrapper function
+    import ..Sphere: bearing, cosdistance
+    import ..Healpix: pix2phi, pix2theta
+
     import Base.@boundscheck, Base.@propagate_inbounds
 
     struct PixelCovarianceCoeff{T<:Real}
@@ -99,6 +103,67 @@ module PixelCovariance
         end
 
         return F
+    end
+
+    function pixelcovariance(nside, pixels, pixind, spec)
+        θ₀ = pix2theta(nside, pixels[pixind])
+        ϕ₀ = pix2phi(nside, pixels[pixind])
+
+        θ = pix2theta.(nside, pixels)
+        ϕ = pix2phi.(nside, pixels)
+
+        # TODO: Track down why broadcast() makes these type unstable.
+        #       For now, manually allocate and use broadcast!()
+        σ = similar(θ)
+        αij = similar(θ)
+        αji = similar(θ)
+        σ .= cosdistance.(θ₀, ϕ₀, θ, ϕ)
+        αij .= bearing.(θ₀, ϕ₀, θ, ϕ)
+        αji .= bearing.(θ, ϕ, θ₀, ϕ₀)
+
+        # TODO: Same here
+        cij = similar(θ)
+        sij = similar(θ)
+        cji = similar(θ)
+        sji = similar(θ)
+        @fastmath begin
+            cij .= cos.(2.*αij)
+            sij .= sin.(2.*αij)
+            cji .= cos.(2.*αji)
+            sji .= sin.(2.*αji)
+        end
+
+        lmax = maximum(sum(x->!iszero(x), spec, 1))
+        coeff = PixelCovarianceCoeff{Float64}(lmax)
+        covF = Matrix{Float64}(lmax+1, 4)
+
+        covTT = similar(σ)
+        covQQ = similar(σ)
+        covUU = similar(σ)
+        covQU = similar(σ)
+        covUQ = similar(σ)
+        @inbounds for (i,z) in enumerate(σ)
+            PixelCovarianceF!(coeff, covF, 700, z)
+            tt = zero(eltype(covF))
+            qq = zero(eltype(covF))
+            uu = zero(eltype(covF))
+            for ll in size(covF,1):-1:1
+                tt += spec[ll,1]*covF[ll,1]
+                qq += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
+                uu += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
+            end
+            covTT[i] =  tt
+            covQQ[i] =  cij[i]*qq*cji[i] + sij[i]*uu*sji[i]
+            covUU[i] =  sij[i]*qq*sji[i] + cij[i]*uu*cji[i]
+            covQU[i] = -cij[i]*qq*sji[i] + sij[i]*uu*cji[i]
+            covUQ[i] = -sij[i]*qq*cji[i] + cij[i]*uu*sji[i]
+        end
+
+        return Dict(:TT => covTT,
+                    :QQ => covQQ,
+                    :UU => covUU,
+                    :QU => covQU,
+                    :UQ => covUQ)
     end
 end
 
