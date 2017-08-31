@@ -11,8 +11,13 @@ end
 Pages = ["private.md"]
 ```
 
-## Harmonics
-### Legendre Functions
+## Sphere Functions
+```@autodocs
+Modules = [CMB.Sphere]
+Public = false
+```
+
+## Legendre Functions
 ```@autodocs
 Modules = [CMB.Legendre]
 Public = false
@@ -30,8 +35,3 @@ Modules = [CMB.PixelCovariance]
 Public = false
 ```
 
-## Sphere Functions
-```@autodocs
-Modules = [CMB.Sphere]
-Public = false
-```
