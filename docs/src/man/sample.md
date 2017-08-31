@@ -104,7 +104,11 @@ submatrices.
 
 Each of these block columns can be visualized as a map:
 ```@example guide
-covcol = PixelCovariance.pixelcovariance(512, obspix, pixind, spec)
+cache = PixelCovarianceCache(512, 700, obspix)
+updatespectra!(cache, spec)
+selectpixel!(cache, pixind)
+
+covcol = pixelcovariance!(cache)
 fig = figure(figsize=(16,16))
 plot_healpix_map(expand_obspix(covcol[:TT]); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
 plot_healpix_map(expand_obspix(covcol[:QQ]); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")

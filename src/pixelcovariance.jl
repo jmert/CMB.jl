@@ -8,7 +8,9 @@ arXiv:astro-ph/0012120v3
 """
 module PixelCovariance
 
-export PixelCovarianceCoeff, PixelCovarianceF!
+export PixelCovarianceCoeff, PixelCovarianceF!,
+    PixelCovarianceCache, updatespectra!, selectpixel!,
+    pixelcovariance, pixelcovariance!
 
 # For computing the Legendre terms
 import ..Legendre: LegendreUnitCoeff, LegendreP!
@@ -106,65 +108,127 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
     return F
 end
 
-function pixelcovariance(nside, pixels, pixind, spec)
-    θ₀ = pix2theta(nside, pixels[pixind])
-    ϕ₀ = pix2phi(nside, pixels[pixind])
+struct PixelCovarianceCache
+    nside::Int
+    lmax::Int
+    pixels::Vector{Int}
 
-    θ = pix2theta.(nside, pixels)
-    ϕ = pix2phi.(nside, pixels)
+    spectra::Matrix{Float64}
 
-    # TODO: Track down why broadcast() makes these type unstable.
-    #       For now, manually allocate and use broadcast!()
-    σ = similar(θ)
-    αij = similar(θ)
-    αji = similar(θ)
-    σ .= cosdistance.(θ₀, ϕ₀, θ, ϕ)
-    αij .= bearing.(θ₀, ϕ₀, θ, ϕ)
-    αji .= bearing.(θ, ϕ, θ₀, ϕ₀)
+    pixind::Ref{Int}
+    θ₀::Ref{Float64}
+    ϕ₀::Ref{Float64}
 
-    # TODO: Same here
-    cij = similar(θ)
-    sij = similar(θ)
-    cji = similar(θ)
-    sji = similar(θ)
+    θ::Vector{Float64}
+    ϕ::Vector{Float64}
+    z::Vector{Float64}
+    αij::Vector{Float64}
+    αji::Vector{Float64}
+    cij::Vector{Float64}
+    sij::Vector{Float64}
+    cji::Vector{Float64}
+    sji::Vector{Float64}
+
+    coeff::PixelCovarianceCoeff{Float64}
+    F::Matrix{Float64}
+
+    C::Matrix{Float64}
+    Cv::Dict{Symbol,typeof(view(Matrix{Float64}(1,1),:,1))}
+
+    function PixelCovarianceCache(nside,lmax,pixels)
+        N = length(pixels)
+
+        spectra = Matrix{Float64}(lmax+1, 3)
+
+        θ = Vector{Float64}(N)
+        ϕ = similar(θ)
+
+        z = similar(θ)
+
+        αij = similar(θ)
+        αji = similar(θ)
+        cij = similar(θ)
+        sij = similar(θ)
+        cji = similar(θ)
+        sji = similar(θ)
+
+        coeff = PixelCovarianceCoeff{Float64}(lmax)
+        F = Matrix{Float64}(lmax+1, 4)
+
+        C = Matrix{Float64}(N, 9)
+        Cv = Dict(
+                :TT => view(C, :, 1),
+                :QT => view(C, :, 2),
+                :UT => view(C, :, 3),
+                :TQ => view(C, :, 4),
+                :QQ => view(C, :, 5),
+                :UQ => view(C, :, 6),
+                :TU => view(C, :, 7),
+                :QU => view(C, :, 8),
+                :UU => view(C, :, 9)
+            )
+
+        # The pixel coordinates can all be precomputed just once
+        θ .= pix2theta.(nside, pixels)
+        ϕ .= pix2phi.(nside, pixels)
+
+        return new(nside, lmax, pixels,
+                   spectra,
+                   0, 0.0, 0.0,
+                   θ, ϕ, z, αij, αji, cij, sij, cji, sji,
+                   coeff, F, C, Cv)
+    end
+end
+
+function updatespectra!(cache, spectra)
+    cache.spectra .= spectra
+end
+
+function selectpixel!(cache, pixind)
+    cache.pixind[] = pixind
+    cache.θ₀[] = pix2theta(cache.nside, cache.pixels[pixind])
+    cache.ϕ₀[] = pix2phi(cache.nside, cache.pixels[pixind])
+
+    cache.z   .= cosdistance.(cache.θ₀, cache.ϕ₀, cache.θ, cache.ϕ)
+    cache.αij .= bearing.(cache.θ₀, cache.ϕ₀, cache.θ,  cache.ϕ)
+    cache.αji .= bearing.(cache.θ,  cache.ϕ,  cache.θ₀, cache.ϕ₀)
+
     @fastmath begin
-        cij .= cos.(2.*αij)
-        sij .= sin.(2.*αij)
-        cji .= cos.(2.*αji)
-        sji .= sin.(2.*αji)
+        cache.cij .= cos.(2 .* cache.αij)
+        cache.sij .= sin.(2 .* cache.αij)
+        cache.cji .= cos.(2 .* cache.αji)
+        cache.sji .= sin.(2 .* cache.αji)
     end
+    return cache
+end
 
-    lmax = maximum(sum(x->!iszero(x), spec, 1))
-    coeff = PixelCovarianceCoeff{Float64}(lmax)
-    covF = Matrix{Float64}(lmax+1, 4)
+function pixelcovariance(nside, pixels, pixind, spec)
+    lmax = size(spec,1)
+    cache = PixelCovarianceCache(nside, lmax, pixels)
+    updatespectra!(cache, spec)
+    selectpixel!(cache, pixind)
+    return cache
+end
 
-    covTT = similar(σ)
-    covQQ = similar(σ)
-    covUU = similar(σ)
-    covQU = similar(σ)
-    covUQ = similar(σ)
-    @inbounds for (i,z) in enumerate(σ)
-        PixelCovarianceF!(coeff, covF, 700, z)
-        tt = zero(eltype(covF))
-        qq = zero(eltype(covF))
-        uu = zero(eltype(covF))
-        for ll in size(covF,1):-1:1
-            tt += spec[ll,1]*covF[ll,1]
-            qq += spec[ll,2]*covF[ll,3] - spec[ll,3]*covF[ll,4]
-            uu += spec[ll,3]*covF[ll,3] - spec[ll,2]*covF[ll,4]
+function pixelcovariance!(cache::PixelCovarianceCache)
+    @inbounds for (i,z) in enumerate(cache.z)
+        PixelCovarianceF!(cache.coeff, cache.F, cache.lmax, z)
+        tt = zero(eltype(cache.F))
+        qq = zero(eltype(cache.F))
+        uu = zero(eltype(cache.F))
+        for ll in size(cache.F,1):-1:1
+            tt += cache.spectra[ll,1]*cache.F[ll,1]
+            qq += cache.spectra[ll,2]*cache.F[ll,3] - cache.spectra[ll,3]*cache.F[ll,4]
+            uu += cache.spectra[ll,3]*cache.F[ll,3] - cache.spectra[ll,2]*cache.F[ll,4]
         end
-        covTT[i] =  tt
-        covQQ[i] =  cij[i]*qq*cji[i] + sij[i]*uu*sji[i]
-        covUU[i] =  sij[i]*qq*sji[i] + cij[i]*uu*cji[i]
-        covQU[i] = -cij[i]*qq*sji[i] + sij[i]*uu*cji[i]
-        covUQ[i] = -sij[i]*qq*cji[i] + cij[i]*uu*sji[i]
+        cache.C[i,1] =  tt
+        cache.C[i,5] =  cache.cij[i]*qq*cache.cji[i] + cache.sij[i]*uu*cache.sji[i]
+        cache.C[i,9] =  cache.sij[i]*qq*cache.sji[i] + cache.cij[i]*uu*cache.cji[i]
+        cache.C[i,6] = -cache.sij[i]*qq*cache.cji[i] + cache.cij[i]*uu*cache.sji[i]
+        cache.C[i,8] = -cache.cij[i]*qq*cache.sji[i] + cache.sij[i]*uu*cache.cji[i]
     end
 
-    return Dict(:TT => covTT,
-                :QQ => covQQ,
-                :UU => covUU,
-                :QU => covQU,
-                :UQ => covUQ)
+    return cache.Cv
 end
 
 end # module PixelCovariance
