@@ -13,6 +13,12 @@ are included in this package. This chapter presents the results of those tests; 
 output in this chapter is automatically generated at build time using the code as it
 exists in this package.
 
+!!! note
+
+    Numerical accuracy is still very much a work-in-progress. The plots and tests being
+    presented here will form a foundation for future work on systematically improving
+    numerical accuracy.
+
 ## Testing ulps
 
 One standard test for numerical algorithms is the “ulps” accuracy; ulps stands for
@@ -38,27 +44,14 @@ sampling.
 
 ```@setup sphere_ulps_grid
 using CMB
+using CMB.Util: @absrelerr
 using PyPlot
-macro ulps(fncall)
-    (fncall isa Expr && fncall.head == :call) ||
-            error("Expected a function call, found $(fncall)")
-    fn = esc(fncall.args[1])
-    args = esc.(fncall.args[2:end])
-    bigargs = Any[:(big($a)) for a in args]
-
-    quote
-        begin
-            r₁ = $fn($(args...))
-            r₂ = $fn($(bigargs...))
-            u = (r₁-r₂) / eps(abs(r₁))
-            convert(Float64, u)
-        end
-    end
-end
+using PyCall
+@pyimport mpl_toolkits.axes_grid1 as ag1
 ```
 
 ```@example sphere_ulps_grid
-function sphere_ulps_grid()
+function sphere_grid(fn)
     (θ₀,ϕ₀) = (0.5π, π)
     δ = 1.0
     ε = deg2rad(δ) / 2
@@ -66,40 +59,79 @@ function sphere_ulps_grid()
     Φ = linspace(0+ε, 2π-ε, (1/δ)*360)
     @assert step(Θ) == 2ε # hide
     @assert step(Φ) == 2ε # hide
-    Δα₁ = zeros(length(Θ), length(Φ))
-    Δα₂ = zeros(length(Θ), length(Φ))
-    Δσ  = zeros(length(Θ), length(Φ))
-    Δz  = zeros(length(Θ), length(Φ))
+    Δa₁ = zeros(length(Θ), length(Φ))
+    Δa₂ = zeros(length(Θ), length(Φ))
+    Δr₁ = zeros(length(Θ), length(Φ))
+    Δr₂ = zeros(length(Θ), length(Φ))
 
     for (i,θ) in enumerate(Θ)
         for (j,ϕ) in enumerate(Φ)
-            Δα₁[i,j] = @ulps bearing(θ₀, ϕ₀, θ, ϕ)
-            Δα₂[i,j] = @ulps bearing(θ, ϕ, θ₀, ϕ₀)
-            Δσ[i,j]  = @ulps distance(θ₀, ϕ₀, θ, ϕ)
-            Δz[i,j]  = @ulps cosdistance(θ₀, ϕ₀, θ, ϕ)
+            (Δa₁[i,j], Δr₁[i,j]) = @absrelerr fn(θ₀, ϕ₀, θ, ϕ)
+            (Δa₂[i,j], Δr₂[i,j]) = @absrelerr fn(θ, ϕ, θ₀, ϕ₀)
         end
     end
-    return (Δα₁,Δα₂,Δσ,Δz)
+    return (Δa₁, Δa₂, Δr₁, Δr₂)
 end
-Δα₁,Δα₂,Δσ,Δz = sphere_ulps_grid()
+
+function plot_sphere_grid(fn)
+    (Δa₁,Δa₂,Δr₁,Δr₂) = sphere_grid(fn)
+    fnname = split(string(fn), ".")[end]
+
+    fig = figure(figsize=(10,6));
+
+    clf();
+    grid = ag1.ImageGrid(fig, 211,
+            nrows_ncols=(1,2),
+            axes_pad=0.1,
+            add_all=true,
+            share_all=true,
+            cbar_mode="single",
+            aspect=true)
+    args = [(:vmin,-1e-15), (:vmax,1e-15), (:cmap, "gray"), (:interpolation,"none")]
+    grid[1][:imshow](Δa₁; args...)
+    grid[2][:imshow](Δa₂; args...)
+    grid[1][:set_title]("abs Δ $fnname(θ₀, ϕ₀, θ, ϕ)")
+    grid[2][:set_title]("abs Δ $fnname(θ, ϕ, θ₀, ϕ₀)")
+    colorbar(grid[2][:images][1], cax=grid[:cbar_axes][1])
+
+    grid = ag1.ImageGrid(fig, 212,
+            nrows_ncols=(1,2),
+            axes_pad=0.1,
+            add_all=true,
+            share_all=true,
+            cbar_mode="single",
+            aspect=true)
+    args = [(:vmin,-10), (:vmax,10), (:cmap, "gray"), (:interpolation,"none")]
+    grid[1][:imshow](Δr₁; args...)
+    grid[2][:imshow](Δr₂; args...)
+    grid[1][:set_title]("rel Δ $fnname(θ₀, ϕ₀, θ, ϕ)")
+    grid[2][:set_title]("rel Δ $fnname(θ, ϕ, θ₀, ϕ₀)")
+    colorbar(grid[2][:images][1], cax=grid[:cbar_axes][1])
+
+    fig[:tight_layout]()
+
+    return nothing
+end
+
 nothing # hide
 ```
 
 ```@example sphere_ulps_grid
-args = [(:vmin,-10), (:vmax,10), (:cmap, "gray")]
-figure(figsize=(6.5,8))
-subplot(2,1,1); imshow(Δα₁; args...); gca()[:set_title]("bearing(θ₀, ϕ₀, θ, ϕ)")
-subplot(2,1,2); imshow(Δα₂; args...); gca()[:set_title]("bearing(θ, ϕ, θ₀, ϕ₀)")
-savefig("sphere_ulps_grid_bearing.png"); nothing # hide
+plot_sphere_grid(bearing)
+savefig("sphere_grid_bearing.png"); nothing # hide
 ```
-![](sphere_ulps_grid_bearing.png)
+![](sphere_grid_bearing.png)
 
 ```@example sphere_ulps_grid
-figure(figsize=(6.5,8))
-subplot(2,1,1); imshow(Δσ; args...); gca()[:set_title]("distance(θ₀, ϕ₀, θ, ϕ)")
-subplot(2,1,2); imshow(Δz; args...); gca()[:set_title]("cosdistance(θ₀, ϕ₀, θ, ϕ)")
-savefig("sphere_ulps_grid_distance.png"); nothing # hide
+plot_sphere_grid(distance)
+savefig("sphere_grid_distance.png"); nothing # hide
 ```
-![](sphere_ulps_grid_distance.png)
+![](sphere_grid_distance.png)
+
+```@example sphere_ulps_grid
+plot_sphere_grid(cosdistance)
+savefig("sphere_grid_cosdistance.png"); nothing # hide
+```
+![](sphere_grid_cosdistance.png)
 
 
