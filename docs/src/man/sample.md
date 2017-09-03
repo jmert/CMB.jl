@@ -84,6 +84,97 @@ savefig("center_pix_azimuths.png"); close(gcf()) # hide
 ```
 ![](center_pix_azimuths.png)
 
+The sines/cosines are used...
+```math
+\newcommand{\covF}[1]{F_\ell^{#1}(x)}
+\newcommand{\TT}{\langle T_i T_j\rangle}
+\newcommand{\TQ}{\langle T_i Q_j\rangle}
+\newcommand{\TU}{\langle T_i U_j\rangle}
+\newcommand{\QQ}{\langle Q_i Q_j\rangle}
+\newcommand{\QU}{\langle Q_i U_j\rangle}
+\newcommand{\UU}{\langle U_i U_j\rangle}
+\begin{align}
+    \TT &\equiv \sum_\ell C_\ell^{TT} \covF{00}
+    \\
+    \TQ &\equiv -\sum_\ell C_\ell^{TE} \covF{10}
+    \\
+    \TU &\equiv -\sum_\ell C_\ell^{BT} \covF{10}
+    \\
+    \QQ &\equiv \sum_\ell
+        \left[ C_\ell^{EE} \covF{12} - C_\ell^{BB} \covF{22} \right]
+    \\
+    \UU &\equiv \sum_\ell
+        \left[ C_\ell^{BB} \covF{12} - C_\ell^{EE} \covF{22} \right]
+    \\
+    \QU &\equiv \sum_\ell
+        C_\ell^{EB} \left[ \covF{12} + \covF{22} \right]
+\end{align}
+```
+
+```math
+\begin{align}
+    R(\alpha) &= \begin{bmatrix}
+        1 & 0 & 0 \\
+        0 &  \cos(2\alpha) & \sin(2\alpha) \\
+        0 & -\sin(2\alpha) & \cos(2\alpha)
+    \end{bmatrix}
+    &
+    M(z_{ij}) &= \begin{bmatrix}
+        \TT & \TQ & \TU \\
+        \TQ & \QQ & \QU \\
+        \TU & \QU & \UU
+    \end{bmatrix}
+\end{align}
+```
+
+```math
+\newcommand{\cij}{c_{ij}}
+\newcommand{\sij}{s_{ij}}
+\newcommand{\cji}{c_{ji}}
+\newcommand{\sji}{s_{ji}}
+\begin{align}
+    R(\alpha_{ij}) &= \begin{bmatrix}
+        1 & 0 & 0 \\
+        0 &  \cij & \sij \\
+        0 & -\sij & \cij
+    \end{bmatrix}
+    &
+    R(\alpha_{ji})^T &= \begin{bmatrix}
+        1 & 0 & 0 \\
+        0 & \cji & -\sji \\
+        0 & \sji &  \cji
+    \end{bmatrix}
+\end{align}
+```
+
+```math
+\begin{align*}
+    \begin{aligned}
+    C_{ij} = R(\alpha_{ij}) M(z_{ij}) R(\alpha_{ji})^T =
+        % Show the first two columns together first:
+        &\left[ \begin{matrix}
+            \TT \\
+            \TQ\cij + \TU\sij \\
+            -\TQ\sij + \TU\cij
+        \end{matrix} \right.
+    \\
+        \qquad\ldots\qquad
+        &\begin{matrix}
+            \TQ\cji + \TU\sji \\
+            \QQ\cij\cji + \QU(\cij\sji + \sij\cji) + \UU\sij\sji \\
+            -\QQ\sij\cji + \QU(\cij\cji - \sij\sji) + \UU\cij\sji \\
+        \end{matrix}
+    \\
+        \qquad\ldots\qquad
+        &\left. \begin{matrix}
+            -\TQ\sji + \TU\cji \\
+            -\QQ\cij\sji + \QU(\cij\cji - \sij\sji) + \UU\sij\cji \\
+            \QQ\sij\sji - \QU(\cij\sji + \sij\cji) + \UU\cij\cji
+        \end{matrix} \right]
+    \end{aligned}
+\end{align*}
+```
+
 Make the reddened spectrum...
 ```@example guide
 ℓ = collect(0:700)
