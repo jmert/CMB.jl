@@ -35,3 +35,9 @@ Modules = [CMB.PixelCovariance]
 Public = false
 ```
 
+## Miscellaneous Utilities
+```@autodocs
+Modules = [CMB.Util]
+Public = false
+```
+

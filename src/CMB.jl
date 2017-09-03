@@ -20,5 +20,6 @@ module CMB
     @reexport using .PixelCovariance
 
     include("bkutils.jl")
+    include("util.jl")
 end
 
