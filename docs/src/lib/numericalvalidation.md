@@ -30,27 +30,28 @@ Let ``f`` be a function...
 ## Contents
 ```@contents
 Pages = ["numericalvalidation.md"]
+Depth = 3
 ```
 
-## Sphere Functions
+
+# Sphere Functions
+
+## Sampling the entire sphere
 
 We'll first start by systmatically sampling the entire sphere (at relatively low
 resolution) to identify if there are any particular problem areas in each of the
-spherical algorithms.
+spherical algorithms. We'll record both the absolute and relative error, and we'll
+evaluate the functions symmetrically, giving us 4 matrices of error estimates for
+each case.
 
 We'll sample at 1° resolution across the entire sphere to begin with. Arbitrarily,
 we'll choose the point ``(θ₀,ϕ₀) = (π/2, π)`` to be the second coordinate in the
 sampling.
 
-```@setup sphere_ulps_grid
+```@example sphere_grid
 using CMB
 using CMB.Util: @absrelerr
-using PyPlot
-using PyCall
-@pyimport mpl_toolkits.axes_grid1 as ag1
-```
 
-```@example sphere_ulps_grid
 function sphere_grid(fn)
     (θ₀,ϕ₀) = (0.5π, π)
     δ = 1.0
@@ -72,6 +73,16 @@ function sphere_grid(fn)
     end
     return (Δa₁, Δa₂, Δr₁, Δr₂)
 end
+nothing # hide
+```
+
+We'll be using `matplotlib` via the `PyPlot` and `PyCall` interfaces to visualize the
+output, and the following function is how the plots shown below have been generated:
+
+```@example sphere_grid
+using PyPlot
+using PyCall
+@pyimport mpl_toolkits.axes_grid1 as ag1
 
 function plot_sphere_grid(fn)
     (Δa₁,Δa₂,Δr₁,Δr₂) = sphere_grid(fn)
@@ -112,23 +123,22 @@ function plot_sphere_grid(fn)
 
     return nothing
 end
-
 nothing # hide
 ```
 
-```@example sphere_ulps_grid
+```@example sphere_grid
 plot_sphere_grid(bearing)
 savefig("sphere_grid_bearing.png"); nothing # hide
 ```
 ![](sphere_grid_bearing.png)
 
-```@example sphere_ulps_grid
+```@example sphere_grid
 plot_sphere_grid(distance)
 savefig("sphere_grid_distance.png"); nothing # hide
 ```
 ![](sphere_grid_distance.png)
 
-```@example sphere_ulps_grid
+```@example sphere_grid
 plot_sphere_grid(cosdistance)
 savefig("sphere_grid_cosdistance.png"); nothing # hide
 ```
