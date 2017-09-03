@@ -21,6 +21,21 @@ import ..Healpix: pix2phi, pix2theta
 
 import Base.@boundscheck, Base.@propagate_inbounds
 
+"""
+    struct PixelCovarianceCoeff{T<:Real}
+
+Precomputed recursion relation coefficients for computing the pixel-pixel covariance.
+
+# Example
+```jldoctest
+julia> PixelCovarianceCoeff{Float64}(2)
+CMB.PixelCovariance.PixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:
+    λ: CMB.Legendre.LegendreNormCoeff{CMB.Legendre.LegendreUnitNorm,Float64}
+    η: [0.0795775, 0.238732, 0.397887]
+    α: [0.0, 0.0, 0.324874]
+    β: [0.0, 0.0, 0.0331573]
+```
+"""
 struct PixelCovarianceCoeff{T<:Real}
     λ::LegendreUnitCoeff{T}
     η::Vector{T}
@@ -28,25 +43,39 @@ struct PixelCovarianceCoeff{T<:Real}
     β::Vector{T}
 
     function PixelCovarianceCoeff{T}(lmax::Integer) where T
-        lmax ≥ 0 || throw(DomainError())
+        lmax = max(lmax, 2)
 
         λ = LegendreUnitCoeff{T}(lmax)
         η = Vector{T}(lmax+1)
         α = Vector{T}(lmax+1)
         β = Vector{T}(lmax+1)
 
-        @inbounds for ll in 1:(lmax+1)
+        η[1] = 1/(4π);  η[2] = 3/(4π)
+        α[1] = zero(T); α[2] = zero(T);
+        β[1] = zero(T); β[2] = zero(T);
+        @inbounds for ll in 2:lmax
             lT = convert(T, ll)
             norm = convert(T, 2ll + 1) / (4π)
             invql = inv( (lT-one(T)) * lT * (lT+one(T)) * (lT+convert(T,2)) )
 
-            η[ll] = norm
-            α[ll] = 2norm * lT * sqrt(invql)
-            β[ll] = 2norm * invql
+            η[ll+1] = norm
+            α[ll+1] = 2norm * lT * sqrt(invql)
+            β[ll+1] = 2norm * invql
         end
 
         return new(λ, η, α, β)
     end
+end
+
+# Improve printing somewhat
+Base.show(io::IO, norm::PixelCovarianceCoeff{T}) where {T} =
+    print(io, PixelCovarianceCoeff, "{$T}")
+function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCoeff)
+    println(io, C, " for lmax = $(length(C.η)-1) with coefficients:")
+    println(io, "    λ: ", C.λ)
+    println(io, "    η: ", C.η)
+    println(io, "    α: ", C.α)
+    println(io, "    β: ", C.β)
 end
 
 @noinline function _chkbounds_F(C, F, lmax)
