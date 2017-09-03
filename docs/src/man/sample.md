@@ -93,7 +93,9 @@ nothing # hide
 ```
 Make the input spectrum be a TT + BB (no EE) spectrum:
 ```@example guide
-spec = hcat(Cl, zeros(size(Cl)), Cl)
+spec = zeros(Float64, 701, 6)
+spec[:,1] .= Cl # TT
+spec[:,3] .= Cl # EE
 ```
 
 The [`pixelcovariance`](@ref) function makes use of the angular separation and
@@ -104,7 +106,7 @@ submatrices.
 
 Each of these block columns can be visualized as a map:
 ```@example guide
-cache = PixelCovarianceCache(512, 700, obspix)
+cache = PixelCovarianceCache(512, 700, obspix, [:TT,:QQ,:QU,:UU])
 updatespectra!(cache, spec)
 selectpixel!(cache, pixind)
 
