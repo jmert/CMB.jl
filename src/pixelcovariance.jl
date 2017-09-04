@@ -178,15 +178,14 @@ struct PixelCovarianceCache
     Cv::Dict{Symbol,typeof(view(Matrix{Float64}(1,1),:,1))}
 
     """
-        PixelCovarianceCache(nside, lmax, pixels [, fields=Symbol[:QQ,:QU,:UU] ])
+        PixelCovarianceCache(nside, lmax, pixels, fields=Symbol[:QQ,:QU,:UQ,:UU])
     """
-    function PixelCovarianceCache(nside, lmax, pixels, fields=Symbol[:QQ,:QU,:UU])
+    function PixelCovarianceCache(nside, lmax, pixels,
+                                  fields=Symbol[:QQ,:QU,:UQ,:UU])
         N = length(pixels)
 
         # Map the symbol description of which fields to generate into a bit array
         bitfields = [(ff in fields) for ff in FIELDMAP]
-        # The off-diagonal terms must be symmetric, so guarantee symmetry.
-        bitfields .|= bitfields'
 
         C = zeros(Float64, N, 9)
         # Name views for convienience
@@ -254,12 +253,16 @@ function selectpixel!(cache, pixind)
     cache.αij .= bearing.(cache.θ₀, cache.ϕ₀, cache.θ,  cache.ϕ)
     cache.αji .= bearing.(cache.θ,  cache.ϕ,  cache.θ₀, cache.ϕ₀)
 
-    @fastmath begin
-        cache.cij .= cos.(2 .* cache.αij)
-        cache.sij .= sin.(2 .* cache.αij)
-        cache.cji .= cos.(2 .* cache.αji)
-        cache.sji .= sin.(2 .* cache.αji)
+    @static if VERSION >= v"0.7.0-DEV.264"
+        _sincos = @fastmath sincos
+    else
+        _sincos = x -> (@fastmath sin(x), @fastmath cos(x))
     end
+    @inbounds for i in 1:length(cache.αij)
+        (cache.sij[i], cache.cij[i]) = _sincos(2cache.αij[i])
+        (cache.sji[i], cache.cji[i]) = _sincos(2cache.αji[i])
+    end
+
     return cache
 end
 
@@ -331,7 +334,7 @@ function pixelcovariance!(cache::PixelCovarianceCache)
         end
     end
 
-    return cache.Cv
+    return cache
 end
 
 end # module PixelCovariance

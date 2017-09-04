@@ -197,7 +197,7 @@ submatrices.
 
 Each of these block columns can be visualized as a map:
 ```@example guide
-cache = PixelCovarianceCache(512, 700, obspix, [:TT,:QQ,:QU,:UU])
+cache = PixelCovarianceCache(512, 700, obspix, [:TT,:QQ,:QU,:UQ,:UU])
 updatespectra!(cache, spec)
 selectpixel!(cache, pixind)
 
