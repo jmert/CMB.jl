@@ -2,7 +2,7 @@
 
 ```@example guide
 using CMB
-using CMB.BKUtils: plot_healpix_map
+using CMB.BKUtil: plot_healpix_map
 using FITSIO
 using PyPlot
 ```

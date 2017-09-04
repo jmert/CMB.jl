@@ -1,4 +1,4 @@
-module BKUtils
+module BKUtil
 
 export plot_healpix_map
 
