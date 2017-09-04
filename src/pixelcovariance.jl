@@ -174,9 +174,6 @@ struct PixelCovarianceCache
     coeff::PixelCovarianceCoeff{Float64}
     F::Matrix{Float64}
 
-    C::Matrix{Float64}
-    Cv::Dict{Symbol,typeof(view(Matrix{Float64}(1,1),:,1))}
-
     """
         PixelCovarianceCache(nside, lmax, pixels, fields=Symbol[:QQ,:QU,:UQ,:UU])
     """
@@ -186,20 +183,6 @@ struct PixelCovarianceCache
 
         # Map the symbol description of which fields to generate into a bit array
         bitfields = [(ff in fields) for ff in FIELDMAP]
-
-        C = zeros(Float64, N, 9)
-        # Name views for convienience
-        Cv = Dict(
-                  :TT => view(C,:,1),
-                  :QT => view(C,:,2),
-                  :UT => view(C,:,3),
-                  :TQ => view(C,:,4),
-                  :QQ => view(C,:,5),
-                  :UQ => view(C,:,6),
-                  :TU => view(C,:,7),
-                  :QU => view(C,:,8),
-                  :UU => view(C,:,9),
-                 )
 
         spectra = zeros(Float64, lmax+1, 6)
 
@@ -224,7 +207,7 @@ struct PixelCovarianceCache
                    spectra,
                    0, 0.0, 0.0,
                    θ, ϕ, z, αij, αji, cij, sij, cji, sji,
-                   coeff, F, C, Cv)
+                   coeff, F)
     end
 end
 
@@ -274,7 +257,7 @@ function pixelcovariance(nside, pixels, pixind, spec)
     return cache
 end
 
-function pixelcovariance!(cache::PixelCovarianceCache)
+function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
     T = eltype(cache.F)
     R = size(cache.F,1):-1:1
 
@@ -288,7 +271,7 @@ function pixelcovariance!(cache::PixelCovarianceCache)
                 ClTT = cache.spectra[ll,1]
                 tt += ClTT*cache.F[ll,1]
             end
-            cache.C[i,1] = tt
+            C[i,1] = tt
         end
 
         # TQ and TU
@@ -301,10 +284,10 @@ function pixelcovariance!(cache::PixelCovarianceCache)
                 tq -= ClTE*cache.F[ll,2]
                 tu -= ClTB*cache.F[ll,2]
             end
-            cache.C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i]
-            cache.C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i]
-            cache.C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i]
-            cache.C[i,7] = -tq*cache.sji[i] + tu*cache.cji[i]
+            C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i]
+            C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i]
+            C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i]
+            C[i,7] = -tq*cache.sji[i] + tu*cache.cji[i]
         end
 
         # QQ, QU, and UU
@@ -327,10 +310,10 @@ function pixelcovariance!(cache::PixelCovarianceCache)
             cji = cache.cji[i]
             sij = cache.sij[i]
             sji = cache.sji[i]
-            cache.C[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji
-            cache.C[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji
-            cache.C[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji
-            cache.C[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji
+            C[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji
+            C[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji
+            C[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji
+            C[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji
         end
     end
 

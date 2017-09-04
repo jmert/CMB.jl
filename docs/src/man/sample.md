@@ -198,16 +198,17 @@ submatrices.
 Each of these block columns can be visualized as a map:
 ```@example guide
 cache = PixelCovarianceCache(512, 700, obspix, [:TT,:QQ,:QU,:UQ,:UU])
+covmat = Matrix{Float64}(length(obspix), 9)
 updatespectra!(cache, spec)
 selectpixel!(cache, pixind)
 
-covcol = pixelcovariance!(cache)
+pixelcovariance!(cache, covmat)
 fig = figure(figsize=(16,16))
-plot_healpix_map(expand_obspix(covcol[:TT]); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covcol[:QQ]); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covcol[:QU]); sub=(3,3,6), cmap="magma", title="QU pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covcol[:UQ]); sub=(3,3,8), cmap="magma", title="UQ pixel-pixel covariance")
-plot_healpix_map(expand_obspix(covcol[:UU]); sub=(3,3,9), cmap="magma", title="UU pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covmat[:,1]); sub=(3,3,1), cmap="magma", title="TT pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covmat[:,5]); sub=(3,3,5), cmap="magma", title="QQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covmat[:,8]); sub=(3,3,6), cmap="magma", title="QU pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covmat[:,6]); sub=(3,3,8), cmap="magma", title="UQ pixel-pixel covariance")
+plot_healpix_map(expand_obspix(covmat[:,9]); sub=(3,3,9), cmap="magma", title="UU pixel-pixel covariance")
 
 savefig("center_pix_cov.png"); close(gcf()) # hide
 nothing # hide
