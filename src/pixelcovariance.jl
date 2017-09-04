@@ -9,7 +9,8 @@ arXiv:astro-ph/0012120v3
 module PixelCovariance
 
 export PixelCovarianceCoeff, PixelCovarianceF!,
-    PixelCovarianceCache, updatespectra!, selectpixel!,
+    PixelCovarianceCache,
+    copyspectra!, makespectra!, applybeam!, selectpixel!,
     pixelcovariance, pixelcovariance!
 
 # For computing the Legendre terms
@@ -143,6 +144,14 @@ pixel-pixel covariance matrix.
 const FIELDMAP = [:TT :TQ :TU;
                   :QT :QQ :QU;
                   :UT :UQ :UU]
+
+"""
+    const SPECTRAMAP
+
+A symbol array which states the canonical ordering of spectra.
+"""
+const SPECTRAMAP = [:TT :EE :BB :TE :TB :EB]
+
 """
     struct PixelCovarianceCache
 
@@ -222,9 +231,38 @@ function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
     println(io, "    covariance blocks: $(reshape(FIELDMAP[C.fields],:))")
 end
 
-
-function updatespectra!(cache, spectra)
+function copyspectra!(cache, spectra)
     cache.spectra .= spectra
+    return cache
+end
+
+function makespectra!(cache, f, fields=[:TT,:EE])
+    lmax = cache.lmax
+
+    goodinds = map(f->in(f, SPECTRAMAP), fields)
+    all(goodinds) || error("Bad field specification(s): $(fields[.!(goodinds)]...)")
+
+    fieldinds = map(f -> find(f .== SPECTRAMAP)[1], fields)
+    for ll in 0:lmax
+        Cl = f(ll)
+        Cl = isfinite(Cl) ? Cl : zero(eltype(cache.spectra))
+        for ff in fieldinds
+            cache.spectra[ll+1,ff] = Cl
+        end
+    end
+    return cache
+end
+
+function applybeam!(cache, fwhm)
+    lmax = cache.lmax
+    sigma = deg2rad(fwhm/60) / (2sqrt(2log(2)))
+
+    fac = -0.5 * sigma*sigma
+    for ll in 0:lmax
+        Bl = exp(ll*(ll+1) * fac)
+        cache.spectra[ll+1,:] .*= Bl
+    end
+    return cache
 end
 
 function selectpixel!(cache, pixind)

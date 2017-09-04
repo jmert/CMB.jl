@@ -175,20 +175,6 @@ The sines/cosines are used...
 \end{align*}
 ```
 
-Make the reddened spectrum...
-```@example guide
-ℓ = collect(0:700)
-Cl = @. (2π / (ℓ*(ℓ+1)))
-Cl[1] = 0.0 # division by zero, so get rid of the NaN
-nothing # hide
-```
-Make the input spectrum be a TT + BB (no EE) spectrum:
-```@example guide
-spec = zeros(Float64, 701, 6)
-spec[:,1] .= Cl # TT
-spec[:,3] .= Cl # EE
-```
-
 The [`pixelcovariance`](@ref) function makes use of the angular separation and
 bearing angles to compute the pixel-pixel covariance terms according to
 Tegmark, et. al. and sum over the input spectrum. It then returns terms
@@ -199,7 +185,8 @@ Each of these block columns can be visualized as a map:
 ```@example guide
 cache = PixelCovarianceCache(512, 700, obspix, [:TT,:QQ,:QU,:UQ,:UU])
 covmat = Matrix{Float64}(length(obspix), 9)
-updatespectra!(cache, spec)
+makespectra!(cache, ℓ -> 2π / (ℓ*(ℓ+1)), [:TT,:EE])
+applybeam!(cache, 30.0)
 selectpixel!(cache, pixind)
 
 pixelcovariance!(cache, covmat)
