@@ -89,48 +89,88 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
         lmax::Integer, x::T) where {T<:Real}
     @boundscheck _chkbounds_F(C, F, lmax)
 
+    # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
+    # this implementation. (Probably related to the keyword-argument penalty?)
+    local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < eps(one(T))
+
     half = inv(convert(T, 2))
-    y = inv(one(T) - x*x)
-    xy = x * y
 
     @inbounds begin
         P = view(F, :, 1)
 
-        # Fill with the P^2_ℓ(x) terms initially
-        LegendreP!(C.λ, P, lmax, 2, x)
-
         # Clear out the ℓ == 0 and ℓ == 1 terms since they aren't defined, and then
         # compute the rest of the terms
+        F[1,2] = zero(T)
+        F[2,2] = zero(T)
         F[1,3] = zero(T)
         F[2,3] = zero(T)
         F[1,4] = zero(T)
         F[2,4] = zero(T)
-        for ll=2:lmax
-            lT = convert(T, ll)
-            lp2 = lT + convert(T, 2)
-            lm1 = lT - one(T)
-            lm4 = lT - convert(T, 4)
 
-            F[ll+1,3] =  C.β[ll+1] * (lp2*xy*P[ll] - (lm4*y + half*lT*lm1)*P[ll+1])
-            F[ll+1,4] = 2C.β[ll+1] * (lp2*y*P[ll]  - lm1*xy*P[ll+1])
-        end
+        if abs(x) ≈ one(T)
+        # Case where two points are antipodes
 
-        # Now refill P with the P^0_ℓ(x) terms
-        LegendreP!(C.λ, P, lmax, 0, x)
+            # F10 always zero in this case
+            for ll=2:lmax
+                F[ll+1,2] = zero(T)
+            end
 
-        # Compute the F10 terms with the P as is
-        F[1,2] = zero(T)
-        F[2,2] = zero(T)
-        for ll=2:lmax
-            lm1 = convert(T, ll) - one(T)
-            F[ll+1,2] = C.α[ll+1] * (xy*P[ll] - (y + half*lm1)*P[ll+1])
-        end
+            # x == +1, both F12 and F22 are constants (before applying the normalization)
+            if sign(x) == one(T)
+                for ll=2:lmax
+                    F[ll+1,3] =  C.η[ll+1]*half
+                    F[ll+1,4] = -C.η[ll+1]*half
+                end
+
+            # x == -1, the F12 and F22 terms flip signs at each ℓ (modulo normalization)
+            else
+                val = half # 1/2 * (-1)^ℓ for ℓ == 2
+                for ll=2:lmax
+                    F[ll+1,3] = C.η[ll+1]*val
+                    F[ll+1,4] = C.η[ll+1]*val
+                    val = -val
+                end
+            end
+
+            # Fill with P^0_ℓ(x) terms
+            LegendreP!(C.λ, P, lmax, 0, x)
+
+        else # abs(x) ≈ one(T)
+        # Case where two points are not antipodes
+
+            y = inv(one(T) - x*x)
+            xy = x * y
+
+            # Fill with the P^2_ℓ(x) terms initially
+            LegendreP!(C.λ, P, lmax, 2, x)
+
+            for ll=2:lmax
+                lT = convert(T, ll)
+                lp2 = lT + convert(T, 2)
+                lm1 = lT - one(T)
+                lm4 = lT - convert(T, 4)
+
+                F[ll+1,3] =  C.β[ll+1] * (lp2*xy*P[ll] - (lm4*y + half*lT*lm1)*P[ll+1])
+                F[ll+1,4] = 2C.β[ll+1] * (lp2*y*P[ll]  - lm1*xy*P[ll+1])
+            end
+
+            # Now refill P with the P^0_ℓ(x) terms
+            LegendreP!(C.λ, P, lmax, 0, x)
+
+            # Compute the F10 terms with the P as is
+            for ll=2:lmax
+                lm1 = convert(T, ll) - one(T)
+                F[ll+1,2] = C.α[ll+1] * (xy*P[ll] - (y + half*lm1)*P[ll+1])
+            end
+
+        end # abs(x) ≈ one(T)
 
         # Now finally apply the normalization to the P^0_ℓ(x) function
         for ll=0:lmax
             P[ll+1] = C.η[ll+1] * P[ll+1]
         end
-    end
+
+    end # @inbounds
 
     return F
 end
