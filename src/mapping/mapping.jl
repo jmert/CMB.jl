@@ -18,9 +18,7 @@ module Mapping
     include("base.jl")
 
     # Specific definitions
-    export ECPPixel, ECPMapPatchDefn, HealpixPixel, HealpixMapDefn,
-        BicepMapDefn, BicepExtMapDefn
-
+    export ECPPixel, ECPMapPatchDefn, HealpixPixel, HealpixMapDefn
     # HealpixMapNNNN types exported in definition loop
     include("specific.jl")
 end

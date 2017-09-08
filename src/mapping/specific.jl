@@ -20,11 +20,11 @@ function ringlength(m::HealpixMapDefn, r)
 end
 
 function pixelphi(m::HealpixMapDefn{Tp}, p::Int32) where Tp<:ColatAzCoordinates
-    return Healpix.pix2phi_ring(m.nside, p)
+    return Healpix.pix2phi(m.nside, p)
 end
 
 function pixeltheta(m::HealpixMapDefn{Tp}, p::Int32) where Tp<:ColatAzCoordinates
-    return Healpix.pix2theta_ring(m.nside, p)
+    return Healpix.pix2theta(m.nside, p)
 end
 
 let RI, PI, RPI
@@ -112,23 +112,5 @@ for npow in 0:13
         export $symb
         $symb() = HealpixMapDefn{ColatAzCoordinates,HealpixPolarization}($nside)
     end
-end
-
-# Traditional BICEP Map definition
-BicepMapDefn() = ECPMapPatchDefn(-55.0, 55.0, -70.0, -45.0, 0.25, -57.5)
-# Expanded BICEP map definition, required to be pixel-by-pixel compatible within the overlap
-# region. The definition is defined nominally as in the following line, and then we
-# numerically update the definition to match by a single iteration.
-let lx=-60.0, hx=+60.0, ly=-73.0, hy=-38.0
-    # Required Δx to be compatible
-    m₀ = BicepMapDefn();
-    Δ₀ = step(m₀.x_tic)
-    # Approximate bixepext definition
-    m₁ = ECPMapPatchDefn(lx, hx, ly, hy, m₀.ps, m₀.racen)
-    Δ₁ = step(m₁.x_tic)
-    # accumulate map size mismatch caused by pixel size diff
-    Δ = 0.5 * (Δ₀ - Δ₁) * m₁.nx
-    # Then declare the global shortcut
-    global BicepExtMapDefn() = ECPMapPatchDefn(lx-Δ, hx+Δ, ly, hy, m₀.ps, m₀.racen)
 end
 

@@ -1,3 +1,5 @@
+__precompile__()
+
 module CMB
     import Reexport.@reexport
 
@@ -19,7 +21,6 @@ module CMB
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
 
-    include("bkutil.jl")
     include("util.jl")
 end
 
