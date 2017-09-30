@@ -237,7 +237,7 @@ factor.
 """
 @fastmath function pix2phi(nside::I, p::I) where I<:Integer
     F = float(I)
-    p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(T)) - p
+    p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
         i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
         j′ = p′ + one(I) - nside2npixcap(i′)
