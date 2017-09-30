@@ -18,12 +18,12 @@ rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
 # this implementation. (Probably related to the keyword-argument penalty?)
 local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
 
-doc"""
+"""
     bearing(θ₁, ϕ₁, θ₂, ϕ₂) -> α
 
-Calculates at the coordinate $(θ_1, ϕ_1)$ the bearing angle $α$ between North and the great
-circle connecting $(θ_1, ϕ_1)$ to $(θ_2,ϕ_2)$. Coordinates are to be given in radians where
-$θ$ is the colatitude angle from the North Pole and $ϕ$ is the azimuthal angle.
+Calculates at the coordinate ``(θ_1, ϕ_1)`` the bearing angle ``α`` between North and the great
+circle connecting ``(θ_1, ϕ_1)`` to ``(θ_2,ϕ_2)``. Coordinates are to be given in radians where
+``θ`` is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle.
 """
 function bearing end
 
@@ -51,12 +51,12 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 end
 
 
-doc"""
+"""
     distance(θ₁, ϕ₁, θ₂, ϕ₂) -> σ
 
-Calculates the inner angle $σ$ between unit vectors pointing from the center of the sphere
-to the two points $(θ_1,ϕ_1)$ and $(θ_2,ϕ_2)$ on its surface, where $θ$ is the colatitude
-angle from the North Pole and $ϕ$ is the azimuthal angle, both in radians.
+Calculates the inner angle ``σ`` between unit vectors pointing from the center of the sphere
+to the two points ``(θ_1,ϕ_1)`` and ``(θ_2,ϕ_2)`` on its surface, where ``θ`` is the colatitude
+angle from the North Pole and ``ϕ`` is the azimuthal angle, both in radians.
 
 See also [`cosdistance`](@ref)
 """
@@ -85,12 +85,12 @@ function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     return @fastmath 2.0*asin(sqrt(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2))
 end
 
-doc"""
+"""
     cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) -> z
 
-Calculates the cosine of the inner angle $z$ between unit vectors pointing from the center
-of the sphere to the two points $(θ_1,ϕ_1)$ and $(θ_2,ϕ_2)$ on its surface, where $θ$ is the
-colatitude angle from the North Pole and $ϕ$ is the azimuthal angle, both in radians.
+Calculates the cosine of the inner angle ``z`` between unit vectors pointing from the center
+of the sphere to the two points ``(θ_1,ϕ_1)`` and ``(θ_2,ϕ_2)`` on its surface, where ``θ`` is the
+colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in radians.
 
 See also [`distance`](@ref)
 """
