@@ -92,7 +92,7 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 
     # For two parallel vectors, return 0 explicitly to avoid hitting any ambiguity in the
     # rotation angle.
-    if (θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂) || (θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂)
+    if any(abs(θ₁-θ₂) .≈ (zero(T),π)) || any(abs(ϕ₁-ϕ₂) .≈ (zero(T),2π))
         return zero(T)
     end
 
@@ -165,7 +165,7 @@ function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 
     # For two parallel vectors, return [1,0] explicitly to avoid hitting any ambiguity in
     # the rotation angle.
-    if (θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂) || (θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂)
+    if any(abs(θ₁-θ₂) .≈ (zero(T),π)) || any(abs(ϕ₁-ϕ₂) .≈ (zero(T),2π))
         return (one(T), zero(T))
     end
 
@@ -238,9 +238,9 @@ function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 
     # For two parallel vectors, return 0 or π explicitly to avoid numerical precision
     # limits.
-    if θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂
+    if abs(θ₁ - θ₂) ≈ zero(T) && abs(ϕ₁ - ϕ₂) ≈ zero(T)
         return zero(T)
-    elseif θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂
+    elseif abs(θ₁ - θ₂) ≈ π && abs(ϕ₁ - ϕ₂) ≈ 2π
         return π
     end
 
@@ -295,9 +295,9 @@ function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 
     # For two parallel vectors, return 0 or π explicitly to avoid numerical precision
     # limits.
-    if θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂
+    if abs(θ₁ - θ₂) ≈ zero(T) && abs(ϕ₁ - ϕ₂) ≈ zero(T)
         return one(T)
-    elseif θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂
+    elseif abs(θ₁ - θ₂) ≈ π && abs(ϕ₁ - ϕ₂) ≈ 2π
         return -one(T)
     end
 
