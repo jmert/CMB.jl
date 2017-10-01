@@ -71,6 +71,12 @@ function bearing end
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
 radians.
+
+# Examples
+```jldoctest
+julia> bearing(π/2, 0.0, π/4, π/4)
+0.6154797086703871
+```
 """
 bearing(θ₁, ϕ₁, θ₂, ϕ₂) = bearing(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
@@ -104,6 +110,12 @@ end
     bearing(r₁, r₂) -> α
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
+
+# Examples
+```jldoctest
+julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
+0.6154797086703873
+```
 """
 @propagate_inbounds function bearing(r₁::AbstractVector, r₂::AbstractVector)
     r₁ ∥ r₂ && return zero(eltype(r₁))
@@ -132,6 +144,12 @@ function bearing2 end
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
 radians.
+
+# Examples
+```jldoctest
+julia> bearing2(π/2, 0.0, π/4, π/4)
+(0.8164965809277261, 0.5773502691896256)
+```
 """
 bearing2(θ₁, ϕ₁, θ₂, ϕ₂) = bearing2(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
@@ -167,6 +185,12 @@ end
     bearing2(r₁, r₂) -> (δθ, δϕ)
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
+
+# Examples
+```jldoctest
+julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
+(0.816496580927726, 0.5773502691896257)
+```
 """
 @propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
     r₁ ∥ r₂ && return (one(eltype(r₁)), zero(eltype(r₁)))
@@ -193,6 +217,12 @@ function distance end
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
 radians.
+
+# Examples
+```jldoctest
+julia> distance(π/2, 0.0, π/4, π/4)
+1.0471975511965979
+```
 """
 distance(θ₁, ϕ₁, θ₂, ϕ₂) = distance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
@@ -221,6 +251,12 @@ end
     distance(r₁, r₂) -> σ
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
+
+# Examples
+```jldoctest
+julia> distance([1.,0.,0.], [0.5,0.5,sqrt(2)/2])
+1.0471975511965979
+```
 """
 @propagate_inbounds function distance(r₁::AbstractVector, r₂::AbstractVector)
     return acos(cosdistance(r₁, r₂))
@@ -238,6 +274,12 @@ function cosdistance end
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
 radians.
+
+# Examples
+```jldoctest
+julia> cosdistance(π/2, 0.0, π/4, π/4)
+0.5
+```
 """
 cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) = cosdistance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
@@ -266,6 +308,12 @@ end
     cosdistance(r₁, r₂) -> z
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
+
+# Examples
+```jldoctest
+julia> cosdistance([1.,0.,0.], [0.5,0.5,sqrt(2)/2])
+0.5
+```
 """
 @propagate_inbounds function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
     return r₁ ⋅ r₂
