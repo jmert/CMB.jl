@@ -158,7 +158,9 @@ function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     # is negative.
     den = flipsign(den, num)
     num = flipsign(num, num)
-    return (num, den)
+    # Normalize the 2-vector [den, num]
+    len = sqrt(den*den + num*num)
+    return (den / len, num / len)
 end
 
 """
