@@ -4,7 +4,7 @@ Collection of routines for working with coordinates on the sphere.
 module Sphere
 
 export
-    bearing, distance, cosdistance
+    bearing, bearing2, distance, cosdistance
 
 using StaticArrays
 import Base: @propagate_inbounds
@@ -23,8 +23,8 @@ local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
 
 """
 Calculates the bearing angle (``α``), defined as the angle between the meridian (at the
-first coordinate) and the great circle connection the first coordinate to the second. Angles
-are measured clockwise and will be in the range ``[0,π)``.
+first coordinate) and the great circle connecting the first coordinate to the second. Angles
+are measured clockwise and will be in the range ``[0,π)``. See also [`bearing2`](@ref).
 """
 function bearing end
 
@@ -54,8 +54,13 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     end
 
     ϕ₂₁ = ϕ₂ - ϕ₁
-    α = @fastmath atan2(-sin(ϕ₂₁), cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂))
-    return @fastmath mod(α, π)
+    num = -sin(ϕ₂₁)
+    den = cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂)
+    # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
+    # is negative.
+    den = flipsign(den, num)
+    num = flipsign(num, num)
+    return atan2(num, den)
 end
 
 # Helper function to get the v × ẑ value, with a special case for SVectors so that the
@@ -77,7 +82,67 @@ Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
     # is negative.
     den = flipsign(den, num)
     num = flipsign(num, num)
-    return @fastmath atan2(num, den)
+    return atan2(num, den)
+end
+
+"""
+Calculates the latitude/longitude vector components of the bearing angle (i.e. ``δθ =
+\\cos(α), δϕ = \\sin(α)``), defined as the angle between the meridian (at the first
+coordinate) and the great circle connecting the first coordinate to the second. See also
+[`bearing`](@ref).
+"""
+function bearing2 end
+
+"""
+    bearing2(θ₁, ϕ₁, θ₂, ϕ₂) -> (δθ, δϕ)
+
+Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
+is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
+radians.
+"""
+bearing2(θ₁, ϕ₁, θ₂, ϕ₂) = bearing2(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
+
+function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
+    local π = convert(T, Base.π)
+    # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
+    # only the latitude makes any difference, and setting to zero makes the parallel checks
+    # below also function properly.
+    if (θ₁ ≈ zero(T) || θ₁ ≈ π) || (θ₂ ≈ zero(T) || θ₂ ≈ π)
+        ϕ₁ = zero(T)
+        ϕ₂ = zero(T)
+    end
+
+    # For two parallel vectors, return 0 explicitly to avoid hitting any ambiguity in the
+    # rotation angle.
+    if (θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂) || (θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂)
+        return zero(T)
+    end
+
+    ϕ₂₁ = ϕ₂ - ϕ₁
+    num = -sin(ϕ₂₁)
+    den = cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂)
+    # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
+    # is negative.
+    den = flipsign(den, num)
+    num = flipsign(num, num)
+    return (num, den)
+end
+
+"""
+    bearing2(r₁, r₂) -> (δθ, δϕ)
+
+Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
+"""
+@propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
+    r₁₂ = normalize(r₁ × r₂)
+    r₁′ = normalize(r₁ |> cross_ẑ)
+    num = (r₁₂ × r₁′) ⋅ r₁
+    den = r₁₂ ⋅ r₁′
+    # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
+    # is negative.
+    den = flipsign(den, num)
+    num = flipsign(num, num)
+    return (den, num)
 end
 
 """
