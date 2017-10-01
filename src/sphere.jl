@@ -163,10 +163,10 @@ function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
         ϕ₂ = zero(T)
     end
 
-    # For two parallel vectors, return 0 explicitly to avoid hitting any ambiguity in the
-    # rotation angle.
+    # For two parallel vectors, return [1,0] explicitly to avoid hitting any ambiguity in
+    # the rotation angle.
     if (θ₁ ≈ θ₂ && ϕ₁ ≈ ϕ₂) || (θ₁ ≈ -θ₂ && ϕ₁ ≈ -ϕ₂)
-        return zero(T)
+        return (one(T), zero(T))
     end
 
     ϕ₂₁ = ϕ₂ - ϕ₁
