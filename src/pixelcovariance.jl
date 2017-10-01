@@ -13,12 +13,14 @@ export PixelCovarianceCoeff, PixelCovarianceF!,
     copyspectra!, makespectra!, applybeam!, selectpixel!,
     pixelcovariance, pixelcovariance!
 
+using StaticArrays
+
 # For computing the Legendre terms
 import ..Legendre: LegendreUnitCoeff, LegendreP!
 
 # For pixelcovariance() wrapper function
-import ..Sphere: bearing, cosdistance
-import ..Healpix: pix2phi, pix2theta
+import ..Sphere: bearing2, cosdistance
+import ..Healpix: pix2vec
 
 import Base.@boundscheck, Base.@propagate_inbounds
 
@@ -207,14 +209,10 @@ struct PixelCovarianceCache
     spectra::Matrix{Float64}
 
     pixind::Ref{Int}
-    θ₀::Ref{Float64}
-    ϕ₀::Ref{Float64}
+    r₀::MVector{3,Float64}
 
-    θ::Vector{Float64}
-    ϕ::Vector{Float64}
+    r::Vector{SVector{3,Float64}}
     z::Vector{Float64}
-    αij::Vector{Float64}
-    αji::Vector{Float64}
     cij::Vector{Float64}
     sij::Vector{Float64}
     cji::Vector{Float64}
@@ -235,11 +233,9 @@ struct PixelCovarianceCache
 
         spectra = zeros(Float64, lmax+1, 6)
 
-        θ = zeros(Float64, N)
-        ϕ = zeros(Float64, N)
+        r₀ = MVector{3,Float64}(0, 0, 0)
+        r = reinterpret(SVector{3,Float64}, zeros(Float64, 3, N), (N,))
         z = zeros(Float64, N)
-        αij = zeros(Float64, N)
-        αji = zeros(Float64, N)
         cij = zeros(Float64, N)
         sij = zeros(Float64, N)
         cji = zeros(Float64, N)
@@ -249,13 +245,12 @@ struct PixelCovarianceCache
         F = zeros(Float64, lmax+1, 4)
 
         # The pixel coordinates can all be precomputed just once
-        θ .= pix2theta.(nside, pixels)
-        ϕ .= pix2phi.(nside, pixels)
+        r .= pix2vec.(nside, pixels)
 
         return new(nside, lmax, pixels, bitfields,
                    spectra,
-                   0, 0.0, 0.0,
-                   θ, ϕ, z, αij, αji, cij, sij, cji, sji,
+                   0, r₀,
+                   r, z, cij, sij, cji, sji,
                    coeff, F)
     end
 end
@@ -267,7 +262,7 @@ function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
     println(io, "    HEALPix nside: $(C.nside)")
     println(io, "    number of pixels: $(length(C.pixels))")
     println(io, "    maximum ℓ mode: $(C.lmax)")
-    println(io, "    selected pixel: ", C.pixind[], ", at (θ,ϕ) = ($(C.θ₀[]), $(C.ϕ₀[]))")
+    println(io, "    selected pixel: ", C.pixind[], ", at r = $(C.r₀)")
     println(io, "    covariance blocks: $(reshape(FIELDMAP[C.fields],:))")
 end
 
@@ -307,21 +302,16 @@ end
 
 function selectpixel!(cache, pixind)
     cache.pixind[] = pixind
-    cache.θ₀[] = pix2theta(cache.nside, cache.pixels[pixind])
-    cache.ϕ₀[] = pix2phi(cache.nside, cache.pixels[pixind])
+    cache.r₀ .= pix2vec(cache.nside, cache.pixels[pixind])
 
-    cache.z   .= cosdistance.(cache.θ₀, cache.ϕ₀, cache.θ, cache.ϕ)
-    cache.αij .= bearing.(cache.θ₀, cache.ϕ₀, cache.θ,  cache.ϕ)
-    cache.αji .= bearing.(cache.θ,  cache.ϕ,  cache.θ₀, cache.ϕ₀)
-
-    @static if VERSION >= v"0.7.0-DEV.264"
-        _sincos = @fastmath sincos
-    else
-        _sincos = x -> (@fastmath sin(x), @fastmath cos(x))
-    end
-    @inbounds for i in 1:length(cache.αij)
-        (cache.sij[i], cache.cij[i]) = _sincos(2cache.αij[i])
-        (cache.sji[i], cache.cji[i]) = _sincos(2cache.αji[i])
+    @inbounds for ii in 1:length(cache.z)
+        cache.z[ii] = cosdistance(cache.r₀, cache.r[ii])
+        c,s = bearing2(cache.r₀, cache.r[ii])
+        cache.sij[ii] = 2*c*s
+        cache.cij[ii] = c*c - s*s
+        c,s = bearing2(cache.r[ii], cache.r₀)
+        cache.sji[ii] = 2*c*s
+        cache.cji[ii] = c*c - s*s
     end
 
     return cache
