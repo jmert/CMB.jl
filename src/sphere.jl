@@ -19,7 +19,7 @@ rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
 
 # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
 # this implementation. (Probably related to the keyword-argument penalty?)
-local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
+@inline simpleapprox(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
 
 # Make a couple of functions which will make vector math easier for us
 
@@ -82,6 +82,7 @@ bearing(θ₁, ϕ₁, θ₂, ϕ₂) = bearing(promote(θ₁, ϕ₁, θ₂, ϕ₂
 
 function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
+    local ≈ = simpleapprox
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -155,6 +156,7 @@ bearing2(θ₁, ϕ₁, θ₂, ϕ₂) = bearing2(promote(θ₁, ϕ₁, θ₂, ϕ�
 
 function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
+    local ≈ = simpleapprox
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -228,6 +230,7 @@ distance(θ₁, ϕ₁, θ₂, ϕ₂) = distance(promote(θ₁, ϕ₁, θ₂, ϕ�
 
 function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
+    local ≈ = simpleapprox
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
@@ -285,6 +288,7 @@ cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) = cosdistance(promote(θ₁, ϕ₁, θ�
 
 function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     local π = convert(T, Base.π)
+    local ≈ = simpleapprox
     # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
     # only the latitude makes any difference, and setting to zero makes the parallel checks
     # below also function properly.
