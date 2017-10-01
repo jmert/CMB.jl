@@ -21,6 +21,43 @@ rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
 # this implementation. (Probably related to the keyword-argument penalty?)
 local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
 
+# Make a couple of functions which will make vector math easier for us
+
+"""
+    ∥(u, v)
+
+Test whether vector ``u`` is parallel to vector ``v``. Assumes that both are unit
+normalized. See also [`⟂`](@ref).
+"""
+@generated function ∥(u, v)
+    T = promote_type(eltype(u), eltype(v))
+    return :( ($(one(T)) - abs(u⋅v)) < $(sqrt(eps(one(T)))) )
+end
+
+"""
+    ⟂(u, v)
+
+Test whether vector ``u`` is perpendicular to vector ``v``. Assumes that both are unit
+normalized. See also [`∥`](@ref).
+"""
+@generated function ⟂(u, v)
+    T = promote_type(eltype(u), eltype(v))
+    return :( abs(u⋅v) < $(sqrt(eps(one(T)))) )
+end
+
+"""
+    const x̂ = SVector(1, 0, 0)
+    const ŷ = SVector(0, 1, 0)
+    const ẑ = SVector(0, 0, 1)
+
+Constant unit vectors in the Cartesian directions.
+"""
+x̂, ŷ, ẑ
+
+const x̂ = SVector(1, 0, 0)
+const ŷ = SVector(0, 1, 0)
+const ẑ = SVector(0, 0, 1)
+
 """
 Calculates the bearing angle (``α``), defined as the angle between the meridian (at the
 first coordinate) and the great circle connecting the first coordinate to the second. Angles
@@ -63,19 +100,15 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     return atan2(num, den)
 end
 
-# Helper function to get the v × ẑ value, with a special case for SVectors so that the
-# compiler can inline all the operations without needing to actually allocate anything.
-cross_ẑ(v::AbstractVector) = [v[2], -v[1], zero(eltype(v))]
-cross_ẑ(v::SVector) = SVector(v[2], -v[1], zero(eltype(v)))
-
 """
     bearing(r₁, r₂) -> α
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 """
 @propagate_inbounds function bearing(r₁::AbstractVector, r₂::AbstractVector)
+    r₁ ∥ r₂ && return zero(eltype(r₁))
     r₁₂ = r₁ × r₂
-    r₁′ = r₁ |> cross_ẑ
+    r₁′ = r₁ ∥ ẑ ? ẑ × r₂ : r₁ × ẑ
     num = (r₁₂ × r₁′) ⋅ r₁
     den = r₁₂ ⋅ r₁′
     # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
@@ -134,8 +167,9 @@ end
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 """
 @propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
+    r₁ ∥ r₂ && return (one(eltype(r₁)), zero(eltype(r₁)))
     r₁₂ = normalize(r₁ × r₂)
-    r₁′ = normalize(r₁ |> cross_ẑ)
+    r₁′ = normalize(r₁ ∥ ẑ ? ẑ × r₂ : r₁ × ẑ)
     num = (r₁₂ × r₁′) ⋅ r₁
     den = r₁₂ ⋅ r₁′
     # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
@@ -232,9 +266,7 @@ end
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 """
 @propagate_inbounds function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
-    return r₁[1]*r₂[1] + r₁[2]*r₂[2] + r₁[3]*r₂[3]
+    return r₁ ⋅ r₂
 end
-
-
 
 end
