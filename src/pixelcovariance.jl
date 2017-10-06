@@ -339,7 +339,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
                 ClTT = cache.spectra[ll,1]
                 tt += ClTT*cache.F[ll,1]
             end
-            C[i,1] = tt
+            C[i,1] = tt # TT
         end
 
         # TQ and TU
@@ -352,10 +352,10 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
                 tq -= ClTE*cache.F[ll,2]
                 tu -= ClTB*cache.F[ll,2]
             end
-            C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i]
-            C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i]
-            C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i]
-            C[i,7] = -tq*cache.sji[i] + tu*cache.cji[i]
+            C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i] # QT
+            C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i] # QU
+            C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i] # TQ
+            C[i,7] = -tq*cache.sji[i] + tu*cache.cji[i] # TU
         end
 
         # QQ, QU, and UU
@@ -378,10 +378,10 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
             cji = cache.cji[i]
             sij = cache.sij[i]
             sji = cache.sji[i]
-            C[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji
-            C[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji
-            C[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji
-            C[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji
+            C[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
+            C[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
+            C[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
+            C[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
         end
     end
 
