@@ -209,8 +209,6 @@ struct PixelCovarianceCache
     spectra::Matrix{Float64}
 
     pixind::Ref{Int}
-    r₀::MVector{3,Float64}
-
     r::Vector{SVector{3,Float64}}
     z::Vector{Float64}
     cij::Vector{Float64}
@@ -233,7 +231,6 @@ struct PixelCovarianceCache
 
         spectra = zeros(Float64, lmax+1, 6)
 
-        r₀ = MVector{3,Float64}(0, 0, 0)
         r = reinterpret(SVector{3,Float64}, zeros(Float64, 3, N), (N,))
         z = zeros(Float64, N)
         cij = zeros(Float64, N)
@@ -249,8 +246,7 @@ struct PixelCovarianceCache
 
         return new(nside, lmax, pixels, bitfields,
                    spectra,
-                   0, r₀,
-                   r, z, cij, sij, cji, sji,
+                   1, r, z, cij, sij, cji, sji,
                    coeff, F)
     end
 end
@@ -258,11 +254,12 @@ end
 # Improve printing somewhat
 Base.show(io::IO, norm::PixelCovarianceCache) = print(io, PixelCovarianceCache)
 function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
+    pix = C.pixind[]
     println(io, C)
     println(io, "    HEALPix nside: $(C.nside)")
     println(io, "    number of pixels: $(length(C.pixels))")
     println(io, "    maximum ℓ mode: $(C.lmax)")
-    println(io, "    selected pixel: ", C.pixind[], ", at r = $(C.r₀)")
+    println(io, "    selected pixel: ", pix, ", at r = $(C.r[pix])")
     println(io, "    covariance blocks: $(reshape(FIELDMAP[C.fields],:))")
 end
 
@@ -302,14 +299,12 @@ end
 
 function selectpixel!(cache, pixind)
     cache.pixind[] = pixind
-    cache.r₀ .= pix2vec(cache.nside, cache.pixels[pixind])
-
     @inbounds for ii in 1:length(cache.z)
-        cache.z[ii] = cosdistance(cache.r₀, cache.r[ii])
-        c,s = bearing2(cache.r₀, cache.r[ii])
+        cache.z[ii] = cosdistance(cache.r[pixind], cache.r[ii])
+        c,s = bearing2(cache.r[pixind], cache.r[ii])
         cache.sij[ii] = 2*c*s
         cache.cij[ii] = c*c - s*s
-        c,s = bearing2(cache.r[ii], cache.r₀)
+        c,s = bearing2(cache.r[ii], cache.r[pixind])
         cache.sji[ii] = 2*c*s
         cache.cji[ii] = c*c - s*s
     end
