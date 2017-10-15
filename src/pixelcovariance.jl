@@ -231,7 +231,7 @@ struct PixelCovarianceCache
 
         spectra = zeros(Float64, lmax+1, 6)
 
-        r = reinterpret(SVector{3,Float64}, zeros(Float64, 3, N), (N,))
+        r = zeros(SVector{3,Float64}, N)
         z = zeros(Float64, N)
         cij = zeros(Float64, N)
         sij = zeros(Float64, N)
