@@ -320,7 +320,7 @@ julia> cosdistance([1.,0.,0.], [0.5,0.5,sqrt(2)/2])
 ```
 """
 @propagate_inbounds function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
-    return r₁ ⋅ r₂
+    return clamp(r₁ ⋅ r₂, -one(eltype(r₁)), one(eltype(r₁)))
 end
 
 end

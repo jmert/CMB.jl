@@ -30,5 +30,13 @@ for ii=1:7
   @test cosdistance(npole..., π/2, 2π*ii/7) ≈ 0.0 atol=eps(1π)
 end
 
+# Specific case where
+#   norm(a) == 1.0 && dot(a, a) > 1.0
+let a = [0.6468729683743681,-0.18340815863750012,-0.7402140299479167]
+    @test norm(a) == 1.0
+    @test dot(a, a) > 1.0
+    @test cosdistance(a, a) == 1.0
+end
+
 end
 
