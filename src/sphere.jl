@@ -247,7 +247,8 @@ function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
         return π
     end
 
-    return @fastmath 2.0*asin(sqrt(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2))
+    return @fastmath T(2)*asin(sqrt(sin(T(0.5)*(θ₂-θ₁))^2 +
+                                    sin(θ₁)*sin(θ₂)*sin(T(0.5)*(ϕ₂-ϕ₁))^2))
 end
 
 """
@@ -305,7 +306,8 @@ function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
         return -one(T)
     end
 
-    return @fastmath one(T) - 2*(sin(0.5*(θ₂-θ₁))^2 + sin(θ₁)*sin(θ₂)*sin(0.5*(ϕ₂-ϕ₁))^2)
+    return @fastmath one(T) - 2*(sin(T(0.5)*(θ₂-θ₁))^2
+                                 + sin(θ₁)*sin(θ₂)*sin(T(0.5)*(ϕ₂-ϕ₁))^2)
 end
 
 """
