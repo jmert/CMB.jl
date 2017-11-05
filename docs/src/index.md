@@ -16,18 +16,7 @@ Design goals of this package include:
 ## User Manual and Documentation
 ```@contents
 Pages = [
-    "man/sample.md",
-    "man/coordinates.md",
-    "man/numericalvalidation.md",
     "man/references.md"
-]
-Depth = 1
-```
-
-## Numerical Validation
-```@contents
-Pages = [
-    "lib/numericalvalidation.md"
 ]
 Depth = 1
 ```
