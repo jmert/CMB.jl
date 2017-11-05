@@ -198,8 +198,8 @@ julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
     r₁ ∥ r₂ && return (one(eltype(r₁)), zero(eltype(r₁)))
     r₁₂ = normalize(r₁ × r₂)
     r₁′ = normalize(r₁ ∥ ẑ ? ẑ × r₂ : r₁ × ẑ)
-    num = (r₁₂ × r₁′) ⋅ r₁
-    den = r₁₂ ⋅ r₁′
+    num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(eltype(r₁)), one(eltype(r₁)))
+    den = clamp(r₁₂ ⋅ r₁′, -one(eltype(r₁)), one(eltype(r₁)))
     # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
     # is negative.
     den = flipsign(den, num)
