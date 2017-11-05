@@ -10,7 +10,7 @@ module Healpix
 
 export
     npix2nside, nring2nside,
-    nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2npixarea,
+    nside2npix, nside2nring, nside2npixcap, nside2npixequ, nside2pixarea,
     isnorth, issouth,
     isnorthcap, issouthcap, iscap,
     isnorthequbelt, issouthequbelt, isequbelt,
