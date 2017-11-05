@@ -1,26 +1,94 @@
 module Healpix
+    using Compat.Test
     using CMB.Healpix
-    using Base.Test
 
-    # Read off ring beginning/ending for Nside=4 map from Figure 5, Gorski
-    # et al (2004).
-    p_start_nside4 = [0; 4;12;24;40;56;72; 88;104;120;136;152;168;180;188]
-    p_end_nside4   = [3;11;23;39;55;71;87;103;119;135;151;167;179;187;191]
+    # Each of the following arrays can be initialized directly from examining Fig. 4 of
+    # Górski, et al (2005).
+    hpix4_pix     = collect(0:191)
+    hpix4_ring    = Int[]
+    hpix4_ringidx = Int[]
+    hpix4_isnorth        = Bool[]
+    hpix4_issouth        = Bool[]
+    hpix4_iscap          = Bool[]
+    hpix4_isnorthcap     = Bool[]
+    hpix4_issouthcap     = Bool[]
+    hpix4_isequbelt      = Bool[]
+    hpix4_isnorthequbelt = Bool[]
+    hpix4_issouthequbelt = Bool[]
 
-    # Known ring start and ends for each ring
-    @test all(pix2ring.(4, p_start_nside4) .== 1:15)
-    @test all(pix2ring.(4, p_end_nside4)   .== 1:15)
+    for ii in 1:3
+        append!(hpix4_ring, ii .* ones(Int, 4ii))
+        append!(hpix4_ringidx, 1:4ii)
+        append!(hpix4_isnorth,        fill(true,  4ii))
+        append!(hpix4_issouth,        fill(false, 4ii))
+        append!(hpix4_iscap,          fill(true,  4ii))
+        append!(hpix4_isnorthcap,     fill(true,  4ii))
+        append!(hpix4_issouthcap,     fill(false, 4ii))
+        append!(hpix4_isequbelt,      fill(false, 4ii))
+        append!(hpix4_isnorthequbelt, fill(false, 4ii))
+        append!(hpix4_issouthequbelt, fill(false, 4ii))
+    end
+    for ii in 1:5
+        append!(hpix4_ring, (3+ii) .* ones(Int, 16))
+        append!(hpix4_ringidx, 1:16)
+        append!(hpix4_isnorth,        fill(true,  16))
+        append!(hpix4_issouth,        fill(false, 16))
+        append!(hpix4_iscap,          fill(false, 16))
+        append!(hpix4_isnorthcap,     fill(false, 16))
+        append!(hpix4_issouthcap,     fill(false, 16))
+        append!(hpix4_isequbelt,      fill(true,  16))
+        append!(hpix4_isnorthequbelt, fill(true,  16))
+        append!(hpix4_issouthequbelt, fill(false, 16))
+    end
+    for ii in 1:4
+        append!(hpix4_ring, (8+ii) .* ones(Int, 16))
+        append!(hpix4_ringidx, 1:16)
+        append!(hpix4_isnorth,        fill(false, 16))
+        append!(hpix4_issouth,        fill(true,  16))
+        append!(hpix4_iscap,          fill(false, 16))
+        append!(hpix4_isnorthcap,     fill(false, 16))
+        append!(hpix4_issouthcap,     fill(false, 16))
+        append!(hpix4_isequbelt,      fill(true,  16))
+        append!(hpix4_isnorthequbelt, fill(false, 16))
+        append!(hpix4_issouthequbelt, fill(true,  16))
+    end
+    for ii in 1:3
+        jj = 3 - ii + 1
+        append!(hpix4_ring, (12+ii) .* ones(Int, 4jj))
+        append!(hpix4_ringidx, 1:4jj)
+        append!(hpix4_isnorth,        fill(false, 4jj))
+        append!(hpix4_issouth,        fill(true,  4jj))
+        append!(hpix4_iscap,          fill(true,  4jj))
+        append!(hpix4_isnorthcap,     fill(false, 4jj))
+        append!(hpix4_issouthcap,     fill(true,  4jj))
+        append!(hpix4_isequbelt,      fill(false, 4jj))
+        append!(hpix4_isnorthequbelt, fill(false, 4jj))
+        append!(hpix4_issouthequbelt, fill(false, 4jj))
+    end
 
-    # Start of each ring is always 1
-    @test all(pix2ringidx.(4, p_start_nside4) .== 1)
-    # End of rings vary based on whether in a cap or the equatorial belt
-    @test all(pix2ringidx.(4, p_end_nside4) .== [4;8;12;16ones(Int,9);12;8;4])
+    @testset "Nside properties" begin
+        @test nside2npix(4) == length(hpix4_pix)
+        @test npix2nside(length(hpix4_pix)) == 4
+        @test nside2nring(4) == hpix4_ring[end]
+        @test nring2nside(hpix4_ring[end]) == 4
+        @test nside2pixarea(4) == 4π / length(hpix4_pix)
+    end
 
-    # Make sure pixels at starts and ends of rings agree on their z value
-    @test all(pix2z.(4,p_start_nside4) .== pix2z.(4,p_end_nside4))
+    @testset "Pixel indices" begin
+        @test all(pix2ring.(4, hpix4_pix) .== hpix4_ring)
+        @test all(pix2ringidx.(4, hpix4_pix) .== hpix4_ringidx)
+    end
 
-    @test 1 == @inferred pix2ring(4, 0)
-    @test 1 == @inferred pix2ringidx(4, 0)
-    @test 0.0 == @inferred pix2z(4, 88)
+    @testset "Pixel classification" begin
+        @test all(isnorth.(       4, hpix4_pix) .== hpix4_isnorth)
+        @test all(issouth.(       4, hpix4_pix) .== hpix4_issouth)
+        @test all(iscap.(         4, hpix4_pix) .== hpix4_iscap)
+        @test all(isnorthcap.(    4, hpix4_pix) .== hpix4_isnorthcap)
+        @test all(issouthcap.(    4, hpix4_pix) .== hpix4_issouthcap)
+        @test all(isequbelt.(     4, hpix4_pix) .== hpix4_isequbelt)
+        @test all(isnorthequbelt.(4, hpix4_pix) .== hpix4_isnorthequbelt)
+        @test all(issouthequbelt.(4, hpix4_pix) .== hpix4_issouthequbelt)
+    end
+
 end
 
