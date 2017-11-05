@@ -45,7 +45,7 @@ Base.@pure iscap(nside, p)      = isnorthcap(nside, p) | issouthcap(nside, p)
 
 Base.@pure isnorthequbelt(nside, p) = isnorth(nside, p) & ~isnorthcap(nside, p)
 Base.@pure issouthequbelt(nside, p) = issouth(nside, p) & ~issouthcap(nside, p)
-Base.@pure isequbelt(nside, p)      = ~iscap(n, p)
+Base.@pure isequbelt(nside, p)      = ~iscap(nside, p)
 
 # The function definitions are short enough that I wanted to keep them visually together
 # without having the documentation break them up. Add documentation now
