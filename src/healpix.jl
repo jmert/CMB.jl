@@ -51,7 +51,7 @@ Base.@pure isequbelt(nside, p)      = ~iscap(n, p)
 # without having the documentation break them up. Add documentation now
 
 """
-    npix2nside(npix) -> Nside
+    Nisde = npix2nside(npix)
 
 Returns the equivalent `Nside` corresponding to the number of pixels `npix`. Note that no
 validation is performed, so non-conformant values of `npix` will give non-conformant
@@ -59,7 +59,7 @@ Nside values.
 """ npix2nside(npix)
 
 """
-    nring2nside(nring) -> Nside
+    Nside = nring2nside(nring)
 
 Returns the equivalent `Nside` corresponding to the number of iso-latitude rings `nring`.
 Note that no validation is performed, so non-conformant values of `nring` will give
@@ -67,91 +67,91 @@ non-conformant Nside values.
 """ nring2nside(npix)
 
 """
-    nside2npix(nside) -> N
+    Npix = nside2npix(nside)
 
-Returns the total number of pixels `N` in an `nside` HEALPix map.
+Returns the total number of pixels `Npix` in an `nside` HEALPix map.
 
 N.B.: HEALPix pixel indexing is 0-based, so valid pixel values are in the range
 0:(N-1).
 """ nside2npix
 
 """
-    nside2nring(nside) -> N
+    Nring = nside2nring(nside)
 
-Returns the number of iso-latitude rings `N` in the `nside` HEALPix map.
+Returns the number of iso-latitude rings `Nring` in the `nside` HEALPix map.
 """ nside2nring
 
 """
-    nside2npixcap(nside) -> N
+    Npix = nside2npixcap(nside)
 
-Returns the number of pixels `N` in the polar caps for the given `nside` HEALPix map.
+Returns the number of pixels `Npix` in the polar caps for the given `nside` HEALPix map.
 """ nside2npixcap
 
 """
-    nside2npixequ(nside) -> N
+    Npix = nside2npixequ(nside)
 
-Returns the number of pixels `N` in the northern hemisphere, including the equatorial
+Returns the number of pixels `Npix` in the northern hemisphere, including the equatorial
 ring, for the given `nside` HEALPix map.
 """ nside2npixequ
 
 """
-    nside2pixarea(nside) -> σ
+    σ = nside2pixarea(nside)
 
-Returns the surface area `σ` (in steradiands) of each pixel in the given `nside` HEALPix
+Returns the surface area `σ` (in steradians) of each pixel in the given `nside` HEALPix
 map.
 """ nside2pixarea
 
 """
-    isnorthcap(nside, pix) -> TF
+    isnorthcap(nside, pix)
 
 Test for whether the given pixel `pix` is in the northern polar cap for an `nside`
 HEALPix map.
 """ isnorthcap
 
 """
-    issouthcap(nside, pix) -> TF
+    issouthcap(nside, pix)
 
 Test for whether the given pixel `pix` is in the southern polar cap for an `nside`
 HEALPix map.
 """ issouthcap
 
 """
-    iscap(nside, pix) -> TF
+    iscap(nside, pix)
 
 Test for whether the given pixel `pix` is in either polar cap for an `nside` HEALPix
 map.
 """ iscap
 
 """
-    isnorthequbelt(nside, pix) -> TF
+    isnorthequbelt(nside, pix)
 
 Test for whether the given pixel `pix` is in the northern equatorial belt (including the
 equatorial ring) for an `nside` HEALPix map.
 """ isnorthequbelt
 
 """
-    issouthequbelt(nside, pix) -> TF
+    issouthequbelt(nside, pix)
 
 Test for whether the given pixel `pix` is in the southern equatorial belt (excluding the
 equatorial ring) for an `nside` HEALPix map.
 """ issouthequbelt
 
 """
-    isequbelt(nside, pix) -> TF
+    isequbelt(nside, pix)
 
 Test for whether the given pixel `pix` is in the equatorial belt for an `nside` HEALPix
 map.
 """ isequbelt
 
 """
-    isnorth(nside, pix) -> TF
+    isnorth(nside, pix)
 
 Test for whether the given pixel `pix` is in the northern hemisphere (including the
 equatorial ring) for an `nside` HEALPix map.
 """ isnorth
 
 """
-    issouth(nside, pix) -> TF
+    issouth(nside, pix)
 
 Test for whether the given pixel `pix` is in the southern hemisphere (excluding the
 equatorial ring) for an `nside` HEALPix map.
@@ -160,7 +160,7 @@ equatorial ring) for an `nside` HEALPix map.
 ####
 
 """
-    pix2ring(nside, p) -> i
+    i = pix2ring(nside, p)
 
 Computes the ring index `i` for the given pixel `p`. `nside` is the Nside resolution
 factor.
@@ -179,7 +179,7 @@ end
 pix2ring(nside, p) = pix2ring(promote(nside, p)...)
 
 """
-    pix2ringidx(nside, p) -> j
+    j = pix2ringidx(nside, p)
 
 Computes the index `j` within the ring for the given pixel `p`. `nside` is the Nside
 resolution factor.
@@ -201,7 +201,7 @@ end
 pix2ringidx(nside, p) = pix2ringidx(promote(nside, p)...)
 
 """
-    pix2z(nside, p) -> z
+    z = pix2z(nside, p)
 
 Computes the cosine of the colatitude `z` for the given pixel `p`. `nside` is the Nside
 resolution factor.
@@ -222,7 +222,7 @@ end
 pix2z(nside, p) = pix2z(promote(nside, p)...)
 
 """
-    pix2theta(nside, p) -> θ
+    θ = pix2theta(nside, p)
 
 Computes the colatitude `θ` for the given pixel `p`. `nside` is the Nside resolution
 factor.
@@ -230,7 +230,7 @@ factor.
 pix2theta(nside, p) = @fastmath acos(pix2z(promote(nside, p)...))
 
 """
-    pix2phi(nside, p) -> ϕ
+    ϕ = pix2phi(nside, p)
 
 Computes the azimuth `ϕ` for the given pixel `p`. `nside` is the Nside resolution
 factor.
@@ -258,16 +258,16 @@ end
 pix2phi(nside, p) = pix2phi(promote(nside, p)...)
 
 """
-    pix2ang(nside, p) -> (θ,ϕ)
+    (θ,ϕ) = pix2ang(nside, p)
 
 Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`.
 """
 pix2ang(nside, p) = (pix2theta(nside, p), pix2phi(nside, p))
 
 """
-    pix2vec(nside, p) -> SVector{3}(x, y, z)
+    r::SVector{3} = pix2vec(nside, p)
 
-Computes the unit vector pointing to the pixel center of the given pixel `p`.
+Computes the unit vector `r` pointing to the pixel center of the given pixel `p`.
 """
 @fastmath function pix2vec(nside::I, p::I) where I<:Integer
     z = pix2z(nside, p)

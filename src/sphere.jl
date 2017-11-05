@@ -66,7 +66,7 @@ are measured clockwise and will be in the range ``[0,π)``. See also [`bearing2`
 function bearing end
 
 """
-    bearing(θ₁, ϕ₁, θ₂, ϕ₂) -> α
+    α = bearing(θ₁, ϕ₁, θ₂, ϕ₂)
 
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
@@ -108,7 +108,7 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 end
 
 """
-    bearing(r₁, r₂) -> α
+    α = bearing(r₁, r₂)
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 
@@ -140,7 +140,7 @@ coordinate) and the great circle connecting the first coordinate to the second. 
 function bearing2 end
 
 """
-    bearing2(θ₁, ϕ₁, θ₂, ϕ₂) -> (δθ, δϕ)
+    (δθ, δϕ) = bearing2(θ₁, ϕ₁, θ₂, ϕ₂)
 
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
@@ -184,7 +184,7 @@ function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 end
 
 """
-    bearing2(r₁, r₂) -> (δθ, δϕ)
+    (δθ, δϕ) = bearing2(r₁, r₂)
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 
@@ -214,7 +214,7 @@ sphere to two points on its surface.
 function distance end
 
 """
-    distance(θ₁, ϕ₁, θ₂, ϕ₂) -> σ
+    σ = distance(θ₁, ϕ₁, θ₂, ϕ₂)
 
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
@@ -251,7 +251,7 @@ function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 end
 
 """
-    distance(r₁, r₂) -> σ
+    σ = distance(r₁, r₂)
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 
@@ -272,7 +272,7 @@ center of the sphere to two points on its surface.
 function cosdistance end
 
 """
-    cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) -> z
+    z = cosdistance(θ₁, ϕ₁, θ₂, ϕ₂)
 
 Points on the sphere are given as coordinate pairs ``(θ₁,ϕ₁)`` and ``(θ₂,ϕ₂)`` where ``θ``
 is the colatitude angle from the North Pole and ``ϕ`` is the azimuthal angle, both in
@@ -309,7 +309,7 @@ function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
 end
 
 """
-    cosdistance(r₁, r₂) -> z
+    z = cosdistance(r₁, r₂)
 
 Points on the sphere are given as unit vectors ``r₁`` and ``r₂``.
 
