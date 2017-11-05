@@ -2,79 +2,85 @@ module Sphere
 using Compat.Test
 using CMB.Sphere, StaticArrays
 
-@testset "Sphere antipodes (angles)" begin
-    npole = (0.0,  1.0)
-    spole = (1.0π, 2.0)
+const NumTypes = (Float32, Float64, BigFloat)
+
+@testset "Antipodes (angles, $T)" for T in NumTypes
+    npole = (T(0.0),  T(1.0))
+    spole = (T(π), T(2.0))
 
     # North and South Pole antipodes
-    @test bearing(    npole..., spole...) == 0.0
-    @test bearing(    spole..., npole...) == 0.0
-    @test bearing2(   npole..., spole...) == (1.0, 0.0)
-    @test bearing2(   spole..., npole...) == (1.0, 0.0)
-    @test distance(   npole..., spole...) == 1π
-    @test cosdistance(npole..., spole...) == -1.0
+    @test @inferred bearing(    npole..., spole...) == T(0.0)
+    @test @inferred bearing(    spole..., npole...) == T(0.0)
+    @test @inferred bearing2(   npole..., spole...) == (T(1.0), T(0.0))
+    @test @inferred bearing2(   spole..., npole...) == (T(1.0), T(0.0))
+    @test @inferred distance(   npole..., spole...) == T(π)
+    @test @inferred cosdistance(npole..., spole...) == T(-1.0)
 
     # North and North Pole
-    @test bearing(    npole..., npole...) == 0.0
-    @test bearing2(   npole..., npole...) == (1.0, 0.0)
-    @test distance(   npole..., npole...) == 0.0
-    @test cosdistance(npole..., npole...) == 1.0
+    @test @inferred bearing(    npole..., npole...) == T(0.0)
+    @test @inferred bearing2(   npole..., npole...) == (T(1.0), T(0.0))
+    @test @inferred distance(   npole..., npole...) == T(0.0)
+    @test @inferred cosdistance(npole..., npole...) == T(1.0)
 
     # South and South Pole
-    @test bearing(    spole..., spole...) == 0.0
-    @test bearing2(   spole..., spole...) == (1.0, 0.0)
-    @test distance(   spole..., spole...) == 0.0
-    @test cosdistance(spole..., spole...) == 1.0
+    @test @inferred bearing(    spole..., spole...) == T(0.0)
+    @test @inferred bearing2(   spole..., spole...) == (T(1.0), T(0.0))
+    @test @inferred distance(   spole..., spole...) == T(0.0)
+    @test @inferred cosdistance(spole..., spole...) == T(1.0)
 end
 
-@testset "Sphere antipodes (vectors)" begin
-    npole = @SVector [0.0, 0.0,  1.0]
-    spole = @SVector [0.0, 0.0, -1.0]
+@testset "Antipodes (vectors, $T)" for T in NumTypes
+    npole = @SVector T[0.0, 0.0,  1.0]
+    spole = @SVector T[0.0, 0.0, -1.0]
 
     # North and South Pole antipodes
-    @test bearing(    npole, spole) == 0.0
-    @test bearing(    spole, npole) == 0.0
-    @test bearing2(   npole, spole) == (1.0, 0.0)
-    @test bearing2(   spole, npole) == (1.0, 0.0)
-    @test distance(   npole, spole) == 1π
-    @test cosdistance(npole, spole) == -1.0
+    @test @inferred bearing(    npole, spole) == T(0.0)
+    @test @inferred bearing(    spole, npole) == T(0.0)
+    @test @inferred bearing2(   npole, spole) == (T(1.0), T(0.0))
+    @test @inferred bearing2(   spole, npole) == (T(1.0), T(0.0))
+    @test @inferred distance(   npole, spole) == T(π)
+    @test @inferred cosdistance(npole, spole) == T(-1.0)
 
     # North and North Pole
-    @test bearing(    npole, npole) == 0.0
-    @test bearing2(   npole, npole) == (1.0, 0.0)
-    @test distance(   npole, npole) == 0.0
-    @test cosdistance(npole, npole) == 1.0
+    @test @inferred bearing(    npole, npole) == T(0.0)
+    @test @inferred bearing2(   npole, npole) == (T(1.0), T(0.0))
+    @test @inferred distance(   npole, npole) == T(0.0)
+    @test @inferred cosdistance(npole, npole) == T(1.0)
 
     # South and South Pole
-    @test bearing(    spole, spole) == 0.0
-    @test bearing2(   npole, npole) == (1.0, 0.0)
-    @test distance(   spole, spole) == 0.0
-    @test cosdistance(spole, spole) == 1.0
+    @test @inferred bearing(    spole, spole) == T(0.0)
+    @test @inferred bearing2(   spole, spole) == (T(1.0), T(0.0))
+    @test @inferred distance(   spole, spole) == T(0.0)
+    @test @inferred cosdistance(spole, spole) == T(1.0)
 end
 
-@testset "Sphere Pole to Equator (angles)" begin
+@testset "Pole to Equator (angles, $T)" for T in NumTypes
     # Pole with arbitrary points around equator. Distance at the equator is easy to know
     # analytically.
-    npole = (0.0, 1.0)
+    npole = (T(0.0), T(1.0))
+    atol = max(eps(1π), eps(T(π)))
     for ii=1:7
-        eqpnt = (π/2, 2π*ii/7)
-        @test bearing(    npole..., eqpnt...) == 0.0
-        @test bearing2(   npole..., eqpnt...) == (1.0, 0.0)
-        @test distance(   npole..., eqpnt...) ≈ π/2
-        @test cosdistance(npole..., eqpnt...) ≈ 0.0 atol=eps(1π)
+        local pi = T===BigFloat ? T(π) : 1.0π
+        eqpnt = (T(pi/2), T(2pi*ii/7))
+        @test @inferred bearing(    npole..., eqpnt...) == T(0.0)
+        @test @inferred bearing2(   npole..., eqpnt...) == (T(1.0), T(0.0))
+        @test @inferred(distance(   npole..., eqpnt...)) ≈ T(π/2) atol=atol
+        @test @inferred(cosdistance(npole..., eqpnt...)) ≈ T(0.0) atol=atol
     end
 end
 
-@testset "Sphere Pole to Equator (vectors)" begin
+@testset "Pole to Equator (vectors, $T)" for T in NumTypes
     # Pole with arbitrary points around equator. Distance at the equator is easy to know
     # analytically, so vary longitudes to not nice multiples of π.
-    npole = @SVector [0.0, 0.0, 1.0]
+    npole = @SVector T[0.0, 0.0, 1.0]
+    atol = max(eps(1π), eps(T(π)))
     for ii=1:7
-        eqpnt = @SVector [cos(2π*ii/7), sin(2π*ii/7), 0.0]
-        @test bearing(    npole, eqpnt) == 0.0
-        @test bearing2(   npole, eqpnt) == (1.0, 0.0)
-        @test distance(   npole, eqpnt) ≈ π/2
-        @test cosdistance(npole, eqpnt) ≈ 0.0 atol=eps(1.0)
+        local pi = T===BigFloat ? T(π) : 1.0π
+        eqpnt = @SVector T[cos(2pi*ii/7), sin(2pi*ii/7), 0.0]
+        @test @inferred bearing(    npole, eqpnt) == T(0.0)
+        @test @inferred bearing2(   npole, eqpnt) == (T(1.0), T(0.0))
+        @test @inferred(distance(   npole, eqpnt)) ≈ T(π/2) atol=atol
+        @test @inferred(cosdistance(npole, eqpnt)) ≈ T(0.0) atol=atol
     end
 end
 
