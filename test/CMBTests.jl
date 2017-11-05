@@ -5,7 +5,6 @@ module CMBTests
         "legendre" => "Legendre",
         "harmonics" => "Harmonics",
         "healpix" => "HEALPix",
-        "pixelcovariance" => "Pixel-Pixel Covariance"
        )
     TESTLIST = Dict{typeof(""), typeof("")}()
 
