@@ -9,14 +9,8 @@ module CMB
     include("legendre.jl")
     @reexport using .Legendre
 
-    include("harmonics.jl")
-    @reexport using .Harmonics
-
     include("healpix.jl")
     @reexport using .Healpix
-
-    include("mapping/mapping.jl")
-    @reexport using .Mapping
 
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
