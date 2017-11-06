@@ -1,8 +1,7 @@
 module Sphere
 using Compat.Test
+using ..CMBTests: NumTypes
 using CMB.Sphere, StaticArrays
-
-const NumTypes = (Float32, Float64, BigFloat)
 
 @testset "Antipodes (angles, $T)" for T in NumTypes
     npole = (T(0.0),  T(1.0))

@@ -10,6 +10,8 @@ module CMBTests
        )
     TESTLIST = Dict{typeof(""), typeof("")}()
 
+    const NumTypes = (Float32, Float64, BigFloat)
+
     export load!, loadall!, runtests
 
     function load!(testlist, id)
