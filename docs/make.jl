@@ -9,9 +9,10 @@ makedocs(
     pages = [
         "CMB.jl Documentation" => "index.md",
         "Manual" => [
+            "Legendre Polynomials" => "man/legendre.md",
             "References" => "man/references.md"
         ],
-        "Library Documentation" => [
+        "API Reference" => [
             "Public" => "lib/public.md",
             "Private" => "lib/private.md"
         ]
