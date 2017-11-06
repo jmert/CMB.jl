@@ -1,16 +1,16 @@
 export outer, quadprod
 
 """
-    outer(A::SparseMatrixCSC, n::Integer, w::AbstractVector)
-    outer(w::AbstractVector, A::SparseMatrixCSC, n::Integer)
-
 Computes the outer product between a given column of a sparse matrix and a vector.
-The second signature computes the conjugate transpose of the first, i.e the first returns
-``\\vec a_n \\vec w^\\dagger`` while the second does ``\\vec w \\vec a_n^\\dagger``,
-where ``\\vec a_n`` is the column `A[:,n]`.
 """
 function outer end
 
+"""
+    outer(A::SparseMatrixCSC, n::Integer, w::AbstractVector)
+
+Performs the equivalent of ``\\vec a_n \\vec w^\\dagger`` where ``\\vec a_n`` is the
+column `A[:,n]`.
+"""
 function outer(A::SparseMatrixCSC{Tv,Ti}, n::Integer, w::AbstractVector{Tv}) where {Tv,Ti}
     colptrn = nzrange(A, n)
     rowvalA = rowvals(A)
@@ -41,6 +41,12 @@ function outer(A::SparseMatrixCSC{Tv,Ti}, n::Integer, w::AbstractVector{Tv}) whe
     return SparseMatrixCSC(size(A,1), nnzw, colptr, rowval, nzvals)
 end
 
+"""
+    outer(w::AbstractVector, A::SparseMatrixCSC, n::Integer)
+
+Performs the equivalent of ``\\vec w \\vec {a_n}^\\dagger`` where ``\\vec a_n`` is the
+column `A[:,n]`.
+"""
 function outer(w::AbstractVector{Tv}, A::SparseMatrixCSC{Tv,Ti}, n::Integer) where {Tv,Ti}
     colptrn = nzrange(A, n)
     rowvalA = rowvals(A)
