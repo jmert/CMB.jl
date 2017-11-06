@@ -21,7 +21,7 @@ module CMB
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
 
-    include("sparse.jl")
     include("util.jl")
+    @reexport using .Util
 end
 

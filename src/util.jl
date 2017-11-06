@@ -3,6 +3,8 @@ Miscellaneous utility functions.
 """
 module Util
 
+include("sparse.jl")
+
 """
     @relerr fncall(args...)
 
