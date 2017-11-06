@@ -1,5 +1,5 @@
 module CMBTests
-    using Base.Test
+    using Compat.Test
 
     const MODULES = Dict(
         "legendre" => "Legendre",
