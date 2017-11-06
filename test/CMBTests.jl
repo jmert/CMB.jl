@@ -30,9 +30,10 @@ module CMBTests
                 modpath = joinpath(dirname(@__FILE__), "$(id).jl")
                 # Include the file and have it processed within this module
                 print("running $desc tests... ")
-                tic()
+                t0 = time_ns()
                 eval(CMBTests, :(include($modpath)) )
-                toc()
+                t1 = time_ns()
+                println( (t1-t0)/1e9, " seconds")
             end
         end
     end
