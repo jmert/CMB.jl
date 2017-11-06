@@ -2,10 +2,11 @@ module CMBTests
     using Compat.Test
 
     const MODULES = Dict(
+        "sphere" => "Sphere",
         "legendre" => "Legendre",
-        "harmonics" => "Harmonics",
         "healpix" => "HEALPix",
-        "sphere" => "Sphere"
+        "harmonics" => "Harmonics",
+        "sparse" => "Sparse"
        )
     TESTLIST = Dict{typeof(""), typeof("")}()
 
