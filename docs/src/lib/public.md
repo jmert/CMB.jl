@@ -34,3 +34,9 @@ Private = false
 Modules = [CMB.PixelCovariance]
 Private = false
 ```
+
+## Miscellaneous Utilities
+```@autodocs
+Modules = [CMB.Util]
+Private = false
+```

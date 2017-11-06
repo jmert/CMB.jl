@@ -6,8 +6,8 @@ export outer, quadprod
 
 Computes the outer product between a given column of a sparse matrix and a vector.
 The second signature computes the conjugate transpose of the first, i.e the first returns
-``\\vec a_n \\vec w^*`` while the second does ``\\vec w \\vec a_n^*``, where ``\\vec a_n``
-is the column `A[:,n]`.
+``\\vec a_n \\vec w^\\dagger`` while the second does ``\\vec w \\vec a_n^\\dagger``,
+where ``\\vec a_n`` is the column `A[:,n]`.
 """
 function outer end
 
