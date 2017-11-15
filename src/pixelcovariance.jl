@@ -16,7 +16,7 @@ export PixelCovarianceCoeff, PixelCovarianceF!,
 using StaticArrays
 
 # For computing the Legendre terms
-import ..Legendre: LegendreUnitCoeff, LegendreP!
+import ..Legendre: LegendreUnitCoeff, legendre!
 
 # For pixelcovariance() wrapper function
 import ..Sphere: bearing2, cosdistance
@@ -135,7 +135,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             end
 
             # Fill with P^0_ℓ(x) terms
-            LegendreP!(C.λ, P, lmax, 0, x)
+            legendre!(C.λ, P, lmax, 0, x)
 
         else # abs(x) ≈ one(T)
         # Case where two points are not antipodes
@@ -144,7 +144,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             xy = x * y
 
             # Fill with the P^2_ℓ(x) terms initially
-            LegendreP!(C.λ, P, lmax, 2, x)
+            legendre!(C.λ, P, lmax, 2, x)
 
             for ll=2:lmax
                 lT = convert(T, ll)
@@ -157,7 +157,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             end
 
             # Now refill P with the P^0_ℓ(x) terms
-            LegendreP!(C.λ, P, lmax, 0, x)
+            legendre!(C.λ, P, lmax, 0, x)
 
             # Compute the F10 terms with the P as is
             for ll=2:lmax

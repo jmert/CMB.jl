@@ -16,6 +16,7 @@ Design goals of this package include:
 ## User Manual and Documentation
 ```@contents
 Pages = [
+    "man/legendre.md",
     "man/references.md"
 ]
 Depth = 1
