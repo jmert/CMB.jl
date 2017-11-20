@@ -9,6 +9,7 @@ makedocs(
     pages = [
         "CMB.jl Documentation" => "index.md",
         "Manual" => [
+            "HEALPix Pixelization" => "man/healpix.md",
             "Legendre Polynomials" => "man/legendre.md",
             "References" => "man/references.md"
         ],
