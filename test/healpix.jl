@@ -90,5 +90,19 @@ module Healpix
         @test all(issouthequbelt.(4, hpix4_pix) .== hpix4_issouthequbelt)
     end
 
+    @testset "Validity checks" begin
+        @test all(ishealpixok.(2.^(0:29)) .== true)
+        @test all(ishealpixok.([0, 2^30]) .== false)
+        @test_throws InvalidNside checkhealpix(0)
+
+        @test all(ishealpixok.(4, hpix4_pix) .== true)
+        @test all(ishealpixok.(4, [-1, 192]) .== false)
+        @test_throws InvalidPixel checkhealpix(4, 192)
+
+        for pix2fn in (pix2z, pix2theta, pix2phi, pix2ang, pix2vec)
+            @test_throws InvalidNside pix2fn(5,  0)
+            @test_throws InvalidPixel pix2fn(4, -1)
+        end
+    end
 end
 
