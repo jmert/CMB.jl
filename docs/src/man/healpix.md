@@ -173,3 +173,82 @@ passing through the Prime Meridian.
 
 In reverse, converting an arbitrary spherical coordinate to a pixel index... *...TO BE
 IMPLEMENTED...*
+
+## Input validation and error handling
+
+As stated earlier, the `HEALPix` ``\Nside`` parameter takes on values which are powers of
+two and by convention of the official `HEALPix` [^1] source is limited to the range
+``1`` to ``2^29``.
+Validity of any `nside` parameter can be checked with the
+[`CMB.Healpix.ishealpixok`](@ref ishealpixok(::Any)) function.
+```jldoctest healpix
+julia> ishealpixok(4)
+true
+
+julia> ishealpixok.((5, 2^30))
+(false, false)
+```
+Likewise, once given an ``\Nside`` value, the pixel indices are bounded in ``0`` to
+`nside2npix(nside) - 1`;
+the two-argument form of [`ishealpixok`](@ref ishealpixok(::Any,::Any)) returns
+whether a pixel is valid
+for the specified `nside` or not:
+```jldoctest healpix
+julia> nside2npix(4)
+192
+
+julia> ishealpixok(4, 191)
+true
+
+julia> ishealpixok(4, 192)
+false
+```
+Variants which throw a [`CMB.Healpix.InvalidNside`](@ref) or
+[`CMB.Healpix.InvalidPixel`](@ref) error are provided by
+[`CMB.Healpix.checkhealpix`](@ref):
+```jldoctest healpix
+julia> checkhealpix(5)
+ERROR: 5 is not a valid Nside parameter (must be power of 2)
+[...]
+
+julia> checkhealpix(4, 192)
+ERROR: 192 is not a valid pixel index for Nside = 4 (must be from 0 to 191)
+[...]
+```
+
+!!! note
+    Only the functions working with spherical coordinates validate their inputs.
+    The pixel indexing and classification functions are considered low-level
+    routines and assume valid inputs.
+    For example,
+    ```jldoctest healpix
+    julia> nside2npix(5)
+    300
+
+    julia> pix2ring(5, 0)
+    1
+
+    julia> pix2theta(5, 0)
+    ERROR: 5 is not a valid Nside parameter (must be power of 2)
+    [...]
+
+    julia> isnorth(4, -1)
+    true
+
+    julia> pix2ringidx(4, -1)
+    0
+
+    julia> pix2phi(4, -1)
+    ERROR: -1 is not a valid pixel index for Nside = 4 (must be from 0 to 191)
+    [...]
+    ```
+    This choise was made for the sake of computational efficiency — the low-level
+    pixel indexing/classification functions are used internally to compute the
+    spherical coordinates.
+
+---
+
+### Footnotes:
+
+[^1]: Official `HEALPix` package:
+    [http://healpix.sourceforge.net/](http://healpix.sourceforge.net/)

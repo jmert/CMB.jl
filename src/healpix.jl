@@ -15,7 +15,7 @@ export
     isnorthcap, issouthcap, iscap,
     isnorthequbelt, issouthequbelt, isequbelt,
     pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec,
-    UNSEEN
+    UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
 using StaticArrays
 
@@ -26,6 +26,81 @@ Special value recognized by the libhealpix/healpy routines as an unobserved/mask
 pixel.
 """
 const UNSEEN = -1.6375e+30
+
+"""
+    const MAX_NSIDE = 2^29
+
+Maximum valid ``N_\\mathrm{side}`` parameter value.
+"""
+const MAX_NSIDE = 2^29
+
+"""
+    InvalidNside(nside)
+
+An invalid `nside` value was provided.
+"""
+struct InvalidNside <: Exception
+    nside::Int
+end
+Base.showerror(io::IO, e::InvalidNside) =
+        print(io, "$(e.nside) is not a valid Nside parameter (must be power of 2)")
+
+"""
+    InvalidPixel(nside, pix)
+
+An invalid pixel index `pix` was provided for the given `nside`.
+"""
+struct InvalidPixel <: Exception
+    nside::Int
+    pix::Int
+end
+Base.showerror(io::IO, e::InvalidPixel) =
+        print(io, "$(e.pix) is not a valid pixel index for Nside = $(e.nside) " *
+              "(must be from 0 to $(nside2npix(e.nside)-1))")
+
+Base.@pure isvalidnside(nside) = (1 ≤ nside ≤ MAX_NSIDE) && ispow2(nside)
+Base.@pure isvalidpixel(nside, pix) = 0 ≤ pix < nside2npix(nside)
+
+"""
+    ishealpixok(nside)
+
+Returns `true` if `nside` is a power of two in the range `1` to
+`2^$(Int(log2(MAX_NSIDE)))`, otherwise `false`.
+"""
+Base.@pure ishealpixok(nside) = isvalidnside(nside)
+
+"""
+    isheapixok(nside, pix)
+
+Returns `true` if `nside` is valid and `pix` is in the range `0` to `nside2npix(nside) - 1`,
+otherwise `false`.
+"""
+Base.@pure ishealpixok(nside, pix) = isvalidnside(nside) && isvalidpixel(nside, pix)
+
+"""
+    checkhealpix(nside)
+
+Throws an [`InvalidNside`](@ref) exception if `nside` is not a valid value.
+"""
+function checkhealpix(nside)
+    isvalidnside(nside) || throw(InvalidNside(nside))
+    return nothing
+end
+
+"""
+    checkhealpix(nside, pix)
+
+Throws an [`InvalidNside`](@ref) exception if `nside` is not a valid value or an
+[`InvalidPixel`](@ref) exception if `pix` is out of range for the given
+``N_\\mathrm{side}``.
+"""
+function checkhealpix(nside, pix)
+    checkhealpix(nside)
+    isvalidpixel(nside, pix) || throw(InvalidPixel(nside, pix))
+    return nothing
+end
+
+# As relatively low-level functions, we don't validate nside or pixel values
 
 Base.@pure npix2nside(npix::Integer)   = trunc(typeof(npix), sqrt(npix/12))
 Base.@pure nring2nside(nring::Integer) = (nring + one(nring)) ÷ 4
@@ -53,26 +128,20 @@ Base.@pure isequbelt(nside, p)      = ~iscap(nside, p)
 """
     Nisde = npix2nside(npix)
 
-Returns the equivalent `Nside` corresponding to the number of pixels `npix`. Note that no
-validation is performed, so non-conformant values of `npix` will give non-conformant
-Nside values.
+Returns the equivalent `Nside` corresponding to the number of pixels `npix`.
 """ npix2nside(npix)
 
 """
     Nside = nring2nside(nring)
 
 Returns the equivalent `Nside` corresponding to the number of iso-latitude rings `nring`.
-Note that no validation is performed, so non-conformant values of `nring` will give
-non-conformant Nside values.
 """ nring2nside(npix)
 
 """
     Npix = nside2npix(nside)
 
-Returns the total number of pixels `Npix` in an `nside` HEALPix map.
-
-N.B.: HEALPix pixel indexing is 0-based, so valid pixel values are in the range
-0:(N-1).
+Returns the total number of pixels `Npix` in an `nside` HEALPix map. Note that `HEALPix`
+pixel indexing is 0-based, so valid pixel values are in the range `0` to `Npix - 1`.
 """ nside2npix
 
 """
@@ -206,7 +275,19 @@ pix2ringidx(nside, p) = pix2ringidx(promote(nside, p)...)
 Computes the cosine of the colatitude `z` for the given pixel `p`. `nside` is the Nside
 resolution factor.
 """
-@fastmath function pix2z(nside::I, p::I) where I<:Integer
+function pix2z(nside::I, p::I) where I<:Integer
+    checkhealpix(nside, p)
+    return unsafe_pix2z(nside, p)
+end
+pix2z(nside, p) = pix2z(promote(nside, p)...)
+
+"""
+    (θ,ϕ) = unsafe_pix2z(nside, p)
+
+Like [`pix2z`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
+index validity.
+"""
+@fastmath function unsafe_pix2z(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
@@ -219,7 +300,6 @@ resolution factor.
     z = p < nside2npixequ(nside) ? z′ : -z′
     return z
 end
-pix2z(nside, p) = pix2z(promote(nside, p)...)
 
 """
     θ = pix2theta(nside, p)
@@ -230,12 +310,32 @@ factor.
 pix2theta(nside, p) = @fastmath acos(pix2z(promote(nside, p)...))
 
 """
+    (θ,ϕ) = unsafe_pix2theta(nside, p)
+
+Like [`pix2theta`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
+index validity.
+"""
+unsafe_pix2theta(nside, p) = acos(unsafe_pix2z(promote(nside, p)...))
+
+"""
     ϕ = pix2phi(nside, p)
 
 Computes the azimuth `ϕ` for the given pixel `p`. `nside` is the Nside resolution
 factor.
 """
-@fastmath function pix2phi(nside::I, p::I) where I<:Integer
+function pix2phi(nside::I, p::I) where I<:Integer
+    checkhealpix(nside, p)
+    return unsafe_pix2phi(nside, p)
+end
+pix2phi(nside, p) = pix2phi(promote(nside, p)...)
+
+"""
+    (θ,ϕ) = unsafe_pix2phi(nside, p)
+
+Like [`pix2phi`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
+index validity.
+"""
+@fastmath function unsafe_pix2phi(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
@@ -255,7 +355,6 @@ factor.
     ϕ = isnorth(nside, p) ? ϕ′ : (2π - ϕ′)
     return ϕ
 end
-pix2phi(nside, p) = pix2phi(promote(nside, p)...)
 
 """
     (θ,ϕ) = pix2ang(nside, p)
@@ -265,11 +364,31 @@ Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`.
 pix2ang(nside, p) = (pix2theta(nside, p), pix2phi(nside, p))
 
 """
+    (θ,ϕ) = unsafe_pix2ang(nside, p)
+
+Like [`pix2ang`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
+index validity.
+"""
+unsafe_pix2ang(nside, p) = (unsafe_pix2theta(nside, p), unsafe_pix2phi(nside, p))
+
+"""
     r::SVector{3} = pix2vec(nside, p)
 
 Computes the unit vector `r` pointing to the pixel center of the given pixel `p`.
 """
-@fastmath function pix2vec(nside::I, p::I) where I<:Integer
+function pix2vec(nside::I, p::I) where I<:Integer
+    checkhealpix(nside, p)
+    return unsafe_pix2vec(nside, p)
+end
+pix2vec(nside, p) = pix2vec(promote(nside, p)...)
+
+"""
+    (θ,ϕ) = unsafe_pix2vec(nside, p)
+
+Like [`pix2vec`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
+index validity.
+"""
+@fastmath function unsafe_pix2vec(nside::I, p::I) where I<:Integer
     z = pix2z(nside, p)
     ϕ = pix2phi(nside, p)
     # If z ≈ ±1, this form should cause less "catastrophic cancellation" than the simpler
@@ -280,7 +399,6 @@ Computes the unit vector `r` pointing to the pixel center of the given pixel `p`
     y = sinθ * sin(ϕ)
     return SVector{3}(x, y, z)
 end
-pix2vec(nside, p) = pix2vec(promote(nside, p)...)
 
 end # module Healpix
 
