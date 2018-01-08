@@ -389,14 +389,17 @@ Like [`pix2vec`](@ref) but does not call [`checkhealpix`](@ref) to check `nside`
 index validity.
 """
 @fastmath function unsafe_pix2vec(nside::I, p::I) where I<:Integer
-    z = pix2z(nside, p)
-    ϕ = pix2phi(nside, p)
+    z = unsafe_pix2z(nside, p)
+    ϕ = unsafe_pix2phi(nside, p)
     # If z ≈ ±1, this form should cause less "catastrophic cancellation" than the simpler
     # invocation `one(z) - z*z` (I think...).
     sinθ = sqrt((one(z)-z)*(one(z)+z))
-    # TODO: switch to sincos() when julia v0.7 is base version
-    x = sinθ * cos(ϕ)
-    y = sinθ * sin(ϕ)
+    @static if isdefined(Base, :sincos)
+        y,x = sinθ .* sincos(ϕ)
+    else
+        x = sinθ * cos(ϕ)
+        y = sinθ * sin(ϕ)
+    end
     return SVector{3}(x, y, z)
 end
 
