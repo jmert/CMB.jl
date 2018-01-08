@@ -44,7 +44,7 @@ end
 """
     outer(w::AbstractVector, A::SparseMatrixCSC, n::Integer)
 
-Performs the equivalent of ``\\vec w \\vec {a_n}^\\dagger`` where ``\\vec a_n`` is the
+Performs the equivalent of ``\\vec w \\vec{a}_n^\\dagger`` where ``\\vec a_n`` is the
 column `A[:,n]`.
 """
 function outer(w::AbstractVector{Tv}, A::SparseMatrixCSC{Tv,Ti}, n::Integer) where {Tv,Ti}
