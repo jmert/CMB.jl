@@ -403,5 +403,61 @@ index validity.
     return SVector{3}(x, y, z)
 end
 
+"""
+    p = ang2pix(nside, θ, ϕ)
+
+
+"""
+@fastmath function ang2pix(nside, θ, ϕ)
+    checkhealpix(nside)
+    0 ≤ θ ≤ π || throw("θ must be in [0,π], but got $θ")
+    ϕ = mod2pi(ϕ)
+    return unsafe_ang2pix(nside, θ, ϕ)
+end
+
+"""
+    p = unsafe_ang2pix(nside, θ, ϕ)
+
+Like [`ang2pix`](@ref) but ...
+"""
+@fastmath function unsafe_ang2pix(nside, θ, ϕ)
+    z = cos(θ)      # z-component
+    z′ = abs(z)
+    α = 2ϕ / π      # scaled distance around ring in [0,4)
+                    # later advantage is that mod(ϕ, π/2) becomes modf(α)
+
+    if z′ > 2/3
+        αt,_ = modf(α)  # fraction across first quadrant
+
+        σ = nside * sqrt(3 * (1 - z′))
+        kp = unsafe_trunc(Int, σ * αt)          # SW-to-NE pixel boundary
+        km = unsafe_trunc(Int, σ * (1 - αt))    # NW-to-SE pixel boundary
+
+        i = kp + km + 1     # intersection of (kp, km+1) or (kp+1, km) lines
+        j = unsafe_trunc(Int, i * α) + 1
+
+        if z > 0
+            # counting from north pole
+            p = nside2npixcap(i) + j - 1
+        else
+            # counting from south pole
+            p = nside2npix(nside) - nside2npixcap(i+1) + j - 1
+        end
+    else
+        tmp = 1/2 - 3z/4
+        kp = unsafe_trunc(Int, nside * (α - tmp))
+        km = unsafe_trunc(Int, nside * (α + tmp))
+        i′ = kp - km + 1    # intersection of (kp, km+1) or (kp+1, km) lines,
+                            # counting from end of north cap
+
+        s = ((i′ & 1) + 1) >> 1
+        j = km + kp + s + 1
+        j -= j > 4nside ? 4nside : 0
+
+        p = nside2npixcap(nside) + 4nside * (i′ - 1) + j
+    end
+    return p
+end
+
 end # module Healpix
 
