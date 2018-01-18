@@ -95,6 +95,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
     # this implementation. (Probably related to the keyword-argument penalty?)
     local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < eps(one(T))
 
+    λ! = C.λ
     half = inv(convert(T, 2))
 
     @inbounds begin
@@ -135,8 +136,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             end
 
             # Fill with P^0_ℓ(x) terms
-            legendre!(C.λ, P, lmax, 0, x)
-
+            λ!(P, 0, x)
         else # abs(x) ≈ one(T)
         # Case where two points are not antipodes
 
@@ -144,7 +144,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             xy = x * y
 
             # Fill with the P^2_ℓ(x) terms initially
-            legendre!(C.λ, P, lmax, 2, x)
+            λ!(P, 2, x)
 
             for ll=2:lmax
                 lT = convert(T, ll)
@@ -157,7 +157,7 @@ function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
             end
 
             # Now refill P with the P^0_ℓ(x) terms
-            legendre!(C.λ, P, lmax, 0, x)
+            λ!(P, 0, x)
 
             # Compute the F10 terms with the P as is
             for ll=2:lmax
