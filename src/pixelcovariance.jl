@@ -48,7 +48,7 @@ struct PixelCovarianceCoeff{T<:Real}
     function PixelCovarianceCoeff{T}(lmax::Integer) where T
         lmax = max(lmax, 2)
 
-        λ = LegendreUnitCoeff{T}(lmax)
+        λ = LegendreUnitCoeff{T}(lmax, 2)
         η = Vector{T}(lmax+1)
         α = Vector{T}(lmax+1)
         β = Vector{T}(lmax+1)
