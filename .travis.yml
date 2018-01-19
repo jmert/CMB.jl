@@ -1,27 +1,33 @@
 ## Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
+
 os:
   - linux
-  - osx
+#  - osx
+
 julia:
   - 0.6
   - nightly
+
 notifications:
   email: false
+
+# https://github.com/travis-ci/travis-ci/issues/4942 workaround
 git:
   depth: 99999999
 
-## uncomment the following lines to allow failures on nightly julia
-## (tests will run but not make your overall status red)
 matrix:
+  fast_finish: true
   allow_failures:
   - julia: nightly
 
 ## uncomment the following lines to override the default test script
-script:
-  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("CMB"); Pkg.test("CMB"; coverage=true)'
+#script:
+#  - julia -e 'Pkg.clone(pwd())'
+#  - julia -e 'Pkg.build("CMB")'
+#  - if [ -f test/runtests.jl ]; then
+#      julia --check-bounds=yes -e 'Pkg.test("CMB"; coverage=true)'
+#    fi
+
 after_success:
-  # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("CMB")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
-  # push coverage results to Codecov
-  - julia -e 'cd(Pkg.dir("CMB")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'cd(Pkg.dir("CMB", "test")); include("coverage.jl")'
