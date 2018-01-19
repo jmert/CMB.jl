@@ -30,4 +30,5 @@ matrix:
 #    fi
 
 after_success:
-  - julia -e 'cd(Pkg.dir("CMB", "test")); include("coverage.jl")'
+  - julia --color=yes -e 'cd(Pkg.dir("CMB", "docs")); include("make.jl")' -- deploy
+  - julia --color=yes -e 'cd(Pkg.dir("CMB", "test")); include("coverage.jl")'
