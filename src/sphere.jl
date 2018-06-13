@@ -119,9 +119,11 @@ julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 ```
 """
 @propagate_inbounds function bearing(r₁::AbstractVector, r₂::AbstractVector)
-    r₁ ∥ r₂ && return zero(eltype(r₁))
+    T = eltype(r₁)
+    r₁ ∥ r₂ && return zero(T)
+    r₁ ∥ ẑ  && return r₁ > zero(T) ? convert(T, π) : zero(T)
     r₁₂ = r₁ × r₂
-    r₁′ = r₁ ∥ ẑ ? ẑ × r₂ : r₁ × ẑ
+    r₁′ = r₁ × ẑ
     num = (r₁₂ × r₁′) ⋅ r₁
     den = r₁₂ ⋅ r₁′
     # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
@@ -195,11 +197,13 @@ julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 ```
 """
 @propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
-    r₁ ∥ r₂ && return (one(eltype(r₁)), zero(eltype(r₁)))
+    T = eltype(r₁)
+    r₁ ∥ r₂ && return (one(T), zero(T))
+    r₁ ∥ ẑ  && return (copysign(one(T), -r₁[3]), zero(T))
     r₁₂ = normalize(r₁ × r₂)
-    r₁′ = normalize(r₁ ∥ ẑ ? ẑ × r₂ : r₁ × ẑ)
-    num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(eltype(r₁)), one(eltype(r₁)))
-    den = clamp(r₁₂ ⋅ r₁′, -one(eltype(r₁)), one(eltype(r₁)))
+    r₁′ = normalize(r₁ × ẑ)
+    num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(T), one(T))
+    den = clamp(r₁₂ ⋅ r₁′, -one(T), one(T))
     # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
     # is negative.
     den = flipsign(den, num)
