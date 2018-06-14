@@ -301,10 +301,10 @@ function selectpixel!(cache, pixind)
     cache.pixind[] = pixind
     @inbounds for ii in 1:length(cache.z)
         cache.z[ii] = cosdistance(cache.r[pixind], cache.r[ii])
-        c,s = bearing2(cache.r[pixind], cache.r[ii])
+        c,s = bearing2(cache.r[ii], cache.r[pixind])
         cache.sij[ii] = 2*c*s
         cache.cij[ii] = c*c - s*s
-        c,s = bearing2(cache.r[ii], cache.r[pixind])
+        c,s = bearing2(cache.r[pixind], cache.r[ii])
         cache.sji[ii] = 2*c*s
         cache.cji[ii] = c*c - s*s
     end
