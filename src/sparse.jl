@@ -1,3 +1,5 @@
+using Compat.SparseArrays
+
 export outer, quadprod
 
 """
