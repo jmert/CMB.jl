@@ -120,8 +120,8 @@ julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 """
 @propagate_inbounds function bearing(r₁::AbstractVector, r₂::AbstractVector)
     T = eltype(r₁)
-    r₁ ∥ r₂ && return zero(T)
-    r₁ ∥ ẑ  && return r₁ > zero(T) ? convert(T, π) : zero(T)
+    r₁ ∥ r₂ && return r₁ ⋅ r₂ < zero(T) ? convert(T, π) : zero(T)
+    r₁ ∥ ẑ  && return r₁[3] > zero(T) ? convert(T, π) : zero(T)
     r₁₂ = r₁ × r₂
     r₁′ = r₁ × ẑ
     num = (r₁₂ × r₁′) ⋅ r₁
@@ -198,7 +198,7 @@ julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 """
 @propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
     T = eltype(r₁)
-    r₁ ∥ r₂ && return (one(T), zero(T))
+    r₁ ∥ r₂ && return (copysign(one(T), r₁ ⋅ r₂), zero(T))
     r₁ ∥ ẑ  && return (copysign(one(T), -r₁[3]), zero(T))
     r₁₂ = normalize(r₁ × r₂)
     r₁′ = normalize(r₁ × ẑ)

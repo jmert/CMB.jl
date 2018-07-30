@@ -33,10 +33,10 @@ end
     spole = @SVector T[0.0, 0.0, -1.0]
 
     # North and South Pole antipodes
-    @test @inferred bearing(    npole, spole) == T(0.0)
-    @test @inferred bearing(    spole, npole) == T(0.0)
-    @test @inferred bearing2(   npole, spole) == (T(1.0), T(0.0))
-    @test @inferred bearing2(   spole, npole) == (T(1.0), T(0.0))
+    @test @inferred bearing(    npole, spole) == T(π)
+    @test @inferred bearing(    spole, npole) == T(π)
+    @test @inferred bearing2(   npole, spole) == (T(-1.0), T(0.0))
+    @test @inferred bearing2(   spole, npole) == (T(-1.0), T(0.0))
     @test @inferred distance(   npole, spole) == T(π)
     @test @inferred cosdistance(npole, spole) == T(-1.0)
 
@@ -76,8 +76,8 @@ end
     for ii=1:7
         local pi = T===BigFloat ? T(π) : 1.0π
         eqpnt = @SVector T[cos(2pi*ii/7), sin(2pi*ii/7), 0.0]
-        @test @inferred bearing(    npole, eqpnt) == T(0.0)
-        @test @inferred bearing2(   npole, eqpnt) == (T(1.0), T(0.0))
+        @test @inferred bearing(    npole, eqpnt) == T(pi)
+        @test @inferred bearing2(   npole, eqpnt) == (T(-1.0), T(0.0))
         @test @inferred(distance(   npole, eqpnt)) ≈ T(π/2) atol=atol
         @test @inferred(cosdistance(npole, eqpnt)) ≈ T(0.0) atol=atol
     end
@@ -94,7 +94,7 @@ end
     # Specific case where internal dot product returns value > 1.0
     r₁ = [0.0,0.0,1.0]
     r₂ = [cos(2π*3/7), sin(2π*3/7), 0.0]
-    @test bearing2(r₁, r₂) == (1.0, 0.0)
+    @test bearing2(r₁, r₂) == (-1.0, 0.0)
 end
 
 end
