@@ -1,5 +1,5 @@
 module Sparse
-    using Compat.Test
+    using Test
     using CMB: quadprod
 
     NumTypes = (Float32, Float64, BigFloat)

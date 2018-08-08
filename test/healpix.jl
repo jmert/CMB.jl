@@ -1,5 +1,5 @@
 module Healpix
-    using Compat.Test
+    using Test
     using CMB.Healpix
 
     # Each of the following arrays can be initialized directly from examining Fig. 4 of

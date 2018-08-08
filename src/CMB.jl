@@ -1,5 +1,3 @@
-__precompile__()
-
 module CMB
     import Reexport.@reexport
 

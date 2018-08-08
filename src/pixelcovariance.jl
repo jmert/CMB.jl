@@ -274,7 +274,7 @@ function makespectra!(cache, f, fields=[:TT,:EE])
     goodinds = map(f->in(f, SPECTRAMAP), fields)
     all(goodinds) || error("Bad field specification(s): $(fields[.!(goodinds)]...)")
 
-    fieldinds = map(f -> find(f .== SPECTRAMAP)[1], fields)
+    fieldinds = map(f -> findall(f .== SPECTRAMAP)[1], fields)
     for ll in 0:lmax
         Cl = f(ll)
         Cl = isfinite(Cl) ? Cl : zero(eltype(cache.spectra))

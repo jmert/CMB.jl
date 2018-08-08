@@ -104,7 +104,7 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     # is negative.
     den = flipsign(den, num)
     num = flipsign(num, num)
-    return atan2(num, den)
+    return atan(num, den)
 end
 
 """

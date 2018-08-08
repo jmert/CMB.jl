@@ -1,5 +1,5 @@
 module CMBTests
-    using Compat.Test
+    using Test
 
     const MODULES = Dict(
         "sphere" => "Sphere",
