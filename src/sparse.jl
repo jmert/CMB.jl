@@ -22,9 +22,9 @@ function outer(A::SparseMatrixCSC{Tv,Ti}, n::Integer, w::AbstractVector{Tv}) whe
     nnzw = length(w)
     numnz = nnza * nnzw
 
-    colptr = Vector{Ti}(nnzw+1)
-    rowval = Vector{Ti}(numnz)
-    nzvals = Vector{Tv}(numnz)
+    colptr = Vector{Ti}(undef, nnzw+1)
+    rowval = Vector{Ti}(undef, numnz)
+    nzvals = Vector{Tv}(undef, numnz)
 
     idx = 0
     @inbounds for jj = 1:nnzw
@@ -59,8 +59,8 @@ function outer(w::AbstractVector{Tv}, A::SparseMatrixCSC{Tv,Ti}, n::Integer) whe
     numnz = nnza * nnzw
 
     colptr = zeros(Ti, size(A,1)+1)
-    rowval = Vector{Ti}(numnz)
-    nzvals = Vector{Tv}(numnz)
+    rowval = Vector{Ti}(undef, numnz)
+    nzvals = Vector{Tv}(undef, numnz)
 
     idx = 0
     @inbounds colptr[1] = 1 # col 1 always at index 1

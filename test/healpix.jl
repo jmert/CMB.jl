@@ -91,7 +91,7 @@ module Healpix
     end
 
     @testset "Validity checks" begin
-        @test all(ishealpixok.(2.^(0:29)) .== true)
+        @test all(ishealpixok.(2 .^ (0:29)) .== true)
         @test all(ishealpixok.([0, 2^30]) .== false)
         @test_throws InvalidNside checkhealpix(0)
 
