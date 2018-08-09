@@ -1,5 +1,6 @@
 module Sphere
-using Compat.Test
+using Test
+using LinearAlgebra
 using ..CMBTests: NumTypes
 using CMB.Sphere, StaticArrays
 

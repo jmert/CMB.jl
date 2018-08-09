@@ -8,6 +8,7 @@ export
 
 using StaticArrays
 import Base: @propagate_inbounds
+import LinearAlgebra: ⋅, ×, normalize
 
 # Fast-path the isapprox tolerance for Float32 and Float64. The computation appears to be
 # too complex to constant-fold automatically, so we do it manually for these two most
@@ -104,7 +105,7 @@ function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
     # is negative.
     den = flipsign(den, num)
     num = flipsign(num, num)
-    return atan2(num, den)
+    return atan(num, den)
 end
 
 """

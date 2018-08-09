@@ -1,5 +1,6 @@
 module Sparse
-    using Compat.Test
+    using Test
+    using Random, SparseArrays
     using CMB: quadprod
 
     NumTypes = (Float32, Float64, BigFloat)
@@ -17,7 +18,7 @@ module Sparse
         bt = convert(Vector{T}, b)
         Bct = convert(SparseMatrixCSC{T}, Bc)
         Brt = convert(SparseMatrixCSC{T}, Br)
-        @test At * Bct * At.' == @inferred quadprod(At, bt, i, :col)
-        @test At * Brt * At.' ≈  @inferred quadprod(At, bt, i, :row)
+        @test At * Bct * At' == @inferred quadprod(At, bt, i, :col)
+        @test At * Brt * At' ≈  @inferred quadprod(At, bt, i, :row)
     end
 end

@@ -6,7 +6,7 @@ os:
 #  - osx
 
 julia:
-  - 0.6
+  - 0.7
   - nightly
 
 notifications:
@@ -30,5 +30,5 @@ matrix:
 #    fi
 
 after_success:
-  - julia --color=yes -e 'cd(Pkg.dir("CMB", "docs")); include("make.jl")' -- deploy
-  - julia --color=yes -e 'cd(Pkg.dir("CMB", "test")); include("coverage.jl")'
+  - julia --color=yes -e 'include("docs/make.jl")' -- deploy
+  - julia --color=yes -e 'include("test/coverage.jl")'

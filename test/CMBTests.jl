@@ -1,5 +1,5 @@
 module CMBTests
-    using Compat.Test
+    using Test
 
     const MODULES = Dict(
         "sphere" => "Sphere",
@@ -33,7 +33,7 @@ module CMBTests
                 # Include the file and have it processed within this module
                 print("running $desc tests... ")
                 t0 = time_ns()
-                eval(CMBTests, :(include($modpath)) )
+                Core.eval(CMBTests, :(include($modpath)) )
                 t1 = time_ns()
                 println( (t1-t0)/1e9, " seconds")
             end

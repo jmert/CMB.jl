@@ -1,5 +1,5 @@
 module Healpix
-    using Compat.Test
+    using Test
     using CMB.Healpix
 
     # Each of the following arrays can be initialized directly from examining Fig. 4 of
@@ -91,7 +91,7 @@ module Healpix
     end
 
     @testset "Validity checks" begin
-        @test all(ishealpixok.(2.^(0:29)) .== true)
+        @test all(ishealpixok.(2 .^ (0:29)) .== true)
         @test all(ishealpixok.([0, 2^30]) .== false)
         @test_throws InvalidNside checkhealpix(0)
 
