@@ -1,6 +1,6 @@
 module Sphere
 using Test
-using LinearAlgebra, StaticArrays
+using LinearAlgebra, Random, StaticArrays
 using ..CMBTests: NumTypes
 using CMB.Sphere
 import CMB.Sphere: cart, ẑ
@@ -46,6 +46,48 @@ end
         @test @inferred(bearing2(   eqpnt..., npole...)) == (T( 1.0), T(0.0))
         @test @inferred(distance(   npole..., eqpnt...)) ≈ T(pi/2) atol=atol
         @test @inferred(cosdistance(npole..., eqpnt...)) ≈ T(0.0)  atol=atol
+    end
+end
+
+# Pairs of points on the equator will always have bearing angles of 90°, and
+# the angular separation is equal to the difference in azimuths.
+@testset "Points around equator ($T)" for T in NumTypes
+    local pi = T===BigFloat ? T(π) : 1.0π
+    atol = max(eps(1π), eps(T(π)))
+
+    Random.seed!(1928)
+    for nn in 1:4
+        θ  = T(pi / 2)
+        ϕ₁ = T(pi) * rand(T)
+        for Δϕ in T.((pi/8, pi/4, pi/2, 3pi/4, 7pi/8))
+            ϕ₂ = ϕ₁ + Δϕ
+            @test all((≈).(bearing2(θ, ϕ₁, θ, ϕ₂), T.((0, 1)), atol=atol))
+            @test all((≈).(bearing2(θ, ϕ₂, θ, ϕ₁), T.((0, 1)), atol=atol))
+            @test bearing( θ, ϕ₁, θ, ϕ₂) ≈ T(pi / 2) atol=atol
+            @test bearing( θ, ϕ₂, θ, ϕ₁) ≈ T(pi / 2) atol=atol
+            @test distance(θ, ϕ₁, θ, ϕ₂) ≈ Δϕ atol=atol
+            @test distance(θ, ϕ₂, θ, ϕ₁) ≈ Δϕ atol=atol
+        end
+    end
+end
+
+# For a pair of points on the same latitude and separated in azimuth by 180°, the
+# angular separation will be twice the colatitude angle.
+@testset "Isolatitudes ($T)" for T in NumTypes
+    local pi = T===BigFloat ? T(π) : 1.0π
+    # TODO: Figure out if there's a way to improve the situation so that this can be
+    #       dropped down to just max(eps) like the other test sets.
+    atol = sqrt(max(T(eps(1π)), eps(T(π))))
+
+    Random.seed!(4759)
+    for nn in 1:4
+        θ  = T(pi) * rand(T)
+        ϕ₁ = T(pi) * rand(T)
+        ϕ₂ = ϕ₁ + T(π)
+        σ  = θ > pi/2 ? T(2pi) - 2θ : 2θ
+
+        @test distance(θ, ϕ₁, θ, ϕ₂) ≈ σ atol=atol
+        @test distance(θ, ϕ₂, θ, ϕ₁) ≈ σ atol=atol
     end
 end
 
