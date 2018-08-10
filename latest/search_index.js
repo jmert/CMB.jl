@@ -409,7 +409,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Nlm-Union{Tuple{T}, Tuple{Type{T},Integer,Integer}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Nlm-Union{Tuple{T}, Tuple{Type{T},Integer,Integer}} where T",
     "page": "Public",
     "title": "CMB.Legendre.Nlm",
     "category": "method",
@@ -417,87 +417,87 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Pl!-Union{Tuple{T}, Tuple{AbstractArray{T,1},Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Pl!-Tuple{AbstractArray{T,1} where T,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.Pl!",
     "category": "method",
-    "text": "Pl!(P::AbstractVector, lmax::Integer, x::Real)\n\nFills the vector P with the Legendre polynomial values P_ℓ(x) for all degrees 0 ≤ ℓ ≤ lmax at x.\n\n\n\n\n\n"
+    "text": "Pl!(P::AbstractVector, lmax::Integer, x)\n\nFills the vector P with the Legendre polynomial values P_ℓ(x) for all degrees 0 ≤ ℓ ≤ lmax at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Pl-Union{Tuple{T}, Tuple{Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Pl-Tuple{Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.Pl",
     "category": "method",
-    "text": "p = Pl(l::Integer, x::Real)\n\nComputes the scalar value p = P_ℓ(x), where P_ℓ(x) is the Legendre polynomial of degree l at x.\n\n\n\n\n\n"
+    "text": "p = Pl(l::Integer, x)\n\nComputes the scalar value p = P_ℓ(x), where P_ℓ(x) is the Legendre polynomial of degree l at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Plm!-Union{Tuple{T}, Tuple{AbstractArray{T,1},Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Plm!-Tuple{AbstractArray{T,1} where T,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.Plm!",
     "category": "method",
-    "text": "Plm!(P::AbstractVector, lmax::Integer, m::Integer, x::Real)\n\nFills the vector P with the Legendre polynomial values P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x.\n\n\n\n\n\n"
+    "text": "Plm!(P::AbstractVector, lmax::Integer, m::Integer, x)\n\nFills the vector P with the Legendre polynomial values P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Plm!-Union{Tuple{T}, Tuple{AbstractArray{T,2},Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Plm!-Tuple{AbstractArray{T,2} where T,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.Plm!",
     "category": "method",
-    "text": "Plm!(P::AbstractMatrix, lmax::Integer, mmax::Integer, x::Real)\n\nFills the lower triangle of the matrix P with the associated Legendre polynomial values P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and all orders 0 ≤ m ≤ ℓ at x.\n\n\n\n\n\n"
+    "text": "Plm!(P::AbstractMatrix, lmax::Integer, mmax::Integer, x)\n\nFills the lower triangle of the matrix P with the associated Legendre polynomial values P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and all orders 0 ≤ m ≤ ℓ at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.Plm-Union{Tuple{T}, Tuple{Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.Plm-Tuple{Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.Plm",
     "category": "method",
-    "text": "p = Plm(l::Integer, m::Integer, x::Real)\n\nComputes the scalar value p = P_ℓ^m(x), where P_ℓ^m(x) is the associated Legendre polynomial of degree l and order m at x.\n\n\n\n\n\n"
+    "text": "p = Plm(l::Integer, m::Integer, x)\n\nComputes the scalar value p = P_ℓ^m(x), where P_ℓ^m(x) is the associated Legendre polynomial of degree l and order m at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.legendre!-Union{Tuple{T}, Tuple{N}, Tuple{N,AbstractArray{T,1},Integer,Integer,T}} where T<:Real where N<:AbstractLegendreNorm",
+    "location": "lib/public.html#CMB.Legendre.legendre!-Tuple{AbstractLegendreNorm,AbstractArray{T,2} where T,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.legendre!",
     "category": "method",
-    "text": "legendre!(norm::AbstractLegendreNorm, Λ::AbstractVector, lmax::Integer, m::Integer,\n          x::Real)\n\nFills the vector Λ with the pre-normalized Legendre polynomial values N_ℓ^m P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x, where N_ℓ^m is the normalization scheme norm.\n\n\n\n\n\n"
+    "text": "legendre!(norm::AbstractLegendreNorm, P::AbstractMatrix, lmax::Integer, mmax::Integer, x)\n\nFills the matrix Λ with the pre-normalized Legendre polynomial values N_ℓ^m P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and all orders 0 ≤ m ≤ ℓ at x, where N_ℓ^m is the normalization scheme norm.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.legendre!-Union{Tuple{T}, Tuple{N}, Tuple{N,AbstractArray{T,2},Integer,Integer,T}} where T<:Real where N<:AbstractLegendreNorm",
+    "location": "lib/public.html#CMB.Legendre.legendre!-Union{Tuple{T}, Tuple{AbstractLegendreNorm,AbstractArray{T,1} where T,Integer,Integer,Any}} where T",
     "page": "Public",
     "title": "CMB.Legendre.legendre!",
     "category": "method",
-    "text": "legendre!(norm::AbstractLegendreNorm, P::AbstractMatrix, lmax::Integer, mmax::Integer, x::Real)\n\nFills the matrix Λ with the pre-normalized Legendre polynomial values N_ℓ^m P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and all orders 0 ≤ m ≤ ℓ at x, where N_ℓ^m is the normalization scheme norm.\n\n\n\n\n\n"
+    "text": "legendre!(norm::AbstractLegendreNorm, Λ::AbstractVector, lmax::Integer, m::Integer, x)\n\nFills the vector Λ with the pre-normalized Legendre polynomial values N_ℓ^m P_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x, where N_ℓ^m is the normalization scheme norm.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.legendre-Union{Tuple{T}, Tuple{N}, Tuple{N,Integer,Integer,T}} where T<:Real where N<:AbstractLegendreNorm",
+    "location": "lib/public.html#CMB.Legendre.legendre-Tuple{AbstractLegendreNorm,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.legendre",
     "category": "method",
-    "text": "p = legendre(norm::AbstractLegendreNorm, l::Integer, m::Integer, x::Real)\n\nComputes the scalar value p = N_ℓ^m P_ℓ^m(x), where P_ℓ^m(x) is the associated Legendre polynomial of degree l and order m at x and N_ℓ^m the normalization scheme norm.\n\n\n\n\n\n"
+    "text": "p = legendre(norm::AbstractLegendreNorm, l::Integer, x)\n\nComputes the scalar value p = N_ℓ P_ℓ(x), where P_ℓ(x) is the Legendre polynomial of degree l at x and N_ℓ is the normalization scheme norm.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.legendre-Union{Tuple{T}, Tuple{N}, Tuple{N,Integer,T}} where T<:Real where N<:AbstractLegendreNorm",
+    "location": "lib/public.html#CMB.Legendre.legendre-Tuple{AbstractLegendreNorm,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.legendre",
     "category": "method",
-    "text": "p = legendre(norm::AbstractLegendreNorm, l::Integer, x::Real)\n\nComputes the scalar value p = N_ℓ P_ℓ(x), where P_ℓ(x) is the Legendre polynomial of degree l at x and N_ℓ is the normalization scheme norm.\n\n\n\n\n\n"
+    "text": "p = legendre(norm::AbstractLegendreNorm, l::Integer, m::Integer, x)\n\nComputes the scalar value p = N_ℓ^m P_ℓ^m(x), where P_ℓ^m(x) is the associated Legendre polynomial of degree l and order m at x and N_ℓ^m the normalization scheme norm.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.λlm!-Union{Tuple{T}, Tuple{AbstractArray{T,1},Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.λlm!-Tuple{AbstractArray{T,1} where T,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.λlm!",
     "category": "method",
-    "text": "λlm!(Λ::AbstractVector, lmax::Integer, m::Integer, x::Real)\n\nFills the vector Λ with the spherical harmonic normalized associated Legendre polynomial values λ_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x.\n\n\n\n\n\n"
+    "text": "λlm!(Λ::AbstractVector, lmax::Integer, m::Integer, x)\n\nFills the vector Λ with the spherical harmonic normalized associated Legendre polynomial values λ_ℓ^m(x) for all degrees 0 ≤ ℓ ≤ lmax and constant order m at x.\n\n\n\n\n\n"
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.λlm!-Union{Tuple{T}, Tuple{AbstractArray{T,2},Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.λlm!-Tuple{AbstractArray{T,2} where T,Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.λlm!",
     "category": "method",
@@ -505,11 +505,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/public.html#CMB.Legendre.λlm-Union{Tuple{T}, Tuple{Integer,Integer,T}} where T<:Real",
+    "location": "lib/public.html#CMB.Legendre.λlm-Tuple{Integer,Integer,Any}",
     "page": "Public",
     "title": "CMB.Legendre.λlm",
     "category": "method",
-    "text": "λ = λlm(l::Integer, m::Integer, x::Real)\n\nComputes the scalar value λ = λ_ℓ^m(x), where λ_ℓ^m(x) is the spherical-harmonic normalized associated Legendre polynomial of degree l and order m at x.\n\n\n\n\n\n"
+    "text": "λ = λlm(l::Integer, m::Integer, x)\n\nComputes the scalar value λ = λ_ℓ^m(x), where λ_ℓ^m(x) is the spherical-harmonic normalized associated Legendre polynomial of degree l and order m at x.\n\n\n\n\n\n"
 },
 
 {
