@@ -913,6 +913,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "lib/private.html#CMB.Sphere.cart-Tuple{Any,Any}",
+    "page": "Private",
+    "title": "CMB.Sphere.cart",
+    "category": "method",
+    "text": "cart(θ, ϕ)\n\nConverts the colatitude-azimuth pair to a Cartesian unit vector.\n\n\n\n\n\n"
+},
+
+{
     "location": "lib/private.html#Sphere-Functions-1",
     "page": "Private",
     "title": "Sphere Functions",
