@@ -18,10 +18,6 @@ import LinearAlgebra: ⋅, ×, normalize
 # Fallback for all other floating point values.
 rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
 
-# Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
-# this implementation. (Probably related to the keyword-argument penalty?)
-@inline simpleapprox(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < rtepspi(T)
-
 # Make a couple of functions which will make vector math easier for us
 
 """
@@ -60,6 +56,17 @@ const ŷ = SVector(0, 1, 0)
 const ẑ = SVector(0, 0, 1)
 
 """
+    cart(θ, ϕ)
+
+Converts the colatitude-azimuth pair to a Cartesian unit vector.
+"""
+function cart(θ, ϕ)
+    sθ, cθ = sincos(θ)
+    sϕ, cϕ = sincos(ϕ)
+    return SVector(sθ * cϕ, sθ * sϕ, cθ)
+end
+
+"""
 Calculates the bearing angle (``α``), defined as the angle between the meridian (at the
 first coordinate) and the great circle connecting the first coordinate to the second. Angles
 are measured clockwise and will be in the range ``[0,π)``. See also [`bearing2`](@ref).
@@ -82,30 +89,9 @@ julia> bearing(π/2, 0.0, π/4, π/4)
 bearing(θ₁, ϕ₁, θ₂, ϕ₂) = bearing(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
 function bearing(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
-    local π = convert(T, Base.π)
-    local ≈ = simpleapprox
-    # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
-    # only the latitude makes any difference, and setting to zero makes the parallel checks
-    # below also function properly.
-    if (θ₁ ≈ zero(T) || θ₁ ≈ π) || (θ₂ ≈ zero(T) || θ₂ ≈ π)
-        ϕ₁ = zero(T)
-        ϕ₂ = zero(T)
-    end
-
-    # For two parallel vectors, return 0 explicitly to avoid hitting any ambiguity in the
-    # rotation angle.
-    if any(abs(θ₁-θ₂) .≈ (zero(T),π)) || any(abs(ϕ₁-ϕ₂) .≈ (zero(T),2π))
-        return zero(T)
-    end
-
-    ϕ₂₁ = ϕ₂ - ϕ₁
-    num = -sin(ϕ₂₁)
-    den = cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂)
-    # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
-    # is negative.
-    den = flipsign(den, num)
-    num = flipsign(num, num)
-    return atan(num, den)
+    r₁ = cart(θ₁, ϕ₁)
+    r₂ = cart(θ₂, ϕ₂)
+    return bearing(r₁, r₂)
 end
 
 """
@@ -123,6 +109,7 @@ julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
     T = eltype(r₁)
     r₁ ∥ r₂ && return r₁ ⋅ r₂ < zero(T) ? convert(T, π) : zero(T)
     r₁ ∥ ẑ  && return r₁[3] > zero(T) ? convert(T, π) : zero(T)
+    r₂ ∥ ẑ  && return r₂[3] > zero(T) ? zero(T) : convert(T, π)
     r₁₂ = r₁ × r₂
     r₁′ = r₁ × ẑ
     num = (r₁₂ × r₁′) ⋅ r₁
@@ -131,7 +118,7 @@ julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
     # is negative.
     den = flipsign(den, num)
     num = flipsign(num, num)
-    return atan2(num, den)
+    return atan(num, den)
 end
 
 """
@@ -158,32 +145,9 @@ julia> bearing2(π/2, 0.0, π/4, π/4)
 bearing2(θ₁, ϕ₁, θ₂, ϕ₂) = bearing2(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
 function bearing2(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
-    local π = convert(T, Base.π)
-    local ≈ = simpleapprox
-    # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
-    # only the latitude makes any difference, and setting to zero makes the parallel checks
-    # below also function properly.
-    if (θ₁ ≈ zero(T) || θ₁ ≈ π) || (θ₂ ≈ zero(T) || θ₂ ≈ π)
-        ϕ₁ = zero(T)
-        ϕ₂ = zero(T)
-    end
-
-    # For two parallel vectors, return [1,0] explicitly to avoid hitting any ambiguity in
-    # the rotation angle.
-    if any(abs(θ₁-θ₂) .≈ (zero(T),π)) || any(abs(ϕ₁-ϕ₂) .≈ (zero(T),2π))
-        return (one(T), zero(T))
-    end
-
-    ϕ₂₁ = ϕ₂ - ϕ₁
-    num = -sin(ϕ₂₁)
-    den = cos(θ₁)*cos(ϕ₂₁) - sin(θ₁)*cot(θ₂)
-    # Flip signs of both to move from quadrants 3 and 4 back into 1 and 2 iff the numerator
-    # is negative.
-    den = flipsign(den, num)
-    num = flipsign(num, num)
-    # Normalize the 2-vector [den, num]
-    len = sqrt(den*den + num*num)
-    return (den / len, num / len)
+    r₁ = cart(θ₁, ϕ₁)
+    r₂ = cart(θ₂, ϕ₂)
+    return bearing2(r₁, r₂)
 end
 
 """
@@ -201,6 +165,7 @@ julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
     T = eltype(r₁)
     r₁ ∥ r₂ && return (copysign(one(T), r₁ ⋅ r₂), zero(T))
     r₁ ∥ ẑ  && return (copysign(one(T), -r₁[3]), zero(T))
+    r₂ ∥ ẑ  && return (copysign(one(T),  r₂[3]), zero(T))
     r₁₂ = normalize(r₁ × r₂)
     r₁′ = normalize(r₁ × ẑ)
     num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(T), one(T))
@@ -234,26 +199,9 @@ julia> distance(π/2, 0.0, π/4, π/4)
 distance(θ₁, ϕ₁, θ₂, ϕ₂) = distance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
 function distance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
-    local π = convert(T, Base.π)
-    local ≈ = simpleapprox
-    # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
-    # only the latitude makes any difference, and setting to zero makes the parallel checks
-    # below also function properly.
-    if (θ₁ ≈ zero(T) || θ₁ ≈ π) || (θ₂ ≈ zero(T) || θ₂ ≈ π)
-        ϕ₁ = zero(T)
-        ϕ₂ = zero(T)
-    end
-
-    # For two parallel vectors, return 0 or π explicitly to avoid numerical precision
-    # limits.
-    if abs(θ₁ - θ₂) ≈ zero(T) && abs(ϕ₁ - ϕ₂) ≈ zero(T)
-        return zero(T)
-    elseif abs(θ₁ - θ₂) ≈ π && abs(ϕ₁ - ϕ₂) ≈ 2π
-        return π
-    end
-
-    return @fastmath T(2)*asin(sqrt(sin(T(0.5)*(θ₂-θ₁))^2 +
-                                    sin(θ₁)*sin(θ₂)*sin(T(0.5)*(ϕ₂-ϕ₁))^2))
+    r₁ = cart(θ₁, ϕ₁)
+    r₂ = cart(θ₂, ϕ₂)
+    return distance(r₁, r₂)
 end
 
 """
@@ -293,26 +241,9 @@ julia> cosdistance(π/2, 0.0, π/4, π/4)
 cosdistance(θ₁, ϕ₁, θ₂, ϕ₂) = cosdistance(promote(θ₁, ϕ₁, θ₂, ϕ₂)...)
 
 function cosdistance(θ₁::T, ϕ₁::T, θ₂::T, ϕ₂::T) where T<:Number
-    local π = convert(T, Base.π)
-    local ≈ = simpleapprox
-    # For a coordinate at a pole, force both longitudes to 0. Since the pole is degenerate,
-    # only the latitude makes any difference, and setting to zero makes the parallel checks
-    # below also function properly.
-    if (θ₁ ≈ zero(T) || θ₁ ≈ π) || (θ₂ ≈ zero(T) || θ₂ ≈ π)
-        ϕ₁ = zero(T)
-        ϕ₂ = zero(T)
-    end
-
-    # For two parallel vectors, return 0 or π explicitly to avoid numerical precision
-    # limits.
-    if abs(θ₁ - θ₂) ≈ zero(T) && abs(ϕ₁ - ϕ₂) ≈ zero(T)
-        return one(T)
-    elseif abs(θ₁ - θ₂) ≈ π && abs(ϕ₁ - ϕ₂) ≈ 2π
-        return -one(T)
-    end
-
-    return @fastmath one(T) - 2*(sin(T(0.5)*(θ₂-θ₁))^2
-                                 + sin(θ₁)*sin(θ₂)*sin(T(0.5)*(ϕ₂-ϕ₁))^2)
+    r₁ = cart(θ₁, ϕ₁)
+    r₂ = cart(θ₂, ϕ₂)
+    return cosdistance(r₁, r₂)
 end
 
 """
