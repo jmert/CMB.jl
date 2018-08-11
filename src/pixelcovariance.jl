@@ -32,8 +32,8 @@ Precomputed recursion relation coefficients for computing the pixel-pixel covari
 # Example
 ```jldoctest
 julia> PixelCovarianceCoeff{Float64}(2)
-CMB.PixelCovariance.PixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:
-    λ: CMB.Legendre.LegendreNormCoeff{CMB.Legendre.LegendreUnitNorm,Float64}
+PixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:
+    λ: LegendreNormCoeff{LegendreUnitNorm,Float64}
     η: [0.0795775, 0.238732, 0.397887]
     α: [0.0, 0.0, 0.324874]
     β: [0.0, 0.0, 0.0331573]
@@ -49,9 +49,9 @@ struct PixelCovarianceCoeff{T<:Real}
         lmax = max(lmax, 2)
 
         λ = LegendreUnitCoeff{T}(lmax, 2)
-        η = Vector{T}(lmax+1)
-        α = Vector{T}(lmax+1)
-        β = Vector{T}(lmax+1)
+        η = Vector{T}(undef, lmax+1)
+        α = Vector{T}(undef, lmax+1)
+        β = Vector{T}(undef, lmax+1)
 
         η[1] = 1/(4π);  η[2] = 3/(4π)
         α[1] = zero(T); α[2] = zero(T);

@@ -162,9 +162,9 @@ The corresponding vector for a given pixel is retrieved with
 [`CMB.Healpix.pix2vec`](@ref).
 ```jldoctest healpix
 julia> pix2vec(nside, 103)
-3-element SVector{3,Float64}:
-  0.980785
- -0.19509
+3-element StaticArrays.SArray{Tuple{3},Float64,1,3}:
+  0.9807852804032303
+ -0.19509032201612872
   0.0
 ```
 where the elements correspond to the typical ``(x, y, z)`` right-handed coordinates with

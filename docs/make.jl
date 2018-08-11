@@ -1,5 +1,5 @@
 dodeploy = "deploy" in ARGS
-dodoctest = !dodeploy
+dodoctest = "fix" in ARGS ? :fix : !dodeploy
 
 # Only run non-nightlies on Linux
 Sys.ARCH === :x86_64 && Sys.KERNEL === :Linux || exit()
