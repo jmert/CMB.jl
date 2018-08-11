@@ -77,7 +77,7 @@ var documenterSearchIndex = {"docs": [
     "page": "HEALPix Pixelization",
     "title": "Working with spherical coordinates",
     "category": "section",
-    "text": "Up to now, all the features shown have concerned working with properties of the pixelization scheme, but the utility of the HEALPix grid is its ability to describe the surface of a sphere. Using spherical coordinates is more useful and more natural for more algorithms than the HEALPix-specific indexing scheme.The first method of describing the location of a particular HEALPix pixel is as a colatitude/azimuth pair of angles on the surface of the sphere identifying the pixel center. Colatitude measures the angle (in radians) south of the North Pole, and azimuth measures the angle (in radians) east of the Prime Meridian. To get the colatitude, use CMB.Healpix.pix2theta,julia> pix2theta(nside, 103)\n1.5707963267948966and to get the azimuth, use CMB.Healpix.pix2phijulia> pix2phi(nside, 103)\n6.086835766330224(both named to follow the mathematical convention that colatitude/azimuth pairs in spherical coordinates are the variable pair (θ ϕ)). When the coordinate pair is required, the method CMB.Healpix.pix2ang returns a 2-tuple with the coordinates:julia> pix2ang(nside, 103)\n(1.5707963267948966, 6.086835766330224)\n\njulia> pix2ang(nside, 103) .|> rad2deg\n(90.0, 348.75)The other common way to represent coordinates on the sphere is via unit vectors. The corresponding vector for a given pixel is retrieved with CMB.Healpix.pix2vec.julia> pix2vec(nside, 103)\n3-element SVector{3,Float64}:\n  0.980785\n -0.19509\n  0.0where the elements correspond to the typical (x y z) right-handed coordinates with the positive z-axis passing through the North Pole and the positive x-axis passing through the Prime Meridian.In reverse, converting an arbitrary spherical coordinate to a pixel index... ...TO BE IMPLEMENTED..."
+    "text": "Up to now, all the features shown have concerned working with properties of the pixelization scheme, but the utility of the HEALPix grid is its ability to describe the surface of a sphere. Using spherical coordinates is more useful and more natural for more algorithms than the HEALPix-specific indexing scheme.The first method of describing the location of a particular HEALPix pixel is as a colatitude/azimuth pair of angles on the surface of the sphere identifying the pixel center. Colatitude measures the angle (in radians) south of the North Pole, and azimuth measures the angle (in radians) east of the Prime Meridian. To get the colatitude, use CMB.Healpix.pix2theta,julia> pix2theta(nside, 103)\n1.5707963267948966and to get the azimuth, use CMB.Healpix.pix2phijulia> pix2phi(nside, 103)\n6.086835766330224(both named to follow the mathematical convention that colatitude/azimuth pairs in spherical coordinates are the variable pair (θ ϕ)). When the coordinate pair is required, the method CMB.Healpix.pix2ang returns a 2-tuple with the coordinates:julia> pix2ang(nside, 103)\n(1.5707963267948966, 6.086835766330224)\n\njulia> pix2ang(nside, 103) .|> rad2deg\n(90.0, 348.75)The other common way to represent coordinates on the sphere is via unit vectors. The corresponding vector for a given pixel is retrieved with CMB.Healpix.pix2vec.julia> pix2vec(nside, 103)\n3-element StaticArrays.SArray{Tuple{3},Float64,1,3}:\n  0.9807852804032303\n -0.19509032201612872\n  0.0where the elements correspond to the typical (x y z) right-handed coordinates with the positive z-axis passing through the North Pole and the positive x-axis passing through the Prime Meridian.In reverse, converting an arbitrary spherical coordinate to a pixel index... ...TO BE IMPLEMENTED..."
 },
 
 {
@@ -261,7 +261,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Public",
     "title": "CMB.Sphere.bearing",
     "category": "method",
-    "text": "α = bearing(θ₁, ϕ₁, θ₂, ϕ₂)\n\nPoints on the sphere are given as coordinate pairs (θ₁ϕ₁) and (θ₂ϕ₂) where θ is the colatitude angle from the North Pole and ϕ is the azimuthal angle, both in radians.\n\nExamples\n\njulia> bearing(π/2, 0.0, π/4, π/4)\n0.6154797086703871\n\n\n\n\n\n"
+    "text": "α = bearing(θ₁, ϕ₁, θ₂, ϕ₂)\n\nPoints on the sphere are given as coordinate pairs (θ₁ϕ₁) and (θ₂ϕ₂) where θ is the colatitude angle from the North Pole and ϕ is the azimuthal angle, both in radians.\n\nExamples\n\njulia> bearing(π/2, 0.0, π/4, π/4)\n0.6154797086703873\n\n\n\n\n\n"
 },
 
 {
@@ -285,7 +285,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Public",
     "title": "CMB.Sphere.bearing2",
     "category": "method",
-    "text": "(δθ, δϕ) = bearing2(θ₁, ϕ₁, θ₂, ϕ₂)\n\nPoints on the sphere are given as coordinate pairs (θ₁ϕ₁) and (θ₂ϕ₂) where θ is the colatitude angle from the North Pole and ϕ is the azimuthal angle, both in radians.\n\nExamples\n\njulia> bearing2(π/2, 0.0, π/4, π/4)\n(0.8164965809277261, 0.5773502691896256)\n\n\n\n\n\n"
+    "text": "(δθ, δϕ) = bearing2(θ₁, ϕ₁, θ₂, ϕ₂)\n\nPoints on the sphere are given as coordinate pairs (θ₁ϕ₁) and (θ₂ϕ₂) where θ is the colatitude angle from the North Pole and ϕ is the azimuthal angle, both in radians.\n\nExamples\n\njulia> bearing2(π/2, 0.0, π/4, π/4)\n(0.8164965809277261, 0.5773502691896257)\n\n\n\n\n\n"
 },
 
 {
@@ -365,7 +365,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Public",
     "title": "CMB.Legendre.AbstractLegendreNorm",
     "category": "type",
-    "text": "abstract type AbstractLegendreNorm end\n\nAbstract supertype for normalization conditions of the Associated Legendre polynomials.\n\nExample\n\njulia> subtypes(AbstractLegendreNorm)\n3-element Array{Union{DataType, UnionAll},1}:\n CMB.Legendre.LegendreNormCoeff\n CMB.Legendre.LegendreSphereNorm\n CMB.Legendre.LegendreUnitNorm\n\n\n\n\n\n"
+    "text": "abstract type AbstractLegendreNorm end\n\nAbstract supertype for normalization conditions of the Associated Legendre polynomials.\n\nExample\n\njulia> using InteractiveUtils; subtypes(AbstractLegendreNorm)\n3-element Array{Any,1}:\n LegendreNormCoeff\n LegendreSphereNorm\n LegendreUnitNorm\n\n\n\n\n\n"
 },
 
 {
@@ -373,7 +373,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Public",
     "title": "CMB.Legendre.LegendreNormCoeff",
     "category": "type",
-    "text": "struct LegendreNormCoeff{N<:AbstractLegendreNorm,T<:Real} <: AbstractLegendreNorm\n\nPrecomputed recursion relation coefficients for the normalization N and value type T.\n\nExample\n\njulia> LegendreNormCoeff{LegendreSphereNorm,Float64}(1)\nCMB.Legendre.LegendreNormCoeff{CMB.Legendre.LegendreSphereNorm,Float64} for lmax = 1, mmax = 1 with coefficients:\n    μ: [0.0, 1.22474]\n    ν: [1.73205, 2.23607]\n    α: [0.0 0.0; 1.73205 0.0]\n    β: [0.0 0.0; -0.0 0.0]\n\n\n\n\n\n"
+    "text": "struct LegendreNormCoeff{N<:AbstractLegendreNorm,T<:Real} <: AbstractLegendreNorm\n\nPrecomputed recursion relation coefficients for the normalization N and value type T.\n\nExample\n\njulia> LegendreNormCoeff{LegendreSphereNorm,Float64}(1)\nLegendreNormCoeff{LegendreSphereNorm,Float64} for lmax = 1, mmax = 1 with coefficients:\n    μ: [0.0, 1.22474]\n    ν: [1.73205, 2.23607]\n    α: [0.0 0.0; 1.73205 0.0]\n    β: [0.0 0.0; -0.0 0.0]\n\n\n\n\n\n"
 },
 
 {
@@ -789,7 +789,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Public",
     "title": "CMB.PixelCovariance.PixelCovarianceCoeff",
     "category": "type",
-    "text": "struct PixelCovarianceCoeff{T<:Real}\n\nPrecomputed recursion relation coefficients for computing the pixel-pixel covariance.\n\nExample\n\njulia> PixelCovarianceCoeff{Float64}(2)\nCMB.PixelCovariance.PixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:\n    λ: CMB.Legendre.LegendreNormCoeff{CMB.Legendre.LegendreUnitNorm,Float64}\n    η: [0.0795775, 0.238732, 0.397887]\n    α: [0.0, 0.0, 0.324874]\n    β: [0.0, 0.0, 0.0331573]\n\n\n\n\n\n"
+    "text": "struct PixelCovarianceCoeff{T<:Real}\n\nPrecomputed recursion relation coefficients for computing the pixel-pixel covariance.\n\nExample\n\njulia> PixelCovarianceCoeff{Float64}(2)\nPixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:\n    λ: LegendreNormCoeff{LegendreUnitNorm,Float64}\n    η: [0.0795775, 0.238732, 0.397887]\n    α: [0.0, 0.0, 0.324874]\n    β: [0.0, 0.0, 0.0331573]\n\n\n\n\n\n"
 },
 
 {
