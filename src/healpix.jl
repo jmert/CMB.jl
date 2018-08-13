@@ -14,7 +14,7 @@ export
     isnorth, issouth,
     isnorthcap, issouthcap, iscap,
     isnorthequbelt, issouthequbelt, isequbelt,
-    pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec,
+    pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec, ang2pix,
     UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
 using StaticArrays
@@ -430,8 +430,8 @@ Like [`ang2pix`](@ref) but ...
         αt,_ = modf(α)  # fraction across first quadrant
 
         σ = nside * sqrt(3 * (1 - z′))
-        kp = unsafe_trunc(Int, σ * αt)          # SW-to-NE pixel boundary
-        km = unsafe_trunc(Int, σ * (1 - αt))    # NW-to-SE pixel boundary
+        kp = unsafe_trunc(Int, σ * αt)          # NW pixel boundary
+        km = unsafe_trunc(Int, σ * (1 - αt))    # SW pixel boundary
 
         i = kp + km + 1     # intersection of (kp, km+1) or (kp+1, km) lines
         j = unsafe_trunc(Int, i * α) + 1
@@ -444,17 +444,20 @@ Like [`ang2pix`](@ref) but ...
             p = nside2npix(nside) - nside2npixcap(i+1) + j - 1
         end
     else
-        tmp = 1/2 - 3z/4
-        kp = unsafe_trunc(Int, nside * (α - tmp))
-        km = unsafe_trunc(Int, nside * (α + tmp))
-        i′ = kp - km + 1    # intersection of (kp, km+1) or (kp+1, km) lines,
-                            # counting from end of north cap
+        tmp = 3z / 4
+        kp = unsafe_trunc(Int, nside * (1/2 - tmp + α)) # NW pixel boundary
+        km = unsafe_trunc(Int, nside * (1/2 + tmp + α)) # SW pixel boundary
+        i′ = nside + kp - km  # ring offset w.r.t. northernmost equatorial belt ring
 
-        s = ((i′ & 1) + 1) >> 1
-        j = km + kp + s + 1
-        j -= j > 4nside ? 4nside : 0
+        s = mod(i′, 2) + 1
+        j = (km + kp + s - nside) >> 1
+        # rings with first pixel center at ϕ == 0 have region where ϕ == 2π - δ "wrap
+        # around" back to first pixel
+        if j == 4nside
+            j = 0
+        end
 
-        p = nside2npixcap(nside) + 4nside * (i′ - 1) + j
+        p = nside2npixcap(nside) + 4nside * i′ + j
     end
     return p
 end

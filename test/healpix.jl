@@ -103,5 +103,28 @@ module Healpix
             @test_throws InvalidNside pix2fn(5,  0)
             @test_throws InvalidPixel pix2fn(4, -1)
         end
+        for ang2fn in (ang2pix,)
+            @test_throws InvalidNside ang2fn(5, π/2, π/2)
+        end
+    end
+
+    @testset "Pixel identity" begin
+        for pix in hpix4_pix
+            @test pix == ang2pix(4, pix2ang(4, pix)...)
+        end
+    end
+
+    @testset "Wrap-around pixel ang2pix" begin
+        # For pixel with centers at ϕ = 0, make sure the ϕ ≲ 0 (i.e. ϕ ≈ 2π - δϕ) are
+        # handled correctly.
+        nside = 4
+        _, ϕ₀ = pix2ang(nside, nside2npixcap(nside))
+        ϕ₀ = -ϕ₀ / 2
+        for ring in (nside+1):2:(2nside-1)
+            pix = nside2npixcap(nside) + 4nside*ring
+            θ,_ = pix2ang(nside, pix)
+            @test pix == ang2pix(nside, θ, ϕ₀)
+            @test pix == ang2pix(nside, θ, 2π + ϕ₀)
+        end
     end
 end
