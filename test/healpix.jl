@@ -111,6 +111,7 @@ module Healpix
     @testset "Pixel identity" begin
         for pix in hpix4_pix
             @test pix == ang2pix(4, pix2ang(4, pix)...)
+            @test pix == vec2pix(4, pix2vec(4, pix))
         end
     end
 

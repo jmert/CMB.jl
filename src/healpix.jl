@@ -14,7 +14,8 @@ export
     isnorth, issouth,
     isnorthcap, issouthcap, iscap,
     isnorthequbelt, issouthequbelt, isequbelt,
-    pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec, ang2pix,
+    pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec,
+    ang2pix, vec2pix,
     UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
 using StaticArrays
@@ -415,13 +416,26 @@ end
     return unsafe_ang2pix(nside, θ, ϕ)
 end
 
+@fastmath function vec2pix(nside, r)
+    checkhealpix(nside)
+    length(r) == 3 || throw("r must be a 3-vector")
+    z = r[3]
+    ϕ = atan(r[2], r[1])
+    ϕ += ifelse(ϕ < zero(ϕ), oftype(ϕ, 2π), zero(ϕ))
+    return unsafe_zphi2pix(nside, z, ϕ)
+end
+
 """
     p = unsafe_ang2pix(nside, θ, ϕ)
 
 Like [`ang2pix`](@ref) but ...
 """
 @fastmath function unsafe_ang2pix(nside, θ, ϕ)
-    z = cos(θ)      # z-component
+    z = cos(θ)
+    return unsafe_zphi2pix(nside, z, ϕ)
+end
+
+@fastmath function unsafe_zphi2pix(nside, z, ϕ)
     z′ = abs(z)
     α = 2ϕ / π      # scaled distance around ring in [0,4)
                     # later advantage is that mod(ϕ, π/2) becomes modf(α)
