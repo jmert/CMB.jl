@@ -16,7 +16,11 @@ import LinearAlgebra: ⋅, ×, normalize
 @eval rtepspi(::Type{Float32}) = $(sqrt(eps(convert(Float32,π))))
 @eval rtepspi(::Type{Float64}) = $(sqrt(eps(convert(Float64,π))))
 # Fallback for all other floating point values.
-rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
+rtepspi(::Type{T}) where T = sqrt(eps(convert(T,π)))
+
+@eval rtepsone(::Type{Float32}) = $(sqrt(eps(one(Float32))))
+@eval rtepsone(::Type{Float64}) = $(sqrt(eps(one(Float64))))
+rtepsone(::Type{T}) where T = sqrt(eps(one(T)))
 
 # Make a couple of functions which will make vector math easier for us
 
@@ -26,9 +30,9 @@ rtepspi(::Type{T}) where {T<:AbstractFloat} = sqrt(eps(convert(T,π)))
 Test whether vector ``u`` is parallel to vector ``v``. Assumes that both are unit
 normalized. See also [`⟂`](@ref).
 """
-@generated function ∥(u, v)
+function ∥(u, v)
     T = promote_type(eltype(u), eltype(v))
-    return :( ($(one(T)) - abs(u⋅v)) < $(sqrt(eps(one(T)))) )
+    return (one(T) - abs(u⋅v)) < rtepsone(T)
 end
 
 """
@@ -37,9 +41,9 @@ end
 Test whether vector ``u`` is perpendicular to vector ``v``. Assumes that both are unit
 normalized. See also [`∥`](@ref).
 """
-@generated function ⟂(u, v)
+function ⟂(u, v)
     T = promote_type(eltype(u), eltype(v))
-    return :( abs(u⋅v) < $(sqrt(eps(one(T)))) )
+    return abs(u⋅v) < rtepsone(T)
 end
 
 """
