@@ -1,8 +1,8 @@
 module Sphere
 using Test
 using LinearAlgebra, Random, StaticArrays
-using ..CMBTests: NumTypes
 using CMB.Sphere
+import ..NumTypes
 import CMB.Sphere: cart, ẑ
 
 @testset "Antipodes ($T)" for T in NumTypes
