@@ -3,7 +3,7 @@ using Documenter, CMB
 DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
 
 makedocs(
-    format = Documenter.HTML(),
+    format = Documenter.HTML(mathengine=MathJax()),
     sitename = "CMB Analysis",
     authors = "Justin Willmert",
     modules = [CMB],
