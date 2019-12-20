@@ -1,31 +1,28 @@
-## Documentation: http://docs.travis-ci.com/user/languages/julia/
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
-
 os:
   - linux
-#  - osx
-
+  - osx
 julia:
   - 1.2
   - 1.3
   - nightly
-
+matrix:
+  allow_failures:
+    - julia: nightly
+  fast_finish: true
 notifications:
   email: false
-
-matrix:
-  fast_finish: true
-  allow_failures:
-  - julia: nightly
-
-## uncomment the following lines to override the default test script
-#script:
-#  - julia -e 'Pkg.clone(pwd())'
-#  - julia -e 'Pkg.build("CMB")'
-#  - if [ -f test/runtests.jl ]; then
-#      julia --check-bounds=yes -e 'Pkg.test("CMB"; coverage=true)'
-#    fi
-
 after_success:
-  - julia --color=yes -e 'include("docs/make.jl")' -- deploy
-  - julia --color=yes -e 'include("test/coverage.jl")'
+  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+jobs:
+  include:
+    - stage: Documentation
+      julia: 1.2
+      os: linux
+      script: julia --project=docs -e '
+          using Pkg;
+          Pkg.develop(PackageSpec(path=pwd()));
+          Pkg.instantiate();
+          include("docs/make.jl");'
+      after_success: skip

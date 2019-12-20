@@ -1,9 +1,3 @@
-```@meta
-DocTestSetup = quote
-    using CMB
-end
-```
-
 # Private Documentation
 
 ## Contents

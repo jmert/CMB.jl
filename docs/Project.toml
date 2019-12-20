@@ -1,0 +1,6 @@
+[deps]
+CMB = "592991c5-7c29-5f04-aea2-6d9f924ef2a1"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[compat]
+Documenter = "≥0.21.0"
