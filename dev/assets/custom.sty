@@ -1,0 +1,16 @@
+\usepackage{unicode-math}
+\defaultfontfeatures{Ligatures=TeX}
+\setmainfont{Linux Libertine}
+\defaultfontfeatures+{Scale=MatchLowercase}
+\setsansfont{Linux Biolinum}
+\setmonofont{Inconsolata}
+\setmathfont[
+	% Use italic fonts at all times
+	math-style = ISO,
+	bold-style = ISO,
+]{XITS Math}
+
+% Additionally, use an alternate stylistic set for calligraphic letters
+% so that they are different from the script letters
+\setmathfont{XITS Math}[range={cal,bfcal},StylisticSet=1]
+
