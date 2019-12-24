@@ -105,5 +105,41 @@ end
     @test bearing2(r₁, r₂) == (-1.0, 0.0)
 end
 
+# Test failed with world age problems when generated functions were incorrectly used;
+# numerical derivative via newer world's Dual numbers tests for this error.
+@testset "Derivatives via dual numbers" begin
+    using ForwardDiff: gradient
+    p₁ = @SVector[π/4, 0.0]
+    p₂ = @SVector[π/2, π/4]
+    pts = SVector{4,Float64}([p₁..., p₂...])
+
+    # Analytic derivatives for cosdistance with respect to θ,ϕ
+    function anal_deriv1(pts)
+        r₁ = Sphere.cart(pts[1:2]...)
+        r₂ = Sphere.cart(pts[3:4]...)
+        @inline function dcosσ_dθ(r₁, r₂)
+            x₁, y₁, z₁ = r₁
+            x₂, y₂, z₂ = r₂
+            ζ = @fastmath sqrt(1 - z₁^2)
+            return (x₁*x₂ + y₁*y₂) * z₁/ζ - ζ*z₂
+        end
+        @inline function dcosσ_dϕ(r₁, r₂)
+            x₁, y₁, z₁ = r₁
+            x₂, y₂, z₂ = r₂
+            return -y₁*x₂ + x₁*y₂
+        end
+        return SVector{4}([
+            dcosσ_dθ(r₁, r₂),
+            dcosσ_dϕ(r₁, r₂),
+            dcosσ_dθ(r₂, r₁),
+            dcosσ_dϕ(r₂, r₁)
+           ])
+    end
+    # Numerical derivative using Dual numbers
+    dual_deriv1(pts) = gradient(p -> cosdistance(p...), pts)
+
+    @test anal_deriv1(pts) ≈ @inferred dual_deriv1(pts)
+end
+
 end
 
