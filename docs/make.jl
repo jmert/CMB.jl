@@ -1,5 +1,7 @@
 using Documenter, CMB
 
+doctest = "--fix" in ARGS ? :fix : true
+
 DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
 
 makedocs(
@@ -7,6 +9,7 @@ makedocs(
     sitename = "CMB Analysis",
     authors = "Justin Willmert",
     modules = [CMB],
+    doctest = doctest,
     doctestfilters = Regex[
         r"Ptr{0x[0-9a-f]+}",
         r"[0-9\.]+ seconds \(.*\)"
