@@ -1,12 +1,13 @@
-using Test
+using Test, Logging
+using CMB
 const NumTypes = (Float32, Float64, BigFloat)
 
-const TESTLIST = Dict(
+const TESTLIST = [
     "sphere" => "Sphere",
     "legendre" => "Legendre",
     "healpix" => "HEALPix",
-    "sparse" => "Sparse"
-   )
+    "sparse" => "Sparse",
+   ]
 
 @testset "CMB" begin
     @testset "$desc" for (id,desc) in TESTLIST
@@ -17,5 +18,20 @@ const TESTLIST = Dict(
         include(modpath)
         t1 = time_ns()
         println( (t1-t0)/1e9, " seconds")
+    end
+
+    # Disable Documeter's Info logging
+    oldlvl = Logging.min_enabled_level(current_logger())
+    disable_logging(Logging.Info)
+    try
+        using Documenter
+        DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
+        print("running Doc tests... ")
+        t0 = time_ns()
+        doctest(CMB, testset="Doc Tests")
+        t1 = time_ns()
+        println( (t1-t0)/1e9, " seconds")
+    finally
+        disable_logging(oldlvl - 1)
     end
 end

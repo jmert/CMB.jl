@@ -105,4 +105,3 @@ module Healpix
         end
     end
 end
-
