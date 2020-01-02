@@ -75,10 +75,11 @@ Base.show(io::IO, norm::PixelCovarianceCoeff{T}) where {T} =
     print(io, PixelCovarianceCoeff, "{$T}")
 function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCoeff)
     println(io, C, " for lmax = $(length(C.η)-1) with coefficients:")
-    println(io, "    λ: ", C.λ)
-    println(io, "    η: ", C.η)
-    println(io, "    α: ", C.α)
-    println(io, "    β: ", C.β)
+    io′ = IOContext(io, :compact => true)
+    println(io′, "    λ: ", C.λ)
+    println(io′, "    η: ", C.η)
+    println(io′, "    α: ", C.α)
+    println(io′, "    β: ", C.β)
 end
 
 @noinline function _chkbounds_F(C, F, lmax)
