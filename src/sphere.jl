@@ -10,40 +10,19 @@ using StaticArrays
 import Base: @propagate_inbounds
 import LinearAlgebra: ⋅, ×, normalize
 
-# Fast-path the isapprox tolerance for Float32 and Float64. The computation appears to be
-# too complex to constant-fold automatically, so we do it manually for these two most
-# important case.
-@eval rtepspi(::Type{Float32}) = $(sqrt(eps(convert(Float32,π))))
-@eval rtepspi(::Type{Float64}) = $(sqrt(eps(convert(Float64,π))))
-# Fallback for all other floating point values.
-rtepspi(::Type{T}) where T = sqrt(eps(convert(T,π)))
-
 @eval rtepsone(::Type{Float32}) = $(sqrt(eps(one(Float32))))
 @eval rtepsone(::Type{Float64}) = $(sqrt(eps(one(Float64))))
 rtepsone(::Type{T}) where T = sqrt(eps(one(T)))
-
-# Make a couple of functions which will make vector math easier for us
 
 """
     ∥(u, v)
 
 Test whether vector ``u`` is parallel to vector ``v``. Assumes that both are unit
-normalized. See also [`⟂`](@ref).
+normalized.
 """
 function ∥(u, v)
     T = promote_type(eltype(u), eltype(v))
     return (one(T) - abs(u⋅v)) < rtepsone(T)
-end
-
-"""
-    ⟂(u, v)
-
-Test whether vector ``u`` is perpendicular to vector ``v``. Assumes that both are unit
-normalized. See also [`∥`](@ref).
-"""
-function ⟂(u, v)
-    T = promote_type(eltype(u), eltype(v))
-    return abs(u⋅v) < rtepsone(T)
 end
 
 """
