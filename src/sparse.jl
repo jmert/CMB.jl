@@ -1,4 +1,4 @@
-using Compat.SparseArrays
+using SparseArrays
 
 export outer, quadprod
 
