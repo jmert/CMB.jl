@@ -10,8 +10,6 @@ using StaticArrays
 import Base: @propagate_inbounds
 import LinearAlgebra: ⋅, ×, normalize
 
-@eval rtepsone(::Type{Float32}) = $(sqrt(eps(one(Float32))))
-@eval rtepsone(::Type{Float64}) = $(sqrt(eps(one(Float64))))
 rtepsone(::Type{T}) where T = sqrt(eps(one(T)))
 
 """
