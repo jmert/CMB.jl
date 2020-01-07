@@ -16,6 +16,7 @@ Design goals of this package include:
 ## User Manual and Documentation
 ```@contents
 Pages = [
+    "man/healpix.md",
     "man/legendre.md",
     "man/references.md"
 ]
