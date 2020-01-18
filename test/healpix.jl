@@ -105,19 +105,23 @@ module Healpix
         end
         for ang2fn in (ang2pix,)
             @test_throws InvalidNside ang2fn(5, π/2, π/2)
+            @test_throws DomainError ang2fn(4, 2π, π/2) # θ > π when required π ∈ [0,π]
+        end
+        for vec2fn in (vec2pix,)
+            @test_throws InvalidNside vec2fn(5, Float64[0, 0, 1])
+            @test_throws DimensionMismatch vec2fn(4, Float64[0, 1])
+            @test_throws DimensionMismatch vec2fn(4, Float64[0, 0, 0, 1])
         end
     end
 
     @testset "Pixel identity" begin
-        for pix in hpix4_pix
-            @test pix == ang2pix(4, pix2ang(4, pix)...)
-            @test pix == vec2pix(4, pix2vec(4, pix))
-        end
+        @test all(pix == ang2pix(4, pix2ang(4, pix)...) for pix in hpix4_pix)
+        @test all(pix == vec2pix(4, pix2vec(4, pix)) for pix in hpix4_pix)
     end
 
     @testset "Wrap-around pixel ang2pix" begin
         # For pixel with centers at ϕ = 0, make sure the ϕ ≲ 0 (i.e. ϕ ≈ 2π - δϕ) are
-        # handled correctly.
+        # handled correctly. Only occurs within the equatorial belt.
         nside = 4
         _, ϕ₀ = pix2ang(nside, nside2npixcap(nside))
         ϕ₀ = -ϕ₀ / 2
