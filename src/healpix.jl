@@ -15,8 +15,10 @@ export
     isnorthcap, issouthcap, iscap,
     isnorthequbelt, issouthequbelt, isequbelt,
     pix2ring, pix2ringidx, pix2z, pix2theta, pix2phi, pix2ang, pix2vec,
+    ang2pix, vec2pix,
     UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
+using Base: @propagate_inbounds
 using StaticArrays
 
 """
@@ -231,7 +233,7 @@ equatorial ring) for an `nside` HEALPix map.
 """
     i = pix2ring(nside, p)
 
-Computes the ring index `i` for the given pixel `p`. `nside` is the Nside resolution
+Computes the ring index `i` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
 @fastmath function pix2ring(nside::I, p::I) where I<:Integer
@@ -250,7 +252,7 @@ pix2ring(nside, p) = pix2ring(promote(nside, p)...)
 """
     j = pix2ringidx(nside, p)
 
-Computes the index `j` within the ring for the given pixel `p`. `nside` is the Nside
+Computes the index `j` within the ring for the given pixel `p`, where `nside` is the Nside
 resolution factor.
 """
 @fastmath function pix2ringidx(nside::I, p::I) where I<:Integer
@@ -272,8 +274,8 @@ pix2ringidx(nside, p) = pix2ringidx(promote(nside, p)...)
 """
     z = pix2z(nside, p)
 
-Computes the cosine of the colatitude `z` for the given pixel `p`. `nside` is the Nside
-resolution factor.
+Computes the cosine of the colatitude `z` for the given pixel `p`, where `nside` is the
+Nside resolution factor.
 """
 function pix2z(nside::I, p::I) where I<:Integer
     checkhealpix(nside, p)
@@ -304,7 +306,7 @@ end
 """
     θ = pix2theta(nside, p)
 
-Computes the colatitude `θ` for the given pixel `p`. `nside` is the Nside resolution
+Computes the colatitude `θ` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
 pix2theta(nside, p) = @fastmath acos(pix2z(promote(nside, p)...))
@@ -320,7 +322,7 @@ unsafe_pix2theta(nside, p) = acos(unsafe_pix2z(promote(nside, p)...))
 """
     ϕ = pix2phi(nside, p)
 
-Computes the azimuth `ϕ` for the given pixel `p`. `nside` is the Nside resolution
+Computes the azimuth `ϕ` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
 function pix2phi(nside::I, p::I) where I<:Integer
@@ -359,7 +361,8 @@ end
 """
     (θ,ϕ) = pix2ang(nside, p)
 
-Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`.
+Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`, where
+`nside` is the Nside resolution factor.
 """
 pix2ang(nside, p) = (pix2theta(nside, p), pix2phi(nside, p))
 
@@ -372,9 +375,10 @@ index validity.
 unsafe_pix2ang(nside, p) = (unsafe_pix2theta(nside, p), unsafe_pix2phi(nside, p))
 
 """
-    r::SVector{3} = pix2vec(nside, p)
+    r = pix2vec(nside, p)
 
-Computes the unit vector `r` pointing to the pixel center of the given pixel `p`.
+Computes the unit vector `r` pointing to the pixel center of the given pixel `p`, where
+`nside` is the Nside resolution factor.
 """
 function pix2vec(nside::I, p::I) where I<:Integer
     checkhealpix(nside, p)
@@ -403,5 +407,98 @@ index validity.
     return SVector{3}(x, y, z)
 end
 
-end # module Healpix
+"""
+    p = ang2pix(nside, θ, ϕ)
 
+Computes the HEALPix pixel index `p` which contains the point ``(θ,ϕ)`` given by the
+colatitude `θ` and azimuth `ϕ`, where `nside` is the Nside resolution factor.
+"""
+@fastmath function ang2pix(nside, θ, ϕ)
+    checkhealpix(nside)
+    zero(θ) ≤ θ ≤ oftype(θ, π) || throw(DomainError("θ must be in [0,π], but got $θ"))
+    ϕ = mod2pi(ϕ)
+    return unsafe_ang2pix(nside, θ, ϕ)
+end
+
+"""
+    p = vec2pix(nside, r)
+
+Computes the HEALPix pixel index `p` which contains the point at the end of the unit
+vector `r`, where `nside` is the Nside resolution factor.
+"""
+function vec2pix(nside, r)
+    checkhealpix(nside)
+    length(r) == 3 || throw(DimensionMismatch("r must be a 3-vector"))
+    return @inbounds unsafe_vec2pix(nside, r)
+end
+
+"""
+    p = unsafe_ang2pix(nside, θ, ϕ)
+
+Like [`ang2pix`](@ref) but neither calls [`checkhealpix`](@ref) to check the validity of
+`nside` nor checks the domain of the spherical coordinates `θ` and `ϕ`.
+"""
+@fastmath function unsafe_ang2pix(nside, θ, ϕ)
+    z = cos(θ)
+    return unsafe_zphi2pix(nside, z, ϕ)
+end
+
+"""
+    p = unsafe_vec2pix(nside, r)
+
+Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length of `r`.
+"""
+@fastmath @propagate_inbounds function unsafe_vec2pix(nside, r)
+    z = r[3]
+    ϕ = atan(r[2], r[1])
+    ϕ += ifelse(ϕ < zero(ϕ), 2oftype(ϕ, π), zero(ϕ))
+    return unsafe_zphi2pix(nside, z, ϕ)
+end
+
+"""
+    p = unsafe_zphi2pix(nside, z, ϕ)
+
+Like [`unsafe_ang2pix`](@ref) but uses the value ``z = \\cos(θ)`` instead.
+"""
+@fastmath function unsafe_zphi2pix(nside, z, ϕ)
+    z′ = abs(z)
+    α = 2ϕ / π      # scaled distance around ring in [0,4)
+                    # later advantage is that mod(ϕ, π/2) becomes modf(α)
+
+    if z′ > 2/3
+        αt,_ = modf(α)  # fraction across first quadrant
+
+        σ = nside * sqrt(3 * (1 - z′))
+        kp = unsafe_trunc(Int, σ * αt)          # NW pixel boundary
+        km = unsafe_trunc(Int, σ * (1 - αt))    # SW pixel boundary
+
+        i = kp + km + 1     # intersection of (kp, km+1) or (kp+1, km) lines
+        j = unsafe_trunc(Int, i * α) + 1
+
+        if z > 0
+            # counting from north pole
+            p = nside2npixcap(i) + j - 1
+        else
+            # counting from south pole
+            p = nside2npix(nside) - nside2npixcap(i+1) + j - 1
+        end
+    else
+        tmp = 3z / 4
+        kp = unsafe_trunc(Int, nside * (1/2 - tmp + α)) # NW pixel boundary
+        km = unsafe_trunc(Int, nside * (1/2 + tmp + α)) # SW pixel boundary
+        i′ = nside + kp - km  # ring offset w.r.t. northernmost equatorial belt ring
+
+        s = mod(i′, 2) + 1
+        j = (km + kp + s - nside) >> 1
+        # rings with first pixel center at ϕ == 0 have region where ϕ == 2π - δ "wrap
+        # around" back to first pixel
+        if j == 4nside
+            j = 0
+        end
+
+        p = nside2npixcap(nside) + 4nside * i′ + j
+    end
+    return p
+end
+
+end # module Healpix

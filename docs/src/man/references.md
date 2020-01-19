@@ -38,6 +38,18 @@
       s = (i - N_\mathrm{side}) \operatorname{mod} 2 + 1
     ```
 
+  - Erratum: Equation 22 differs in signs from equations A2–A3, and neither could be made
+    to work. Instead, the implementation here is derived from the system of equations:
+    ```math
+      \begin{align*}
+        z_p(ϕ, k_p) &= \frac{2}{3} - \frac{2k_p}{3N_{\mathrm{side}}}
+            + \frac{8ϕ}{3π}
+        \\
+        z_m(ϕ, k_m) &= -\frac{2}{3} + \frac{2k_m}{3N_{\mathrm{side}}}
+            - \frac{8ϕ}{3π}
+      \end{align*}
+    ```
+
 ### [Pixel Covariance](@id bib-pixelcovariance)
 
 * M. Tegmark and A. de Oliveira-Costa. “How to measure CMB polarization power spectra

@@ -171,14 +171,22 @@ where the elements correspond to the typical ``(x, y, z)`` right-handed coordina
 the positive ``z``-axis passing through the North Pole and the positive ``x``-axis
 passing through the Prime Meridian.
 
-In reverse, converting an arbitrary spherical coordinate to a pixel index... *...TO BE
-IMPLEMENTED...*
+In reverse, converting an arbitrary spherical coordinate to a pixel index is
+accomplished via the [`CMB.Healpix.ang2pix`](@ref) and
+[`CMB.Healpix.vec2pix`](@ref) methods, respectively:
+```jldoctest healpix
+julia> ang2pix(nside, pix2ang(nside, 103)...)
+103
+
+julia> vec2pix(nside, pix2vec(nside, 103))
+103
+```
 
 ## Input validation and error handling
 
 As stated earlier, the `HEALPix` ``\Nside`` parameter takes on values which are powers of
 two and by convention of the official `HEALPix` [^1] source is limited to the range
-``1`` to ``2^29``.
+``1`` to ``2^{29}``.
 Validity of any `nside` parameter can be checked with the
 [`CMB.Healpix.ishealpixok`](@ref ishealpixok(::Any)) function.
 ```jldoctest healpix
@@ -191,8 +199,7 @@ julia> ishealpixok.((5, 2^30))
 Likewise, once given an ``\Nside`` value, the pixel indices are bounded in ``0`` to
 `nside2npix(nside) - 1`;
 the two-argument form of [`ishealpixok`](@ref ishealpixok(::Any,::Any)) returns
-whether a pixel is valid
-for the specified `nside` or not:
+whether a pixel is valid for the specified `nside` or not:
 ```jldoctest healpix
 julia> nside2npix(4)
 192
