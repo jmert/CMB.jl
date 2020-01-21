@@ -1,4 +1,4 @@
-# `HEALPix` Pixelization
+# [`HEALPix` Pixelization](@id man_healpix)
 
 ```@contents
 Pages = ["healpix.md"]

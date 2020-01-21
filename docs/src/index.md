@@ -18,6 +18,7 @@ Design goals of this package include:
 Pages = [
     "man/healpix.md",
     "man/legendre.md",
+    "man/sphere.md",
     "man/references.md"
 ]
 Depth = 1
