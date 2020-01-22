@@ -19,6 +19,7 @@ makedocs(
         "Manual" => [
             "HEALPix Pixelization" => "man/healpix.md",
             "Legendre Polynomials" => "man/legendre.md",
+            "Spherical Functions" => "man/sphere.md",
             "References" => "man/references.md"
         ],
         "API Reference" => [

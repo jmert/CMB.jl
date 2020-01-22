@@ -3,7 +3,35 @@ using Test
 using LinearAlgebra, Random, StaticArrays
 using CMB.Sphere
 import ..NumTypes
-import CMB.Sphere: cart, ẑ
+import CMB.Sphere: cartvec, colataz, latlon, x̂, ẑ
+
+@testset "Inferrability and Int-Float promotion" begin
+    @test @inferred(cartvec(0, 0)) isa SVector{3,Float64}
+    @test @inferred(colataz(0, 0)) isa Tuple{Float64,Float64}
+    @test @inferred(latlon(0, 0)) isa Tuple{Float64,Float64}
+    @test @inferred(colataz(ẑ)) isa Tuple{Float64,Float64}
+    @test @inferred(latlon(ẑ)) isa Tuple{Float64,Float64}
+
+    @test @inferred(bearing(x̂, -x̂)) isa Float64
+    @test @inferred(bearing2(x̂, -x̂)) isa Tuple{Float64, Float64}
+    @test @inferred(distance(x̂, -x̂)) isa Float64
+    @test @inferred(cosdistance(x̂, -x̂)) isa Float64
+end
+
+@testset "Coordinate conversions" begin
+    θ, ϕ = π/6, π/4
+    δ, λ = 60.0, 45.0
+    r = SVector(sqrt(2)/4, sqrt(2)/4, sqrt(3)/2)
+    @test cartvec((θ, ϕ)) == cartvec(θ, ϕ) ≈ r
+    @test colataz((δ, λ)) == colataz(δ, λ)
+    @test latlon((θ, ϕ)) == latlon(θ, ϕ)
+    @test all(colataz(ẑ) .== (0.0, 0.0))
+    @test all(latlon(ẑ) .== (90.0, 0.0))
+    @test all(isapprox.(colataz(r), (θ, ϕ)))
+    @test all(isapprox.(latlon(r), (δ, λ)))
+    @test all(isapprox.(colataz(latlon((θ, ϕ))), (θ, ϕ)))
+    @test all(isapprox.(latlon(colataz((δ, λ))), (δ, λ)))
+end
 
 @testset "Antipodes ($T)" for T in NumTypes
     npole = SVector{3,T}(ẑ)
@@ -49,24 +77,27 @@ end
     end
 end
 
-# Pairs of points on the equator will always have bearing angles of 90°, and
+# Pairs of points on the equator will always have bearing angles of ±90°, and
 # the angular separation is equal to the difference in azimuths.
 @testset "Points around equator ($T)" for T in NumTypes
     local pi = T===BigFloat ? T(π) : 1.0π
     atol = max(eps(1π), eps(T(π)))
 
-    Random.seed!(1928)
+    cs = (zero(T),  one(T))
+    α  = pi / 2
+    θ  = pi / 2
+
     for nn in 1:4
-        θ  = T(pi / 2)
         ϕ₁ = T(pi) * rand(T)
         for Δϕ in T.((pi/8, pi/4, pi/2, 3pi/4, 7pi/8))
             ϕ₂ = ϕ₁ + Δϕ
-            @test all((≈).(bearing2(θ, ϕ₁, θ, ϕ₂), T.((0, 1)), atol=atol))
-            @test all((≈).(bearing2(θ, ϕ₂, θ, ϕ₁), T.((0, 1)), atol=atol))
-            @test bearing( θ, ϕ₁, θ, ϕ₂) ≈ T(pi / 2) atol=atol
-            @test bearing( θ, ϕ₂, θ, ϕ₁) ≈ T(pi / 2) atol=atol
-            @test distance(θ, ϕ₁, θ, ϕ₂) ≈ Δϕ atol=atol
-            @test distance(θ, ϕ₂, θ, ϕ₁) ≈ Δϕ atol=atol
+            s = Δϕ > pi ? -1 : 1
+            @test all((≈).(bearing2(θ, ϕ₁, θ, ϕ₂),  s.*cs, atol=atol))
+            @test all((≈).(bearing2(θ, ϕ₂, θ, ϕ₁), -s.*cs, atol=atol))
+            @test bearing( θ, ϕ₁, θ, ϕ₂) ≈  s*α
+            @test bearing( θ, ϕ₂, θ, ϕ₁) ≈ -s*α
+            @test distance(θ, ϕ₁, θ, ϕ₂) ≈ Δϕ
+            @test distance(θ, ϕ₂, θ, ϕ₁) ≈ Δϕ
         end
     end
 end
@@ -89,6 +120,70 @@ end
         @test distance(θ, ϕ₁, θ, ϕ₂) ≈ σ atol=atol
         @test distance(θ, ϕ₂, θ, ϕ₁) ≈ σ atol=atol
     end
+end
+
+@testset "Reckon type stability ($T)" for T in NumTypes
+    T′ = promote_type(T, Float64)
+    # Vector interface
+    @test @inferred(reckon(T.(ẑ), rand(T), rand(T))) isa SVector{3,T}
+    @test @inferred(reckon(ẑ, rand(T), rand(T))) isa SVector{3,T}
+    @test @inferred(reckon(float.(ẑ), rand(T), rand(T))) isa SVector{3,T′}
+    @test @inferred(reckon(T.(ẑ), rand(), rand(T))) isa SVector{3,T′}
+    @test @inferred(reckon(T.(ẑ), rand(T), rand())) isa SVector{3,T′}
+    # Coordinate interface
+    @test @inferred(reckon(zero(T), zero(T), rand(T), rand(T))) isa Tuple{T,T}
+    @test @inferred(reckon(0.0, 0.0, rand(T), rand(T))) isa Tuple{T′,T′}
+    @test @inferred(reckon(0.0, 0, rand(T), rand(T))) isa Tuple{T′,T′}
+    @test @inferred(reckon(0, 0.0, rand(T), rand(T))) isa Tuple{T′,T′}
+    @test @inferred(reckon(zero(T), zero(T), rand(), rand(T))) isa Tuple{T′,T′}
+    @test @inferred(reckon(zero(T), zero(T), rand(T), rand())) isa Tuple{T′,T′}
+end
+
+# Inverse of distance/azimuth is reckon
+@testset "Reckon vectors ($T)" for T in NumTypes
+    local pi = T(π)
+    atol = max(eps(1π), eps(T(π)))
+
+    σ = rand(T)
+    ϕ = 2pi * rand(T)
+    # ±90° reckoning from the equator is simply a change in the longitude.
+    r = cartvec(pi/2, ϕ)
+    @test reckon(r, σ,  pi/2) ≈ cartvec(pi/2, ϕ + σ)
+    @test reckon(r, σ, -pi/2) ≈ cartvec(pi/2, ϕ - σ)
+    # 0°/180° reckoning from the equator is simply a change in latitude.
+    # (|σ| ≤ 1 < π/2, so no need to check for passing over the poles)
+    @test reckon(r, σ, zero(T)) ≈ cartvec(pi/2-σ, ϕ)
+    @test reckon(r, σ, -2*pi/2) ≈ cartvec(pi/2+σ, ϕ)
+
+    # The poles are treated as part of the prime meridian, and the bearing is calculated
+    # with respect to that.
+    @test reckon(T.(ẑ),  σ, ϕ) ≈ cartvec(σ, pi-ϕ)
+    @test reckon(T.(-ẑ), σ, ϕ) ≈ cartvec(pi-σ, ϕ)
+
+    # Cross-check reckon against distance/bearing
+    let crosscheck = () -> begin
+            # Pick a point near one of the poles
+            θ = rand(T) + atol^0.25 # exclude the pole itself by pushing away from θ==0
+            θ = rand(Bool) ? θ : T(π) - θ
+            ϕ = 2pi * rand(T)
+            # and a distance larger than size of the spherical cap.
+            σ = rand(T) + T(1.02)
+            α = pi * rand(T)
+
+            r = cartvec(θ, ϕ)
+            r′ = reckon(r, σ, α)
+            return isapprox(σ, distance(r, r′)) & isapprox(α, bearing(r, r′))
+        end
+        @test all(crosscheck() for _ in 1:500)
+    end
+end
+@testset "Reckon coordinates ($T)" for T in NumTypes
+    # Reckoning from the poles when called with colatitude-azimuth pairs takes advantage
+    # of the given azimuth to move along the given meridian rather that of only the
+    # prime meridian's great circle.
+    α = rand(T)
+    @test all(reckon(zero(T), ϕ, rand(T), α)[2] ≈ mod2pi(T(π)-α + ϕ) for ϕ in rand(T, 50))
+    @test all(reckon(T(π),    ϕ, rand(T), α)[2] ≈ α + ϕ              for ϕ in rand(T, 50))
 end
 
 @testset "Clamping to ±1" begin
@@ -115,8 +210,8 @@ end
 
     # Analytic derivatives for cosdistance with respect to θ,ϕ
     function anal_deriv1(pts)
-        r₁ = Sphere.cart(pts[1:2]...)
-        r₂ = Sphere.cart(pts[3:4]...)
+        r₁ = Sphere.cartvec(pts[1:2]...)
+        r₂ = Sphere.cartvec(pts[3:4]...)
         @inline function dcosσ_dθ(r₁, r₂)
             x₁, y₁, z₁ = r₁
             x₂, y₂, z₂ = r₂

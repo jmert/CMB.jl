@@ -1,5 +1,16 @@
 # References
 
+### [BICEP/Keck](@id bib-bicepkeck)
+* The BICEP/Keck Array Collaboration. “BICEP/Keck Array VII: Matrix Based E/B Separation
+  Applied to BICEP2 and the Keck Array”
+  In: *The Astrophysical Journal* 825, 66 (Jul 2016)
+  DOI: [10.3847/0004-637X/825/1/66](http://dx.doi.org/10.3847/0004-637X/825/1/66)
+  arXiv: [1603.05976](https://arxiv.org/abs/1603.05976)
+
+* J. Willmert. “Constraining Inflationary B-modes with the BICEP/Keck Array
+  Telescopes”
+  PhD Thesis. University of Minnesota, Nov 2019.
+
 ### [Coordinate systems and conventions](@id bib-coordinates)
 
 * J. P. Hamaker and J. D. Bregman. “Understanding radio polarimetry. III.
@@ -58,8 +69,3 @@
   DOI: [10.1103/PhysRevD.64.063001](http://dx.doi.org/10.1103/PhysRevD.64.063001)
   arXiv: [astro-ph/0012120](https://arxiv.org/abs/astro-ph/0012120)
 
-* The BICEP/Keck Array Collaboration. “BICEP/Keck Array VII: Matrix Based E/B Separation
-  Applied to BICEP2 and the Keck Array”
-  In: *The Astrophysical Journal* 825, 66 (Jul 2016)
-  DOI: [10.3847/0004-637X/825/1/66](http://dx.doi.org/10.3847/0004-637X/825/1/66)
-  arXiv: [1603.05976](https://arxiv.org/abs/1603.05976)
