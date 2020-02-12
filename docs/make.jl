@@ -20,6 +20,7 @@ makedocs(
         "Manual" => [
             "HEALPix Pixelization" => "man/healpix.md",
             "Spherical Functions" => "man/sphere.md",
+            "Pixel-pixel Covariance" => "man/pixelcov.md",
             "References" => "man/references.md"
         ],
         "API Reference" => [
@@ -31,6 +32,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/jmert/CMB.jl.git",
+    repo = "github.com/jmert/CMB.jl",
     target = "build",
 )

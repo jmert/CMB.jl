@@ -17,8 +17,8 @@ Design goals of this package include:
 ```@contents
 Pages = [
     "man/healpix.md",
-    "man/legendre.md",
     "man/sphere.md",
+    "man/pixelcov.md",
     "man/references.md"
 ]
 Depth = 1
@@ -32,9 +32,3 @@ Pages = [
 ]
 Depth = 1
 ```
-
-### [Index](@id main-index)
-```@index
-Pages = ["lib/public.md"]
-```
-

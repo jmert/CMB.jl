@@ -1,6 +1,10 @@
 # References
 
 ### [BICEP/Keck](@id bib-bicepkeck)
+* J. Tolan. “Testing Inflationary Cosmology with BICEP2 and the Keck Array”.
+  PhD Thesis. Stanford University, Aug. 2014.
+  URL: [http://purl.stanford.edu/sr837cd9569](http://purl.stanford.edu/sr837cd9569)
+
 * The BICEP/Keck Array Collaboration. “BICEP/Keck Array VII: Matrix Based E/B Separation
   Applied to BICEP2 and the Keck Array”
   In: *The Astrophysical Journal* 825, 66 (Jul 2016)
@@ -8,7 +12,7 @@
   arXiv: [1603.05976](https://arxiv.org/abs/1603.05976)
 
 * J. Willmert. “Constraining Inflationary B-modes with the BICEP/Keck Array
-  Telescopes”
+  Telescopes”.
   PhD Thesis. University of Minnesota, Nov 2019.
   URL: [http://hdl.handle.net/11299/211821](http://hdl.handle.net/11299/211821)
 
