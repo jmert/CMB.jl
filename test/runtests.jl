@@ -29,6 +29,6 @@ end
     @include "sphere.jl" "Spherical functions"
     @include "healpix.jl" "HEALPix functions"
     @include "sphericalharmonics.jl" "Spherical Harmonics"
-    @include "sparse.jl" "Sparse utilities"
+    @include "util.jl" "Utility functions"
     @include "doctests.jl" "Doctests"
 end
