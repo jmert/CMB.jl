@@ -1,9 +1,8 @@
-module Sparse
+module Util
     using Test
     using Random, SparseArrays
-    using CMB: quadprod
-
-    NumTypes = (Float32, Float64, BigFloat)
+    using CMB.Util
+    import ..NumTypes
 
     (m, n) = (10, 25)
     i = 7

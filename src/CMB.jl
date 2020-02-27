@@ -1,6 +1,8 @@
 module CMB
     import Reexport.@reexport
 
+    include("util.jl")
+
     include("sphere.jl")
     @reexport using .Sphere
 
@@ -13,8 +15,5 @@ module CMB
 
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
-
-    include("util.jl")
-    @reexport using .Util
 end
 
