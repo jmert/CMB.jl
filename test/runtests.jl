@@ -30,5 +30,6 @@ end
     @include "sphere.jl" "Spherical functions"
     @include "healpix.jl" "HEALPix functions"
     @include "sphericalharmonics.jl" "Spherical Harmonics"
+    @include "pixelcovariance.jl" "Pixel Covariance functions"
     @include "doctests.jl" "Doctests"
 end
