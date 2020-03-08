@@ -8,7 +8,7 @@ arXiv:astro-ph/0012120v3
 """
 module PixelCovariance
 
-export PixelCovarianceCoeff, PixelCovarianceF!,
+export Fweights!,
     PixelCovarianceCache,
     copyspectra!, makespectra!, applybeam!, selectpixel!,
     pixelcovariance, pixelcovariance!
@@ -16,7 +16,9 @@ export PixelCovarianceCoeff, PixelCovarianceF!,
 using StaticArrays
 
 # For computing the Legendre terms
-import ..Legendre: LegendreUnitCoeff, legendre!
+import Legendre: AbstractLegendreNorm, legendre!
+# also reuse some utilities developed in Legendre
+import Legendre: _similar
 
 # For pixelcovariance() wrapper function
 import ..Sphere: bearing2, cosdistance
@@ -24,156 +26,119 @@ import ..Healpix: pix2vec
 
 import Base.@boundscheck, Base.@propagate_inbounds
 
-"""
-    struct PixelCovarianceCoeff{T<:Real}
-
-Precomputed recursion relation coefficients for computing the pixel-pixel covariance.
-
-# Example
-```jldoctest
-julia> PixelCovarianceCoeff{Float64}(2)
-PixelCovarianceCoeff{Float64} for lmax = 2 with coefficients:
-    λ: LegendreNormCoeff{LegendreUnitNorm,Float64}
-    η: [0.0795775, 0.238732, 0.397887]
-    α: [0.0, 0.0, 0.324874]
-    β: [0.0, 0.0, 0.0331573]
-```
-"""
-struct PixelCovarianceCoeff{T<:Real}
-    λ::LegendreUnitCoeff{T}
-    η::Vector{T}
-    α::Vector{T}
-    β::Vector{T}
-
-    function PixelCovarianceCoeff{T}(lmax::Integer) where T
-        lmax = max(lmax, 2)
-
-        λ = LegendreUnitCoeff{T}(lmax, 2)
-        η = Vector{T}(undef, lmax+1)
-        α = Vector{T}(undef, lmax+1)
-        β = Vector{T}(undef, lmax+1)
-
-        η[1] = 1/(4π);  η[2] = 3/(4π)
-        α[1] = zero(T); α[2] = zero(T);
-        β[1] = zero(T); β[2] = zero(T);
-        @inbounds for ll in 2:lmax
-            lT = convert(T, ll)
-            norm = convert(T, 2ll + 1) / (4π)
-            invql = inv( (lT-one(T)) * lT * (lT+one(T)) * (lT+convert(T,2)) )
-
-            η[ll+1] = norm
-            α[ll+1] = 2norm * lT * sqrt(invql)
-            β[ll+1] = 2norm * invql
-        end
-
-        return new(λ, η, α, β)
-    end
+@inline function Fweights_η(::Type{T}, l::Integer) where {T}
+    return convert(T, 2l+1) / 4convert(T, π)
 end
 
-# Improve printing somewhat
-Base.show(io::IO, norm::PixelCovarianceCoeff{T}) where {T} =
-    print(io, PixelCovarianceCoeff, "{$T}")
-function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCoeff)
-    println(io, C, " for lmax = $(length(C.η)-1) with coefficients:")
-    io′ = IOContext(io, :compact => true)
-    println(io′, "    λ: ", C.λ)
-    println(io′, "    η: ", C.η)
-    println(io′, "    α: ", C.α)
-    println(io′, "    β: ", C.β)
+@inline function Fweights_αβ(::Type{T}, l::Integer) where {T}
+    η = Fweights_η(T, l)
+    lT = convert(T, l)
+    invql = inv( (lT-one(T)) * lT * (lT+one(T)) * (lT+2one(T)) )
+
+    α = 2η * lT * sqrt(invql)
+    β = 2η * invql
+    return (α, β)
 end
 
-@noinline function _chkbounds_F(C, F, lmax)
+@noinline function _chkbounds_F(F, lmax)
     (0 ≤ lmax) || throw(DomainError())
-    (lmax ≤ length(C.η)) || throw(BoundsError())
     (size(F,1)≥lmax+1 && size(F,2)≥4) || throw(DimensionMismatch())
 end
 
-function PixelCovarianceF!(C::PixelCovarianceCoeff{T}, F::AbstractMatrix{T},
-        lmax::Integer, x::T) where {T<:Real}
-    @boundscheck _chkbounds_F(C, F, lmax)
-
+function Fweights!(Λ::AbstractLegendreNorm, F, lmax::Integer, z)
     # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
     # this implementation. (Probably related to the keyword-argument penalty?)
-    local ≈(x::T, y::T) where {T} = @fastmath x==y || abs(x-y) < eps(one(T))
+    local @inline ≈(x, y) = @fastmath x==y || abs(x-y) < eps(one(y))
 
-    λ! = C.λ
-    half = inv(convert(T, 2))
+    #@boundscheck _chkbounds_F(F, lmax)
+    T = promote_type(eltype(Λ), eltype(F), eltype(z))
+    half = one(T) / 2
 
-    @inbounds begin
-        P = view(F, :, 1)
+    x  = _similar(z)
+    y  = _similar(z)
+    xy = _similar(z)
+    @inbounds @simd for I in eachindex(x)
+        x[I] = x′ = convert(T, z[I])
+        y′ = -inv(fma(x′, x′, -one(T)))
+        y[I], xy[I] = y′, x′ * y′
 
-        # Clear out the ℓ == 0 and ℓ == 1 terms since they aren't defined, and then
-        # compute the rest of the terms
-        F[1,2] = zero(T)
-        F[2,2] = zero(T)
-        F[1,3] = zero(T)
-        F[2,3] = zero(T)
-        F[1,4] = zero(T)
-        F[2,4] = zero(T)
+        # Clear out the ℓ == 0 and ℓ == 1 terms since they are undefined (denominators
+        # of α and β are singular).
+        F[I,1,1] = F[I,2,1] = zero(T)
+        F[I,1,2] = F[I,2,2] = zero(T)
+        F[I,1,3] = F[I,2,3] = zero(T)
+        F[I,1,4] = F[I,2,4] = zero(T)
+    end
 
-        if abs(x) ≈ one(T)
-        # Case where two points are antipodes
+    Iv = ntuple(_ -> :, ndims(x) + 1)
+    P = view(F, Iv..., 1)
 
-            # F10 always zero in this case
-            for ll=2:lmax
-                F[ll+1,2] = zero(T)
-            end
+    # Fill with the P^2_ℓ(x) terms initially
+    legendre!(Λ, P, lmax, 2, x)
+    # Calculate the F12 and F22 terms using P^2_ℓ
+    for ll in 2:lmax
+        η = Fweights_η(T, ll)
+        _, β = Fweights_αβ(T, ll)
+        lT = convert(T, ll)
+        lp2 = lT + convert(T, 2)
+        lm1 = lT - one(T)
+        lm4 = lT - convert(T, 4)
 
-            # x == +1, both F12 and F22 are constants (before applying the normalization)
-            if sign(x) == one(T)
-                for ll=2:lmax
-                    F[ll+1,3] =  C.η[ll+1]*half
-                    F[ll+1,4] = -C.η[ll+1]*half
-                end
-
-            # x == -1, the F12 and F22 terms flip signs at each ℓ (modulo normalization)
-            else
-                val = half # 1/2 * (-1)^ℓ for ℓ == 2
-                for ll=2:lmax
-                    F[ll+1,3] = C.η[ll+1]*val
-                    F[ll+1,4] = C.η[ll+1]*val
-                    val = -val
-                end
-            end
-
-            # Fill with P^0_ℓ(x) terms
-            λ!(P, 0, x)
-        else # abs(x) ≈ one(T)
-        # Case where two points are not antipodes
-
-            y = inv(one(T) - x*x)
-            xy = x * y
-
-            # Fill with the P^2_ℓ(x) terms initially
-            λ!(P, 2, x)
-
-            for ll=2:lmax
-                lT = convert(T, ll)
-                lp2 = lT + convert(T, 2)
-                lm1 = lT - one(T)
-                lm4 = lT - convert(T, 4)
-
-                F[ll+1,3] =  C.β[ll+1] * (lp2*xy*P[ll] - (lm4*y + half*lT*lm1)*P[ll+1])
-                F[ll+1,4] = 2C.β[ll+1] * (lp2*y*P[ll]  - lm1*xy*P[ll+1])
-            end
-
-            # Now refill P with the P^0_ℓ(x) terms
-            λ!(P, 0, x)
-
-            # Compute the F10 terms with the P as is
-            for ll=2:lmax
-                lm1 = convert(T, ll) - one(T)
-                F[ll+1,2] = C.α[ll+1] * (xy*P[ll] - (y + half*lm1)*P[ll+1])
-            end
-
-        end # abs(x) ≈ one(T)
-
-        # Now finally apply the normalization to the P^0_ℓ(x) function
-        for ll=0:lmax
-            P[ll+1] = C.η[ll+1] * P[ll+1]
+        # Closure over pre-computed shared terms
+        @inline function F12F22(Plm1, Pl, x, y, xy)
+            if abs(x) ≈ one(T)
+            # Case where two points are antipodes
+                # x == +1, both F12 and F22 are constants (before applying the normalization)
+                # x == -1, the F12 and F22 terms flip signs at each ℓ (modulo normalization)
+                shalf = iseven(ll) ? half : -half
+                F12, F22 = !signbit(x) ?
+                        (η *  half, η * -half) :
+                        (η * shalf, η * shalf)
+            else # abs(x) ≈ one(T)
+            # Case where two points are not antipodes
+                F12 =  β * (lp2 * xy * Plm1 - (lm4 * y + half * lT * lm1) * Pl)
+                F22 = 2β * (lp2 *  y * Plm1 - lm1 * xy * Pl)
+            end # abs(x) ≈ one(T)
+            return (F12, F22)
         end
 
-    end # @inbounds
+        @inbounds @simd for I in eachindex(x)
+            x′, y′, xy′ = x[I], y[I], xy[I]
+            Plm1, Pl = P[I,ll], P[I,ll+1]
+            F[I,ll+1,3], F[I,ll+1,4] = F12F22(Plm1, Pl, x′, y′, xy′)
+        end
+    end
+    # Replace with P^0_ℓ(x) terms
+    legendre!(Λ, P, lmax, 0, x)
+    # Then calculate the F10 terms
+    for ll in 2:lmax
+        lm1 = convert(T, ll) - one(T)
+        α, _ = Fweights_αβ(T, ll)
+
+        @inline function F10(Plm1, Pl, x, y, xy)
+            if abs(x) ≈ one(T)
+            # Case where two points are antipodes
+                return zero(T)
+            else
+            # Case where two points are not antipodes
+                return α * (xy * Plm1 - (y + half * lm1) * Pl)
+            end
+        end
+
+        @inbounds @simd for I in eachindex(x)
+            x′, y′, xy′ = x[I], y[I], xy[I]
+            Plm1, Pl = P[I,ll], P[I,ll+1]
+            F[I,ll+1,2] = F10(Plm1, Pl, x′, y′, xy′)
+        end
+    end
+
+    # Now finally apply the normalization to the P^0_ℓ(x) function to make F00
+    for ll in 0:lmax
+        η = Fweights_η(T, ll)
+        @inbounds @simd for I in eachindex(x)
+            P[I,ll+1] *= η
+        end
+    end
 
     return F
 end
@@ -217,7 +182,6 @@ struct PixelCovarianceCache
     cji::Vector{Float64}
     sji::Vector{Float64}
 
-    coeff::PixelCovarianceCoeff{Float64}
     F::Matrix{Float64}
 
     """
@@ -239,16 +203,13 @@ struct PixelCovarianceCache
         cji = zeros(Float64, N)
         sji = zeros(Float64, N)
 
-        coeff = PixelCovarianceCoeff{Float64}(lmax)
         F = zeros(Float64, lmax+1, 4)
 
         # The pixel coordinates can all be precomputed just once
         r .= pix2vec.(nside, pixels)
 
-        return new(nside, lmax, pixels, bitfields,
-                   spectra,
-                   1, r, z, cij, sij, cji, sji,
-                   coeff, F)
+        return new(nside, lmax, pixels, bitfields, spectra,
+                   1, r, z, cij, sij, cji, sji, F)
     end
 end
 
@@ -326,7 +287,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
     R = size(cache.F,1):-1:1
 
     @inbounds for (i,z) in enumerate(cache.z)
-        PixelCovarianceF!(cache.coeff, cache.F, cache.lmax, z)
+        Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
 
         # TT
         if cache.fields[1,1]
