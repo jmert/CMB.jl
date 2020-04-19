@@ -11,12 +11,6 @@ Modules = [CMB.Sphere]
 Public = false
 ```
 
-## Legendre Functions
-```@autodocs
-Modules = [CMB.Legendre]
-Public = false
-```
-
 ## Healpix
 ```@autodocs
 Modules = [CMB.Healpix]

@@ -4,8 +4,7 @@ module CMB
     include("sphere.jl")
     @reexport using .Sphere
 
-    include("legendre.jl")
-    @reexport using .Legendre
+    @reexport using Legendre
 
     include("healpix.jl")
     @reexport using .Healpix

@@ -4,7 +4,6 @@ const NumTypes = (Float32, Float64, BigFloat)
 
 const TESTLIST = [
     "sphere" => "Sphere",
-    "legendre" => "Legendre",
     "healpix" => "HEALPix",
     "sparse" => "Sparse",
    ]
