@@ -11,7 +11,14 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[Legendre]]
+git-tree-sha1 = "f6368d48136d63bb9c3390e534899b9fe4f4906b"
+pinned = true
+uuid = "7642852e-7f09-11e9-134e-0940411082b6"
+version = "0.1.0"
+
 [[LibGit2]]
+deps = ["Printf"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 
 [[Libdl]]

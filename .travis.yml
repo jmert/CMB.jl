@@ -3,30 +3,29 @@ language: julia
 os:
   - linux
 julia:
-  - 1.2
-  - 1.3
-  - nightly
+  - 1.2 # earliest supported version
+  - 1.4 # latest stable
+  - nightly # master
 branches:
   only:
     - master
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/ # version tags for Documenter.jl
     - /^release-.*$/
+codecov: true
 notifications:
   email: false
 
-# Dependencies are pinned by a committed Manifest.toml and used for testing
-# on release version of Julia. On nightly, unpin all the dependencies (by
-# directly deleting Manifest.toml) and test with whatever the latest package
-# versions are.
 before_script:
+  - julia -e 'using Pkg; Registry.add(RegistrySpec(url = "https://github.com/jmert/Registry.jl"))'
+  # Dependencies are pinned by a committed Manifest.toml and used for testing
+  # on release version of Julia. On nightly, unpin all the dependencies (by
+  # directly deleting Manifest.toml) and test with whatever the latest package
+  # versions are.
   - >
     if [ x"$TRAVIS_JULIA_VERSION" == x"nightly" ]; then
       echo "rm Manifest.toml";
       rm Manifest.toml;
     fi
-
-after_success:
-  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
 
 jobs:
   allow_failures:
