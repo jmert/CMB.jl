@@ -16,7 +16,10 @@ notifications:
   email: false
 
 before_script:
-  - julia -e 'using Pkg; Registry.add(RegistrySpec(url = "https://github.com/jmert/Registry.jl"))'
+  - julia -e '
+      using Pkg;
+      Registry.add(RegistrySpec("General"));
+      Registry.add(RegistrySpec(url = "https://github.com/jmert/Registry.jl"));'
   # Dependencies are pinned by a committed Manifest.toml and used for testing
   # on release version of Julia. On nightly, unpin all the dependencies (by
   # directly deleting Manifest.toml) and test with whatever the latest package
