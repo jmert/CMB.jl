@@ -1,36 +1,33 @@
-using Test, Logging
-using CMB
+using Test, TestSetExtensions
+using CMB # For doctests, include CMB as a binding in Main
 const NumTypes = (Float32, Float64, BigFloat)
 
-const TESTLIST = [
-    "sphere" => "Sphere",
-    "healpix" => "HEALPix",
-    "sparse" => "Sparse",
-   ]
-
-@testset "CMB" begin
-    @testset "$desc" for (id,desc) in TESTLIST
-        modpath = joinpath(dirname(@__FILE__), "$(id).jl")
-        # Include the file and have it processed within this module
-        print("running $desc tests... ")
+function prettytime(t)
+    v, u = t < 1e3 ? (t, "ns") :
+           t < 1e6 ? (t/1e3, "μs") :
+           t < 1e9 ? (t/1e6, "ms") :
+                     (t/1e9, "s")
+    return string(round(v, digits=3), " ", u)
+end
+macro include(file, desc)
+    mod = gensym(first(splitext(file)))
+    quote
+        print($desc, ": ")
         t0 = time_ns()
-        include(modpath)
-        t1 = time_ns()
-        println( (t1-t0)/1e9, " seconds")
+        @testset $desc begin
+            @eval module $mod
+                using Test, CMB
+                import ..NumTypes
+                include($file)
+            end
+        end
+        printstyled("  ", prettytime(time_ns() - t0), "\n", color=:light_black)
     end
+end
 
-    # Disable Documeter's Info logging
-    oldlvl = Logging.min_enabled_level(current_logger())
-    disable_logging(Logging.Info)
-    try
-        using Documenter
-        DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
-        print("running Doc tests... ")
-        t0 = time_ns()
-        doctest(CMB, testset="Doc Tests")
-        t1 = time_ns()
-        println( (t1-t0)/1e9, " seconds")
-    finally
-        disable_logging(oldlvl - 1)
-    end
+@testset ExtendedTestSet "CMB" begin
+    @include "sphere.jl" "Spherical functions"
+    @include "healpix.jl" "HEALPix functions"
+    @include "sparse.jl" "Sparse utilities"
+    @include "doctests.jl" "Doctests"
 end

@@ -10,6 +10,7 @@
 * J. Willmert. “Constraining Inflationary B-modes with the BICEP/Keck Array
   Telescopes”
   PhD Thesis. University of Minnesota, Nov 2019.
+  URL: [http://hdl.handle.net/11299/211821](http://hdl.handle.net/11299/211821)
 
 ### [Coordinate systems and conventions](@id bib-coordinates)
 
