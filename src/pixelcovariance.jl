@@ -14,75 +14,122 @@ export Fweights!,
     pixelcovariance, pixelcovariance!
 
 using StaticArrays
-
-# For computing the Legendre terms
-import Legendre: AbstractLegendreNorm, legendre!
-# also reuse some utilities developed in Legendre
-import Legendre: _similar
+import Legendre: Legendre, AbstractLegendreNorm, unsafe_legendre!, _similar
 
 # For pixelcovariance() wrapper function
 import ..Sphere: bearing2, cosdistance
 import ..Healpix: pix2vec
+import ..unchecked_sqrt
 
-import Base.@boundscheck, Base.@propagate_inbounds
+import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
 
-@inline function Fweights_η(::Type{T}, l::Integer) where {T}
-    return convert(T, 2l+1) / 4convert(T, π)
+@inline function coeff_η(::Type{T}, l::Integer) where T
+    return T(2l + 1)
 end
-
-@inline function Fweights_αβ(::Type{T}, l::Integer) where {T}
-    η = Fweights_η(T, l)
+@inline function coeff_χ(::Type{T}, l::Integer) where T
     lT = convert(T, l)
-    invql = inv( (lT-one(T)) * lT * (lT+one(T)) * (lT+2one(T)) )
-
-    α = 2η * lT * sqrt(invql)
-    β = 2η * invql
-    return (α, β)
+    fac1 = 4 * T(2lT + one(T))^2 * lT
+    fac2 = @evalpoly(lT, -2, -1, 2, 1)
+    return unchecked_sqrt(fac1 / fac2)
+end
+@inline function coeff_γ(::Type{T}, l::Integer) where T
+    lT = convert(T, l)
+    fac1 = 2 * T(lT + one(T))
+    fac2 = @evalpoly(lT, 0, -2, -1, 2, 1)
+    return fac1 / fac2
 end
 
+function _chkdomain(lmax)
+    @noinline _chkdomain_throw_lmax(l) = throw(DomainError(l, "degree lmax must be non-negative"))
+    0 ≤ lmax || _chkdomain_throw_lmax(lmax)
+    nothing
+end
+
+function _chkbounds(F, lmax, x)
+    @noinline _chkbounds_throw_dims(M, N) = throw(DimensionMismatch(
+            "Output has $M dimensions, expected $(N+2)"))
+    @noinline _chkbounds_throw_axes(F, x) = begin
+        throw(DimensionMismatch(
+            "Output has leading axes $(ntuple(i -> axes(F,i), ndims(x))), expected $(axes(x))"))
+    end
+    @noinline _chkbounds_throw_lmax() = throw(DimensionMismatch(
+            "lmax incompatible with output array axes"))
+    @noinline _chkbounds_throw_poldim() = throw(DimensionMismatch(
+            "incompatible output array axes; expected last dimension with axes 1:4"))
+
+    M = ndims(F)
+    N = ndims(x)
+    M == N + 2 || _chkbounds_throw_dims(M, N)
+    # Leading dimensions of F are storage for the same dimensions as x
+    axesF = axes(F)
+    if N > 0
+        axF = ntuple(i -> axesF[i], N)
+        axx = axes(x)
+        checkbounds_indices(Bool, axF, axx) || _chkbounds_throw_axes(F, x)
+    end
+    # Trailing dimensions of F are storage for range of ell and 4-pol types
+    checkindex(Bool, axesF[N+1], OneTo(lmax+1)) || _chkbounds_throw_lmax()
+    checkindex(Bool, axesF[N+2], OneTo(4)) || _chkbounds_throw_poldim()
+    nothing
+end
 @noinline function _chkbounds_F(F, lmax)
     (0 ≤ lmax) || throw(DomainError())
     (size(F,1)≥lmax+1 && size(F,2)≥4) || throw(DimensionMismatch())
 end
 
-function Fweights!(Λ::AbstractLegendreNorm, F, lmax::Integer, z)
+function unsafe_Fweights!(norm::AbstractLegendreNorm, F, lmax, x)
+    if ndims(x) > 1
+        M = ndims(F)
+        N = ndims(x)
+        S = prod(size(x))
+        x′ = reshape(x, S)
+        F′ = reshape(F, S, ntuple(i->size(F,i+N), M-N)...)
+    else
+        x′ = x
+        F′ = F
+    end
+    @inbounds _Fweights_impl!(norm, F′, lmax, x′)
+    return F
+end
+
+@propagate_inbounds function _Fweights_impl!(norm::AbstractLegendreNorm, F, lmax, z)
+    TF = eltype(F)
+    TV = eltype(z)
+    T = promote_type(eltype(norm), TF, TV)
+
     # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
     # this implementation. (Probably related to the keyword-argument penalty?)
     local @inline ≈(x, y) = @fastmath x==y || abs(x-y) < eps(one(y))
-
-    #@boundscheck _chkbounds_F(F, lmax)
-    T = promote_type(eltype(Λ), eltype(F), eltype(z))
     half = one(T) / 2
 
-    x  = _similar(z)
-    y  = _similar(z)
-    xy = _similar(z)
-    @inbounds @simd for I in eachindex(x)
-        x[I] = x′ = convert(T, z[I])
-        y′ = -inv(fma(x′, x′, -one(T)))
-        y[I], xy[I] = y′, x′ * y′
+    x  = _similar(z, T)
+    y  = _similar(z, T)
+    xy = _similar(z, T)
 
-        # Clear out the ℓ == 0 and ℓ == 1 terms since they are undefined (denominators
-        # of α and β are singular).
-        F[I,1,1] = F[I,2,1] = zero(T)
-        F[I,1,2] = F[I,2,2] = zero(T)
-        F[I,1,3] = F[I,2,3] = zero(T)
-        F[I,1,4] = F[I,2,4] = zero(T)
+    Is = map(Slice, axes(x))
+    I = CartesianIndices(Is)
+    P = @view F[Is..., :, 1]
+
+    @simd for ii in I
+        x[ii] = x′ = convert(T, z[ii])
+        y′ = inv(fma(-x′, x′, one(T)))
+        y[ii], xy[ii] = y′, x′ * y′
     end
 
-    Iv = ntuple(_ -> :, ndims(x) + 1)
-    P = view(F, Iv..., 1)
+    # Calculations below implicitly assume P has been zeroed in domain where ℓ < m, so
+    # zero first two ℓ entries before filling the P^2_ℓ(x) terms
+    fill!(@view(F[Is...,1:2,:]), zero(T))
 
     # Fill with the P^2_ℓ(x) terms initially
-    legendre!(Λ, P, lmax, 2, x)
+    unsafe_legendre!(norm, P, lmax, 2, x)
     # Calculate the F12 and F22 terms using P^2_ℓ
     for ll in 2:lmax
-        η = Fweights_η(T, ll)
-        _, β = Fweights_αβ(T, ll)
+        η = coeff_η(T, ll)
+        γ = coeff_γ(T, ll)
         lT = convert(T, ll)
-        lp2 = lT + convert(T, 2)
+        lp2 = lT + 2one(T)
         lm1 = lT - one(T)
-        lm4 = lT - convert(T, 4)
+        lm4 = lT - 4one(T)
 
         # Closure over pre-computed shared terms
         @inline function F12F22(Plm1, Pl, x, y, xy)
@@ -96,24 +143,24 @@ function Fweights!(Λ::AbstractLegendreNorm, F, lmax::Integer, z)
                         (η * shalf, η * shalf)
             else # abs(x) ≈ one(T)
             # Case where two points are not antipodes
-                F12 =  β * (lp2 * xy * Plm1 - (lm4 * y + half * lT * lm1) * Pl)
-                F22 = 2β * (lp2 *  y * Plm1 - lm1 * xy * Pl)
+                F12 =  γ * (lp2 * xy * Plm1 - (lm4 * y + half * lT * lm1) * Pl)
+                F22 = 2γ * (lp2 *  y * Plm1 - lm1 * xy * Pl)
             end # abs(x) ≈ one(T)
             return (F12, F22)
         end
 
-        @inbounds @simd for I in eachindex(x)
-            x′, y′, xy′ = x[I], y[I], xy[I]
-            Plm1, Pl = P[I,ll], P[I,ll+1]
-            F[I,ll+1,3], F[I,ll+1,4] = F12F22(Plm1, Pl, x′, y′, xy′)
+        @simd for ii in I
+            x′, y′, xy′ = x[ii], y[ii], xy[ii]
+            Plm1, Pl = P[ii,ll], P[ii,ll+1]
+            F[ii,ll+1,3], F[ii,ll+1,4] = F12F22(Plm1, Pl, x′, y′, xy′)
         end
     end
     # Replace with P^0_ℓ(x) terms
-    legendre!(Λ, P, lmax, 0, x)
+    unsafe_legendre!(norm, P, lmax, 0, x)
     # Then calculate the F10 terms
     for ll in 2:lmax
         lm1 = convert(T, ll) - one(T)
-        α, _ = Fweights_αβ(T, ll)
+        χ = coeff_χ(T, ll)
 
         @inline function F10(Plm1, Pl, x, y, xy)
             if abs(x) ≈ one(T)
@@ -121,26 +168,32 @@ function Fweights!(Λ::AbstractLegendreNorm, F, lmax::Integer, z)
                 return zero(T)
             else
             # Case where two points are not antipodes
-                return α * (xy * Plm1 - (y + half * lm1) * Pl)
+                return χ * (xy * Plm1 - (y + half * lm1) * Pl)
             end
         end
 
-        @inbounds @simd for I in eachindex(x)
-            x′, y′, xy′ = x[I], y[I], xy[I]
-            Plm1, Pl = P[I,ll], P[I,ll+1]
-            F[I,ll+1,2] = F10(Plm1, Pl, x′, y′, xy′)
+        @simd for ii in I
+            x′, y′, xy′ = x[ii], y[ii], xy[ii]
+            Plm1, Pl = P[ii,ll], P[ii,ll+1]
+            F[ii,ll+1,2] = F10(Plm1, Pl, x′, y′, xy′)
         end
     end
 
     # Now finally apply the normalization to the P^0_ℓ(x) function to make F00
     for ll in 0:lmax
-        η = Fweights_η(T, ll)
-        @inbounds @simd for I in eachindex(x)
-            P[I,ll+1] *= η
+        η = coeff_η(T, ll)
+        @simd for ii in I
+            P[ii,ll+1] *= η
         end
     end
 
     return F
+end
+
+function Fweights!(norm::AbstractLegendreNorm, F, lmax::Integer, x)
+    _chkdomain(lmax)
+    _chkbounds(F, lmax, x)
+    return unsafe_Fweights!(norm, F, lmax, x)
 end
 
 """
@@ -284,7 +337,8 @@ end
 
 function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
     T = eltype(cache.F)
-    R = size(cache.F,1):-1:1
+    R = reverse(axes(cache.F, 1))
+    fourpi = 4 * convert(T, π)
 
     @inbounds for (i,z) in enumerate(cache.z)
         Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
@@ -296,6 +350,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
                 ClTT = cache.spectra[ll,1]
                 tt += ClTT*cache.F[ll,1]
             end
+            tt /= fourpi
             C[i,1] = tt # TT
         end
 
@@ -309,6 +364,8 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
                 tq -= ClTE*cache.F[ll,2]
                 tu -= ClTB*cache.F[ll,2]
             end
+            tq /= fourpi
+            tu /= fourpi
             C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i] # QT
             C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i] # QU
             C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i] # TQ
@@ -331,6 +388,9 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
                 uu += ClBB*F12 - ClEE*F22
                 qu += ClEB*(F12 + F22)
             end
+            qq /= fourpi
+            uu /= fourpi
+            qu /= fourpi
             cij = cache.cij[i]
             cji = cache.cji[i]
             sij = cache.sij[i]
