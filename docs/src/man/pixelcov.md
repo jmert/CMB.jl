@@ -46,24 +46,24 @@ pixel ``i`` to pixel ``j``.
 In this simplified case, the 6 unique covariances are
 ```math
 \begin{align}
-    \covTT &\equiv \sum_\ell C_\ell^{TT} \covF{00}
+    \covTT &\equiv \frac{1}{4\pi} \sum_\ell C_\ell^{TT} \covF{00}
         \label{eqn:theorycov:tt}
     \\
-    \covTQ &\equiv -\sum_\ell C_\ell^{TE} \covF{10}
+    \covTQ &\equiv -\frac{1}{4\pi} \sum_\ell C_\ell^{TE} \covF{10}
         \label{eqn:theorycov:tq}
     \\
-    \covTU &\equiv -\sum_\ell C_\ell^{TB} \covF{10}
+    \covTU &\equiv -\frac{1}{4\pi} \sum_\ell C_\ell^{TB} \covF{10}
         \label{eqn:theorycov:tu}
     \\
-    \covQQ &\equiv \sum_\ell
+    \covQQ &\equiv \frac{1}{4\pi} \sum_\ell
         \left[ C_\ell^{EE} \covF{12} - C_\ell^{BB} \covF{22} \right]
         \label{eqn:theorycov:qq}
     \\
-    \covUU &\equiv \sum_\ell
+    \covUU &\equiv \frac{1}{4\pi} \sum_\ell
         \left[ C_\ell^{BB} \covF{12} - C_\ell^{EE} \covF{22} \right]
         \label{eqn:theorycov:uu}
     \\
-    \covQU &\equiv \sum_\ell
+    \covQU &\equiv \frac{1}{4\pi} \sum_\ell
         C_\ell^{EB} \left[ \covF{12} + \covF{22} \right]
         \label{eqn:theorycov:qu}
 \end{align}
@@ -73,17 +73,17 @@ The polarization weighting functions are simple functions of the ``P_\ell`` and
 ``P_\ell^2`` associated Legendre polynomials,
 ```math
 \begin{align}
-    \covF{00} &= \eta_\ell P_\ell(z_{ij})
+    \covF{00} &= (2\ell + 1) P_\ell(z_{ij})
         \label{eqn:theorycov:F00}
     \\
-    \covF{10} &= \alpha_\ell
+    \covF{10} &= \chi_\ell
         \left[
         \frac{z_{ij}}{1-z_{ij}^2} P_{\ell-1}(z_{ij}) - \left(
         \frac{1}{1-z_{ij}^2} + \frac{\ell-1}{2} \right)P_\ell(z_{ij})
         \right]
         \label{eqn:theorycov:F10}
     \\
-    \covF{12} &= \beta_\ell
+    \covF{12} &= \gamma_\ell
         \left[
         \frac{\ell+2}{1-z_{ij}^2} z_{ij} P^2_{\ell-1}(z_{ij}) - \left(
         \frac{\ell-4}{1-z_{ij}^2} + \frac{\ell(\ell-1)}{2} \right)
@@ -91,7 +91,7 @@ The polarization weighting functions are simple functions of the ``P_\ell`` and
         \right]
         \label{eqn:theorycov:F12}
     \\
-    \covF{22} &= 2\beta_\ell
+    \covF{22} &= 2\gamma_\ell
         \left[
         \frac{\ell+2}{1-z_{ij}^2} P^2_{\ell-1}(z_{ij}) -
         \frac{\ell-1}{1-z_{ij}^2} z_{ij} P^2_\ell(z_{ij})
@@ -102,15 +102,10 @@ The polarization weighting functions are simple functions of the ``P_\ell`` and
 where[^1]
 ```math
 \begin{align}
-    \eta_\ell   &\equiv \frac{2\ell+1}{4\pi}
-        \qquad
-    &
-    \alpha_\ell &\equiv \frac{2\eta_\ell \ell}
+    \chi_\ell &\equiv \frac{2\ell (2\ell + 1)}
         {\sqrt{(\ell-1)\ell(\ell+1)(\ell+2)}}
     \\
-    {}&{}
-    &
-    \beta_\ell  &\equiv \frac{2\eta_\ell}
+    \gamma_\ell &\equiv \frac{2(2\ell + 1)}
         {(\ell-1)\ell(\ell+1)(\ell+2)}
 \end{align}
 ```
@@ -166,17 +161,17 @@ R^\top``.
     ```math
     \begin{align}
         \covF{10} &= {}\rlap{\,\,0}
-            \hphantom{\left\{ \frac 12 (-1)^\ell \right.}
-            \quad \text{as } |z_{ij}| \to 1
+            \hphantom{\left\{ (-1)^\ell \frac{2\ell+1}{2} \right.}
+            \,\text{as } |z_{ij}| \to 1
         \\
         \covF{12} &= \begin{cases}
-                \frac 12            & \text{as } z_{ij} \to +1 \\
-                \frac 12 (-1)^\ell  & \text{as } z_{ij} \to -1
+                \frac{2\ell+1}{2}            & \text{as } z_{ij} \to +1 \\
+                \frac{2\ell+1}{2}  (-1)^\ell & \text{as } z_{ij} \to -1
             \end{cases}
         \\
         \covF{22} &= \begin{cases}
-                -\frac 12           & \text{as } z_{ij} \to +1 \\
-                 \frac 12 (-1)^\ell & \text{as } z_{ij} \to -1
+                -\frac{2\ell+1}{2}           & \text{as } z_{ij} \to +1 \\
+                 \frac{2\ell+1}{2} (-1)^\ell & \text{as } z_{ij} \to -1
             \end{cases}
     \end{align}
     ```
