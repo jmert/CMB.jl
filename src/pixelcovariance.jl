@@ -356,8 +356,13 @@ end
 
 function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
     T = eltype(cache.F)
-    R = reverse(axes(cache.F, 1))
     fourpi = 4 * convert(T, π)
+    # N.B. In general, the spectrum causes Cl*F to decrease rapidly as ℓ → ∞; reverse
+    #      the order of summation to accumulate from smallest to largest magnitude values.
+    # TODO: Look into using and compare this assumption against Julia's built-in sum() which
+    #       uses a divide-and-conquered summation to increase numerical precision in general
+    #       cases.
+    R = reverse(axes(cache.F, 1))
 
     @inbounds for (i,z) in enumerate(cache.z)
         Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
