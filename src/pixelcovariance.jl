@@ -365,9 +365,9 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         # TT
         if cache.fields[1,1]
             tt = zero(T)
-            for ll in R
+            @simd for ll in R
                 ClTT = cache.spectra[ll,1]
-                tt += ClTT*cache.F[ll,1]
+                tt = muladd(ClTT, cache.F[ll,1], tt) # tt + ClTT*cache.F[ll,1]
             end
             tt /= fourpi
             C[i,1] = tt # TT
@@ -377,11 +377,11 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         if cache.fields[1,2] | cache.fields[1,3]
             tq = zero(T)
             tu = zero(T)
-            for ll in R
+            @simd for ll in R
                 ClTE = cache.spectra[ll,4]
                 ClTB = cache.spectra[ll,5]
-                tq -= ClTE*cache.F[ll,2]
-                tu -= ClTB*cache.F[ll,2]
+                tq = muladd(-ClTE, cache.F[ll,2], tq) # tq - ClTE*cache.F[ll,2]
+                tu = muladd(-ClTB, cache.F[ll,2], tu) # tu - ClTB*cache.F[ll,2]
             end
             tq /= fourpi
             tu /= fourpi
@@ -396,16 +396,16 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
             qq = zero(T)
             qu = zero(T)
             uu = zero(T)
-            for ll in R
+            @simd for ll in R
                 ClEE = cache.spectra[ll,2]
                 ClBB = cache.spectra[ll,3]
                 ClEB = cache.spectra[ll,6]
                 F12 = cache.F[ll,3]
                 F22 = cache.F[ll,4]
 
-                qq += ClEE*F12 - ClBB*F22
-                uu += ClBB*F12 - ClEE*F22
-                qu += ClEB*(F12 + F22)
+                qq = muladd(ClEE, F12, muladd(-ClBB, F22, qq)) # qq + ClEE*F12 - ClBB*F22
+                uu = muladd(ClBB, F12, muladd(-ClEE, F22, uu)) # uu + ClBB*F12 - ClEE*F22
+                qu = muladd(ClEB, F12 + F22, qu)               # qu + ClEB*(F12 + F22)
             end
             qq /= fourpi
             uu /= fourpi
