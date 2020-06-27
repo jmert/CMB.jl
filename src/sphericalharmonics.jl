@@ -52,6 +52,56 @@ function synthesize_reference(alms::AbstractMatrix{T}, θ, ϕ) where {T<:Complex
     return syn
 end
 
+function synthesize_ring(alms::AbstractMatrix{T}, nx, ϕ₀, θ) where {T<:Complex}
+    R = real(T)
+    lmax, mmax = size(alms, 1) - 1, size(alms, 2) - 1
+    nxr = nx ÷ 2 + 1
+
+    Λ = zeros(real(T), lmax+1, mmax+1)
+    λ = zeros(T, nxr)
+    F = plan_brfft(λ, nx)
+    ring = Vector{R}(undef, nx)
+
+    λlm!(Λ, lmax, mmax, cospi(θ/π))
+    fill!(λ, zero(T))
+
+    for m in 0:mmax
+        acc = zero(T)
+        i, mul2, nc = alias_index(nx, m)
+        for ℓ in m:lmax
+            acc += alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
+        end
+        acc *= cis(m * ϕ₀)
+        acc = mul2 ? complex(2real(acc)) : nc ? conj(acc) : acc
+        λ[i+1] += acc
+    end
+    mul!(ring, F, λ)
+end
+
+# alias_index(len, i) -> (i′, mul2, nc)
+#
+# Aliases the given index `i` for a periodic FFT frequency axis of length `len`, with an
+# additional aliasing to below the Nyquist frequency approprate for use in a real-only
+# [irfft()] transform.
+#
+# - `i′` is the returned aliased index.
+# - `mul2` is true if `i′` corresponds to a real-only Fourier mode (`i′ == 0` or
+#   (`iseven(len) && i′ == len÷2+1`) and the original mode must be doubled to account for
+#   the multiplicity of the aliased mode.
+# - `nc` is true if `i′` corresponds to a negative-frequency mode in the full-length
+#   (not real-only, half-length) spectrum and therefore should be conjugated before
+#   summing into the aliased axis.
+@inline function alias_index(len, i)
+    nyq = len ÷ 2
+    i′, nc = i, false
+    if i′ > nyq
+        i′ = mod(i′, len)
+        i′, nc = i′ > nyq ? (len - i′, true) : (i′, false)
+    end
+    mul2 = i != 0 && i′ == 0 || (iseven(len) && i′ == nyq)
+    return (i′, mul2, nc)
+end
+
 # Simple reference function which synthesizes field for an equidistant-cylindrical
 # project (ECP) grid on the entire sphere.
 function synthesize_ecp(alms::Matrix{T}, nx::Integer, ny::Integer) where {T<:Complex}
@@ -74,20 +124,13 @@ function synthesize_ecp(alms::Matrix{T}, nx::Integer, ny::Integer) where {T<:Com
 
         for m in 0:mmax
             acc = zero(T)
+            i, mul2, nc = alias_index(nx, m)
             for ℓ in m:lmax
                 acc += alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
             end
-            # calculated aliased index
-            if m >= nxr
-                i = mod(m, nx)              # alias over total FFT frequency range
-                i = i >= nxr ? i-nxr+1 : i  # reflect over Nyquist
-                if i == 0
-                    acc *= 2
-                end
-            else
-                i = m
-            end
-            λ[i+1] += acc * @fastmath exp(complex(0.0, m*ϕ₀))
+            acc *= cis(m * ϕ₀)
+            acc = mul2 ? complex(2real(acc)) : nc ? conj(acc) : acc
+            λ[i+1] += acc
         end
         mul!(@view(ecp[:,y]), F, λ)
     end
