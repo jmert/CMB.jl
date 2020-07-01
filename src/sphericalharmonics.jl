@@ -7,6 +7,17 @@ using ..Legendre
 using FFTW
 using LinearAlgebra: mul!
 
+@static if isdefined(Base, :sincospi)
+    import Base.sincospi
+else
+    sincospi(x) = (sinpi(x), cospi(x))
+end
+@static if isdefined(Base, :cispi)
+    import Base.cispi
+else
+    cispi(x) = complex(reverse(sincospi(x))...)
+end
+
 function centered_range(start, stop, length)
     rng = range(start, stop, length=length+1)
     Δ = step(rng)
@@ -17,22 +28,22 @@ end
 # The idea is that there are no optimizations, so it is much easier to verify the
 # correctness of the function at the expense of a huge hit to performance. This will
 # primarily only be useful for testing development of the more specialized algorithms.
-function synthesize_reference(alms::AbstractMatrix{T}, θ, ϕ) where {T<:Complex}
-    R = real(T)
-    axes(θ) == axes(ϕ) || throw(DimensionMismatch("θ and ϕ must have same axes"))
+function synthesize_reference(alms::AbstractMatrix{C}, θ, ϕ) where {C<:Complex}
+    axes(θ) == axes(ϕ) ||
+        throw(DimensionMismatch("`θ` and `ϕ` must have same axes"))
     lmax, mmax = size(alms) .- 1
 
+    R = real(C)
     Λ = Matrix{R}(undef, size(alms)...)
-    Φ = Vector{T}(undef, mmax + 1)
-    syn = Array{R}(undef, size(θ)...)
+    Φ = Vector{C}(undef, mmax + 1)
+    syn = zeros(R, axes(θ)...)
 
     @inbounds for I in eachindex(syn)
-        # λ_ℓ^m(cos θ) factors
-        λlm!(Λ, lmax, mmax, cos(θ[I]))
-        # e^{imϕ} factors
-        #   Using complex(cospi(), sinpi()) rather than exp(complex()) gives slightly more
-        #   accurate results for test healpix rings
-        @. Φ = complex(cospi((0:mmax) * ϕ[I]/π), sinpi((0:mmax) * ϕ[I]/π))
+        λlm!(Λ, lmax, mmax, cos(θ[I]))       # λ_ℓ^m(cos θ) factors
+        @. Φ = cispi.((0:mmax) .* (ϕ[I]/π))  # e^{imϕ} factors
+                                             #   Using cispi(ϕ/π) rather than cis(ϕ) gives
+                                             #   slightly more accurate results for test
+                                             #   healpix rings.
 
         acc = zero(R)
         # Σ_{ℓ = 0}^{ℓmax}
@@ -51,6 +62,46 @@ function synthesize_reference(alms::AbstractMatrix{T}, θ, ϕ) where {T<:Complex
     end
     return syn
 end
+
+#= TODO: Doesn't work yet --- figure out quadrature weighting
+
+# Similar to above, a brute-force analysis of the given map (with corresponding coordinates
+# (θ, ϕ) for each pixel into the harmonic coefficients up to order lmax and degree mmax.
+# Note that there is no information provided on the area (in terms of the integral's
+# surface area element) of pixels, so that normalization factor is not applied during
+# analysis and must be applied by the caller using information it will have.
+# Again, there are essentially no optimizations made here to make the implementation easier
+# to ensure it is correct, so this should only be used in testing/development.
+function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
+    axes(map) == axes(θ) == axes(ϕ) ||
+        throw(DimensionMismatch("`map`, `θ`, and `ϕ` must all have the same axes"))
+
+    R = eltype(map)
+    C = complex(R)
+    Λ = Matrix{R}(undef, lmax + 1, mmax + 1)
+    Φ = Vector{C}(undef, mmax + 1)
+    alms = zeros(C, lmax + 1, mmax + 1)
+
+    @inbounds for I in eachindex(map)
+        sθ, cθ = sincos(θ[I])
+        λlm!(Λ, lmax, mmax, cθ)               # λ_ℓ^m(cos θ) factors
+        @. Φ = cispi.((0:mmax) .* (-ϕ[I]/π))  # e^{-imϕ} factors
+                                              #   Using cispi(ϕ/π) rather than cis(ϕ) gives
+                                              #   slightly more accurate results for test
+                                              #   healpix rings.
+
+        # Σ_{ℓ = 0}^{ℓmax}
+        for ℓ in 0:lmax
+            # Σ_{m = 0}^{mmax}
+            alms[ℓ+1,1] += map[I] * Λ[ℓ+1,1] * sθ
+            for m in 1:min(ℓ, mmax)
+                alms[ℓ+1,m+1] += map[I] * Λ[ℓ+1,m+1] * Φ[m+1] * sθ
+            end
+        end
+    end
+    return alms
+end
+=#
 
 function synthesize_ring(alms::AbstractMatrix{T}, nx, ϕ₀, θ) where {T<:Complex}
     R = real(T)
