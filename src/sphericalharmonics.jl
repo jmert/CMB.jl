@@ -1,4 +1,4 @@
-module Harmonics
+module SphericalHarmonics
 
 # While under development, do not export these functions
 #export analyze, synthesize

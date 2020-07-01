@@ -5,8 +5,8 @@ module CMB
     @reexport using .Sphere
 
     @reexport using Legendre
-    include("harmonics.jl")
-    @reexport using .Harmonics
+    include("sphericalharmonics.jl")
+    @reexport using .SphericalHarmonics
 
     include("healpix.jl")
     @reexport using .Healpix

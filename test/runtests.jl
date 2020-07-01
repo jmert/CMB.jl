@@ -28,6 +28,7 @@ end
 @testset ExtendedTestSet "CMB" begin
     @include "sphere.jl" "Spherical functions"
     @include "healpix.jl" "HEALPix functions"
+    @include "sphericalharmonics.jl" "Spherical Harmonics"
     @include "sparse.jl" "Sparse utilities"
     @include "doctests.jl" "Doctests"
 end
