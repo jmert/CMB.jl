@@ -10,7 +10,7 @@ using LinearAlgebra: mul!
 function centered_range(start, stop, length)
     rng = range(start, stop, length=length+1)
     Δ = step(rng)
-    return range(start+Δ/2, stop-Δ/2, step=Δ)
+    return range(start+Δ/2, stop-Δ/2, length=length)
 end
 
 # Simple reference function which synthesizes field for an equidistant-cylindrical
