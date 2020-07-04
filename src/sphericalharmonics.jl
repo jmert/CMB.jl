@@ -103,32 +103,6 @@ function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
 end
 =#
 
-function synthesize_ring(alms::AbstractMatrix{T}, nx, ϕ₀, θ) where {T<:Complex}
-    R = real(T)
-    lmax, mmax = size(alms, 1) - 1, size(alms, 2) - 1
-    nxr = nx ÷ 2 + 1
-
-    Λ = zeros(real(T), lmax+1, mmax+1)
-    λ = zeros(T, nxr)
-    F = plan_brfft(λ, nx)
-    ring = Vector{R}(undef, nx)
-
-    λlm!(Λ, lmax, mmax, cospi(θ/π))
-    fill!(λ, zero(T))
-
-    for m in 0:mmax
-        acc = zero(T)
-        i, mul2, nc = alias_index(nx, m)
-        for ℓ in m:lmax
-            acc += alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
-        end
-        acc *= cis(m * ϕ₀)
-        acc = mul2 ? complex(2real(acc)) : nc ? conj(acc) : acc
-        λ[i+1] += acc
-    end
-    mul!(ring, F, λ)
-end
-
 # alias_index(len, i) -> (i′, mul2, nc)
 #
 # Aliases the given index `i` for a periodic FFT frequency axis of length `len`, with an
@@ -153,39 +127,105 @@ end
     return (i′, mul2, nc)
 end
 
-# Simple reference function which synthesizes field for an equidistant-cylindrical
-# project (ECP) grid on the entire sphere.
-function synthesize_ecp(alms::Matrix{T}, nx::Integer, ny::Integer) where {T<:Complex}
+# Synthesize alms to an equidistant cylindrical grid covering the entire sphere.
+# More advanced that `synthesize_reference` by including:
+#   * Iso-latitude Legendre optimization
+#   * FFT-based ring synthesis
+#   * Polar-symmetry optimization
+function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:Complex}
+    R = real(C)
     lmax, mmax = size(alms) .- 1
-    nxr = nx ÷ 2 + 1 # real-symmetric FFT's Nyquist length (index)
+    nϕr = nϕ ÷ 2 + 1 # real-symmetric FFT's Nyquist length (index)
+    nθh = (nθ + 1) ÷ 2 # number of rings in northern hemisphere
 
     # pixel grid definition for ECP
-    θ = centered_range(0.0, 1.0π, ny)
-    ϕ = centered_range(0.0, 2.0π, nx)
-    ϕ₀ = first(ϕ)
+    θr = centered_range(R(0.0), R(π), nθ)
+    ϕ₀ = R(π) / nϕ
 
-    ecp = Matrix{real(T)}(undef, nx, ny) # transposed to have x-dim have stride 1
-    Λ = zeros(real(T), lmax+1, mmax+1)
-    λ = zeros(T, nxr)
-    F = plan_brfft(λ, nx)
+    ecp = Matrix{R}(undef, nϕ, nθ) # transposed to have x-dim have stride 1
+    Λ = zeros(R, lmax + 1, mmax + 1)
+    λ₁ = zeros(C, nϕr)  # northern ring
+    λ₂ = zeros(C, nϕr)  # southern ring
 
-    for y in 1:ny
-        λlm!(Λ, lmax, mmax, cos(θ[y]))
-        fill!(λ, zero(T))
+    # FFTW plan built for particular alignment/length, so not all @view(ecp[:,j]) are
+    # valid (especially if nϕ is odd). Instead, synthesize into a fixed array and copy
+    # back to the output buffer.
+    F = plan_brfft(λ₁, nϕ)
+    r = Vector{R}(undef, nϕ)
+
+    @inbounds for (j, θ) in enumerate(θr)
+        j′ = nθ - j + 1
+        λlm!(Λ, lmax, mmax, cos(θ))
 
         for m in 0:mmax
-            acc = zero(T)
-            i, mul2, nc = alias_index(nx, m)
+            acc₁, acc₂ = zero(C), zero(C)
+            i, mul2, nc = alias_index(nϕ, m)
             for ℓ in m:lmax
-                acc += alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
+                term = alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
+                acc₁ += term
+                acc₂ += isodd(ℓ + m) ? -term : term
             end
-            acc *= cis(m * ϕ₀)
-            acc = mul2 ? complex(2real(acc)) : nc ? conj(acc) : acc
-            λ[i+1] += acc
+            acc₁, acc₂ = (acc₁, acc₂) .* cis(m * ϕ₀)
+            acc₁, acc₂ = mul2 ? complex.(2 .* real.((acc₁, acc₂))) :
+                         nc  ? conj.((acc₁, acc₂)) : (acc₁, acc₂)
+            λ₁[i+1] += acc₁
+            λ₂[i+1] += acc₂
         end
-        mul!(@view(ecp[:,y]), F, λ)
+
+        copyto!(@view(ecp[:,j]), mul!(r, F, λ₁))
+        fill!(λ₁, zero(C))
+
+        copyto!(@view(ecp[:,j′]), mul!(r, F, λ₂))
+        fill!(λ₂, zero(C))
     end
     return permutedims(ecp)
+end
+
+synthesize_ring(alms, θ₀, nϕ, ϕ₀) = synthesize_ring(alms, θ₀, ϕ₀, nϕ::Integer, Val(false))
+function synthesize_ring(alms::Matrix{C}, θ₀, ϕ₀, nϕ::Integer,
+                         ::Val{pair}) where {C<:Complex, pair}
+    R = real(C)
+    lmax, mmax = size(alms) .- 1
+    nϕr = nϕ ÷ 2 + 1 # real-symmetric FFT's Nyquist length (index)
+
+    Λ = zeros(R, lmax + 1, mmax + 1)
+    r₁ = Vector{R}(undef, nϕ)
+    λ₁ = zeros(C, nϕr)
+    if pair
+        r₂ = Vector{R}(undef, nϕ)
+        λ₂ = zeros(C, nϕr)
+    end
+    F = plan_brfft(λ₁, nϕ)
+
+    λlm!(Λ, lmax, mmax, cos(θ₀))
+    @inbounds for m in 0:mmax
+        acc₁ = zero(C)
+        if pair
+            acc₂ = zero(C)
+        end
+        i, mul2, nc = alias_index(nϕ, m)
+        for ℓ in m:lmax
+            term = alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
+            acc₁ += term
+            if pair
+                acc₂ += isodd(ℓ + m) ? -term : term
+            end
+        end
+        acc₁ *= cis(m * ϕ₀)
+        acc₁ = mul2 ? complex(2real(acc₁)) : nc ? conj(acc₁) : acc₁
+        λ₁[i+1] += acc₁
+        if pair
+            acc₂ *= cis(m * ϕ₀)
+            acc₂ = mul2 ? complex(2real(acc₂)) : nc ? conj(acc₂) : acc₂
+            λ₂[i+1] += acc₂
+        end
+    end
+    mul!(r₁, F, λ₁)
+    if pair
+        mul!(r₂, F, λ₂)
+        return (r₁, r₂)
+    end
+    return r₁
 end
 
 end
