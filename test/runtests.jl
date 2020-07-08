@@ -26,9 +26,9 @@ macro include(file, desc)
 end
 
 @testset ExtendedTestSet "CMB" begin
+    @include "numerics.jl" "Numerics utilities"
     @include "sphere.jl" "Spherical functions"
     @include "healpix.jl" "HEALPix functions"
     @include "sphericalharmonics.jl" "Spherical Harmonics"
-    @include "util.jl" "Utility functions"
     @include "doctests.jl" "Doctests"
 end
