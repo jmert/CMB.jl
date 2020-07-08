@@ -6,17 +6,7 @@ module SphericalHarmonics
 using ..Legendre
 using FFTW
 using LinearAlgebra: mul!
-
-@static if isdefined(Base, :sincospi)
-    import Base.sincospi
-else
-    sincospi(x) = (sinpi(x), cospi(x))
-end
-@static if isdefined(Base, :cispi)
-    import Base.cispi
-else
-    cispi(x) = complex(reverse(sincospi(x))...)
-end
+import ..cispi
 
 function centered_range(start, stop, length)
     rng = range(start, stop, length=length+1)
