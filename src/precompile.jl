@@ -1,0 +1,17 @@
+function _precompile_()
+    ccall(:jl_generating_output, Cint, ()) == 1 || return nothing
+    Base.precompile(Tuple{typeof(CMB.Sphere.colataz),Tuple{Float64,Float64}})
+    Base.precompile(Tuple{typeof(CMB.Sphere.latlon),Tuple{Float64,Float64}})
+    Base.precompile(Tuple{typeof(Fweights!),LegendreUnitNorm,Matrix{Float64},Int64,Float64})
+    Base.precompile(Tuple{typeof(bearing2),Float64,Float64,Float64,Float64})
+    Base.precompile(Tuple{typeof(cosdistance),Float64,Float64,Float64,Float64})
+    Base.precompile(Tuple{typeof(distance),Float64,Float64,Float64,Float64})
+    Base.precompile(Tuple{typeof(nring2nside),Int64})
+    Base.precompile(Tuple{typeof(nside2pixarea),Int64})
+    Base.precompile(Tuple{typeof(pix2ang),Int64,Int64})
+    Base.precompile(Tuple{typeof(pix2phi),Int64,Int64})
+    Base.precompile(Tuple{typeof(pix2ringidx),Int64,Int64})
+    Base.precompile(Tuple{typeof(pix2theta),Int64,Int64})
+    Base.precompile(Tuple{typeof(pix2vec),Int64,Int64})
+    Base.precompile(Tuple{typeof(pix2z),Int64,Int64})
+end
