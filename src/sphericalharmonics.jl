@@ -103,28 +103,23 @@ function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
 end
 =#
 
-# alias_index(len, i) -> (i′, mul2, nc)
+# alias_index(len, i, coeffs) -> (i, coeffs)
 #
 # Aliases the given index `i` for a periodic FFT frequency axis of length `len`, with an
 # additional aliasing to below the Nyquist frequency approprate for use in a real-only
-# [irfft()] transform.
-#
-# - `i′` is the returned aliased index.
-# - `mul2` is true if `i′` corresponds to a real-only Fourier mode (`i′ == 0` or
-#   (`iseven(len) && i′ == len÷2+1`) and the original mode must be doubled to account for
-#   the multiplicity of the aliased mode.
-# - `nc` is true if `i′` corresponds to a negative-frequency mode in the full-length
-#   (not real-only, half-length) spectrum and therefore should be conjugated before
-#   summing into the aliased axis.
-@inline function alias_index(len, i)
+# [irfft()] transform. `coeffs` may be modified based on the output aliased index to
+# appropriate account for multiplicity factors or complex conjugation.
+@inline function alias_index(len, i, coeffs)
     nyq = len ÷ 2
-    i′, nc = i, false
-    if i′ > nyq
-        i′ = mod(i′, len)
-        i′, nc = i′ > nyq ? (len - i′, true) : (i′, false)
+    i < nyq && return (i, coeffs)
+    i = mod(i, len)
+    if i > nyq
+        i = len - i
+        coeffs = conj.(coeffs)
+    elseif i == 0 || (iseven(len) && i == nyq)
+        coeffs = complex.(2 .* real.(coeffs))
     end
-    mul2 = i != 0 && i′ == 0 || (iseven(len) && i′ == nyq)
-    return (i′, mul2, nc)
+    return (i, coeffs)
 end
 
 # Synthesize alms to an equidistant cylindrical grid covering the entire sphere.
@@ -159,15 +154,13 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
 
         for m in 0:mmax
             acc₁, acc₂ = zero(C), zero(C)
-            i, mul2, nc = alias_index(nϕ, m)
             for ℓ in m:lmax
                 term = alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
                 acc₁ += term
                 acc₂ += isodd(ℓ + m) ? -term : term
             end
             acc₁, acc₂ = (acc₁, acc₂) .* cis(m * ϕ₀)
-            acc₁, acc₂ = mul2 ? complex.(2 .* real.((acc₁, acc₂))) :
-                         nc  ? conj.((acc₁, acc₂)) : (acc₁, acc₂)
+            i, (acc₁, acc₂) = alias_index(nϕ, m, (acc₁, acc₂))
             λ₁[i+1] += acc₁
             λ₂[i+1] += acc₂
         end
@@ -203,7 +196,6 @@ function synthesize_ring(alms::Matrix{C}, θ₀, ϕ₀, nϕ::Integer,
         if pair
             acc₂ = zero(C)
         end
-        i, mul2, nc = alias_index(nϕ, m)
         for ℓ in m:lmax
             term = alms[ℓ+1,m+1] * Λ[ℓ+1,m+1]
             acc₁ += term
@@ -211,12 +203,16 @@ function synthesize_ring(alms::Matrix{C}, θ₀, ϕ₀, nϕ::Integer,
                 acc₂ += isodd(ℓ + m) ? -term : term
             end
         end
-        acc₁ *= cis(m * ϕ₀)
-        acc₁ = mul2 ? complex(2real(acc₁)) : nc ? conj(acc₁) : acc₁
+        rot = cis(m * ϕ₀)
+        acc₁ *= rot
+        if pair
+            acc₂ *= rot
+            i, (acc₁, acc₂) = alias_index(nϕ, m, (acc₁, acc₂))
+        else
+            i, acc₁ = alias_index(nϕ, m, acc₁)
+        end
         λ₁[i+1] += acc₁
         if pair
-            acc₂ *= cis(m * ϕ₀)
-            acc₂ = mul2 ? complex(2real(acc₂)) : nc ? conj(acc₂) : acc₂
             λ₂[i+1] += acc₂
         end
     end
