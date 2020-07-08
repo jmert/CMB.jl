@@ -1,4 +1,6 @@
 [deps]
 CMB = "592991c5-7c29-5f04-aea2-6d9f924ef2a1"
 HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
