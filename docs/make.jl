@@ -1,6 +1,7 @@
 using Documenter, CMB
 
-doctest = "--fix" in ARGS ? :fix : false
+doctest = "--fix"  in ARGS ? :fix :
+          "--test" in ARGS ? true : false
 
 DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
 
@@ -26,7 +27,7 @@ makedocs(
             "Private" => "lib/private.md"
         ]
     ],
-    repo = "https://github.com/jmert/CMB.jl.git/blob/{commit}{path}#L{line}",
+    repo = "https://github.com/jmert/CMB.jl/blob/{commit}{path}#L{line}",
 )
 
 deploydocs(

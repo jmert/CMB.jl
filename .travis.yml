@@ -2,16 +2,11 @@
 language: julia
 os:
   - linux
-julia:
-  - 1.2 # earliest supported version
-  - 1.4 # latest stable
-  - nightly # master
 branches:
   only:
     - master
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/ # version tags for Documenter.jl
     - /^release-.*$/
-codecov: true
 notifications:
   email: false
 
@@ -34,7 +29,14 @@ jobs:
   allow_failures:
     - julia: nightly
   fast_finish: true
+
   include:
+    - julia: nightly
+    - julia: 1.5
+      codecov: true
+    - julia: 1.4
+    - julia: 1.2
+
     - stage: Documentation
       julia: 1.2
       os: linux
