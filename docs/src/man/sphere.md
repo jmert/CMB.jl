@@ -76,8 +76,8 @@ julia> σ = distance(r₁, r₂)
 1.6187031137492613
 ```
 In situations where the cosine of the separation is required instead — such
-as for [Legendre polynomial](@ref man_legendre) calculations — it is more
-efficient to directly return the cosine of the angle with the
+as for [Legendre polynomial](https://github.com/jmert/Legendre.jl) calculations
+— it is more efficient to directly return the cosine of the angle with the
 [`cosdistance`](@ref) function:
 ```jldoctest sphereusage
 julia> cosdistance(r₁, r₂)
