@@ -13,6 +13,7 @@ export Fweights!,
     copyspectra!, makespectra!, applybeam!, selectpixel!,
     pixelcovariance, pixelcovariance!
 
+using BitFlags
 using StaticArrays
 using Legendre
 using Legendre: unsafe_legendre!
@@ -215,22 +216,21 @@ function Fweights!(norm::AbstractLegendreNorm, F, lmax::Integer, x)
     return unsafe_Fweights!(norm, F, lmax, x)
 end
 
-"""
-    const FIELDMAP
-
-A symbol array which states the canonical ordering of the block matrices within a
-pixel-pixel covariance matrix.
-"""
-const FIELDMAP = [:TT :TQ :TU;
-                  :QT :QQ :QU;
-                  :UT :UQ :UU]
+@bitflag CovarianceSpectra ClTT ClEE ClBB ClTE ClTB ClEB
 
 """
-    const SPECTRAMAP
+    @bitflag CovarianceFields
 
-A symbol array which states the canonical ordering of spectra.
+A bitfield for identifying subblocks of the pixel-pixel covariance matrix. There are 9
+subblocks, named as the Cartesian product of elements T, Q, and U:
+
+    TT  TQ  TU
+    QT  QQ  QU
+    UT  UQ  UU
 """
-const SPECTRAMAP = [:TT :EE :BB :TE :TB :EB]
+@bitflag CovarianceFields TT TQ TU QT QQ QU UT UQ UU NO_FIELD=0
+const TPol = TQ | TU | UT | QT
+const Pol  = QQ | UU | QU | UQ
 
 """
     struct PixelCovarianceCache
@@ -242,7 +242,7 @@ struct PixelCovarianceCache
     nside::Int
     lmax::Int
     pixels::Vector{Int}
-    fields::BitArray{2}
+    fields::CovarianceFields
 
     spectra::Matrix{Float64}
 
@@ -257,14 +257,11 @@ struct PixelCovarianceCache
     F::Matrix{Float64}
 
     """
-        PixelCovarianceCache(nside, lmax, pixels, fields=Symbol[:QQ,:QU,:UQ,:UU])
+        PixelCovarianceCache(nside, lmax, pixels, fields::CovarianceFields = Pol)
     """
     function PixelCovarianceCache(nside, lmax, pixels,
-                                  fields=Symbol[:QQ,:QU,:UQ,:UU])
+                                  fields::CovarianceFields = Pol)
         N = length(pixels)
-
-        # Map the symbol description of which fields to generate into a bit array
-        bitfields = [(ff in fields) for ff in FIELDMAP]
 
         spectra = zeros(Float64, lmax+1, 6)
 
@@ -294,7 +291,7 @@ function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
     println(io, "    number of pixels: $(length(C.pixels))")
     println(io, "    maximum ℓ mode: $(C.lmax)")
     println(io, "    selected pixel: ", pix, ", at r = $(C.r[pix])")
-    println(io, "    covariance blocks: $(reshape(FIELDMAP[C.fields],:))")
+    println(io, "    covariance blocks: $(C.fields)")
 end
 
 function copyspectra!(cache, spectra)
@@ -302,19 +299,18 @@ function copyspectra!(cache, spectra)
     return cache
 end
 
-function makespectra!(cache, f, fields=[:TT,:EE])
+function makespectra!(cache, f, fields::CovarianceSpectra = ClTT | ClEE)
     lmax = cache.lmax
 
-    goodinds = map(f->in(f, SPECTRAMAP), fields)
-    all(goodinds) || error("Bad field specification(s): $(fields[.!(goodinds)]...)")
-
-    fieldinds = map(f -> findall(f .== SPECTRAMAP)[1], fields)
     for ll in 0:lmax
         Cl = f(ll)
         Cl = isfinite(Cl) ? Cl : zero(eltype(cache.spectra))
-        for ff in fieldinds
-            cache.spectra[ll+1,ff] = Cl
-        end
+        Bool(fields & ClTT) && (cache.spectra[ll+1,1] = Cl)
+        Bool(fields & ClEE) && (cache.spectra[ll+1,2] = Cl)
+        Bool(fields & ClBB) && (cache.spectra[ll+1,3] = Cl)
+        Bool(fields & ClTE) && (cache.spectra[ll+1,4] = Cl)
+        Bool(fields & ClTB) && (cache.spectra[ll+1,5] = Cl)
+        Bool(fields & ClEB) && (cache.spectra[ll+1,6] = Cl)
     end
     return cache
 end
@@ -368,7 +364,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
 
         # TT
-        if cache.fields[1,1]
+        if cache.fields & TT != NO_FIELD
             tt = zero(T)
             @simd for ll in R
                 ClTT = cache.spectra[ll,1]
@@ -379,7 +375,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         end
 
         # TQ and TU
-        if cache.fields[1,2] | cache.fields[1,3]
+        if cache.fields & TPol != NO_FIELD
             tq = zero(T)
             tu = zero(T)
             @simd for ll in R
@@ -397,7 +393,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         end
 
         # QQ, QU, and UU
-        if cache.fields[2,2] | cache.fields[2,3] | cache.fields[3,3]
+        if cache.fields & Pol != NO_FIELD
             qq = zero(T)
             qu = zero(T)
             uu = zero(T)
