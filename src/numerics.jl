@@ -1,7 +1,5 @@
 using SparseArrays
 
-export outer, quadprod
-
 """
 Computes the outer product between a given column of a sparse matrix and a vector.
 """
