@@ -16,6 +16,8 @@ Br = sparse(fill(i,n), collect(1:n), b, n, n)
     bt = convert(Vector{T}, b)
     Bct = convert(SparseMatrixCSC{T}, Bc)
     Brt = convert(SparseMatrixCSC{T}, Br)
-    @test At * Bct * At' == @inferred quadprod(At, bt, i, :col)
-    @test At * Brt * At' ≈  @inferred quadprod(At, bt, i, :row)
+    @test At * Bct * At' == quadprod(At, bt, i, :col)
+    @test @inferred(quadprod(At, bt, i, :col)) isa SparseMatrixCSC
+    @test At * Brt * At' ≈  quadprod(At, bt, i, :row)
+    @test @inferred(quadprod(At, bt, i, :row)) isa SparseMatrixCSC
 end
