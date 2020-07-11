@@ -1,8 +1,4 @@
-module Sphere
-using Test
 using LinearAlgebra, Random, StaticArrays
-using CMB.Sphere
-import ..NumTypes
 import CMB.Sphere: cartvec, colataz, latlon, x̂, ẑ
 
 @testset "Inferrability and Int-Float promotion" begin
@@ -234,6 +230,4 @@ end
     dual_deriv1(pts) = gradient(p -> cosdistance(p...), pts)
 
     @test anal_deriv1(pts) ≈ @inferred dual_deriv1(pts)
-end
-
 end

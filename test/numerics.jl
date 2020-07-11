@@ -1,7 +1,5 @@
-using Test
 using Random, SparseArrays
 using CMB: quadprod
-import ..NumTypes
 
 (m, n) = (10, 25)
 i = 7

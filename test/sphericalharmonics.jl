@@ -1,8 +1,6 @@
-using Test
 using CMB.SphericalHarmonics
 using CMB.SphericalHarmonics: centered_range,
     synthesize_reference, synthesize_ecp, synthesize_ring
-import ..NumTypes
 
 # Define the analytic expressions for the first few spherical harmonics; verify
 # implementations against these.
