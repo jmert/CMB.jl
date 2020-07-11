@@ -1,8 +1,6 @@
 # CMB.jl — CMB Analysis
 
-<!--
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://jmert.github.io/CMB.jl/stable)
--->
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://jmert.github.io/CMB.jl/dev)
 [![Build Status](https://travis-ci.com/jmert/CMB.jl.svg?branch=master)](https://travis-ci.com/jmert/CMB.jl)
 [![Codecov](https://codecov.io/gh/jmert/CMB.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/jmert/CMB.jl)
