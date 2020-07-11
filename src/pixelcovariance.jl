@@ -1,26 +1,16 @@
-"""
-Collection of functions which compute the pixel-pixel covariance of the CMB
-sky.
-
-Based on equations given in Tegmark and de Oliveira-Costa (2001) *“How to
-measure CMB polarization power spectra without losing information”*
-arXiv:astro-ph/0012120v3
-"""
 module PixelCovariance
 
 export Fweights!,
-    PixelCovarianceCache,
     pixelcovariance, pixelcovariance!
 
-using BitFlags
-using StaticArrays
-using Legendre
-using Legendre: unsafe_legendre!
-
-# For pixelcovariance() wrapper function
 import ..Sphere: bearing2, cosdistance
 import ..Healpix: pix2vec
 import ..unchecked_sqrt
+
+using BitFlags
+using Legendre
+using Legendre: unsafe_legendre!
+using StaticArrays
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
 
@@ -229,85 +219,92 @@ subblocks, named as the Cartesian product of elements T, Q, and U:
 const TPol = TQ | TU | UT | QT
 const Pol  = QQ | UU | QU | UQ
 
-"""
-    struct PixelCovarianceCache
-
-Data structure which contains all the information and buffers required to compute the
-pixel-pixel covariance terms for a given pixel with respect to all other pixels.
-"""
-struct PixelCovarianceCache
-    nside::Int
-    lmax::Int
-    pixels::Vector{Int}
-    fields::CovarianceFields
-
-    pixind::Ref{Int}
-    r::Vector{SVector{3,Float64}}
-    F::Matrix{Float64}
-
-    """
-        PixelCovarianceCache(nside, lmax, pixels, fields::CovarianceFields = Pol)
-    """
-    function PixelCovarianceCache(nside, lmax, pixels,
-                                  fields::CovarianceFields = Pol)
-        N = length(pixels)
-        r = zeros(SVector{3,Float64}, N)
-        F = zeros(Float64, lmax+1, 4)
-        r .= pix2vec.(nside, pixels)
-        return new(nside, lmax, pixels, bitfields,
-                   1, r, F)
+function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::CovarianceFields)
+    T = eltype(first(pix))
+    npix = length(pix)
+    cov = zeros(T, npix, 9, npix)
+    lmax = size(Cl, 1) - 1
+    work = PixelCovWork{T}(lmax, LegendreUnitNorm())
+    for ii in axes(pix, 1)
+        @inbounds _pixelcovariance_impl!(work, view(cov, :, :, ii), pix, ii, Cl, fields)
     end
+    cov = reshape(permutedims(reshape(cov, 3npix, 3, npix), (1, 3, 2)), 3npix, 3npix)
+    return cov
 end
 
-# Improve printing somewhat
-Base.show(io::IO, norm::PixelCovarianceCache) = print(io, PixelCovarianceCache)
-function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
-    pix = C.pixind[]
-    println(io, C)
-    println(io, "    HEALPix nside: $(C.nside)")
-    println(io, "    number of pixels: $(length(C.pixels))")
-    println(io, "    maximum ℓ mode: $(C.lmax)")
-    println(io, "    selected pixel: ", pix, ", at r = $(C.r[pix])")
-    println(io, "    covariance blocks: $(C.fields)")
+function pixelcovariance!(cov::AbstractMatrix, pix::AbstractVector, pixind,
+                          Cl::AbstractMatrix, fields::CovarianceFields)
+    axes(cov, 1) == axes(pix, 1) ||
+        throw(DimensionMismatch("Axes of covariance matrix and pixel vector do not match"))
+    axes(cov, 2) == 9
+    Base.checkbounds(pix, pixind)
+    Base.require_one_based_indexing(Cl)
+    size(Cl, 2) == 6 || throw(DimensionMismatch("Expected 6 Cl spectra"))
+
+    return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields)
 end
 
-function pixelcovariance(nside, pixels, pixind)
-    lmax = size(spec,1)
-    cache = PixelCovarianceCache(nside, lmax, pixels)
-    return cache
+struct PixelCovWork{T,N,V}
+    F::Matrix{T}
+    Fwork::FweightsWork{T,N,V}
+end
+function PixelCovWork{T}(lmax::Int, norm::AbstractLegendreNorm = LegendreUnitNorm()) where {T}
+    F = Matrix{T}(undef, lmax+1, 4)
+    Fwork = FweightsWork(norm, F, Legendre.Scalar{T}())
+    return PixelCovWork(F, Fwork)
+end
+Base.eltype(::PixelCovWork{T}) where {T} = T
+
+function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
+                                 cov::AbstractMatrix, pix::AbstractVector, pixind::Int,
+                                 Cl::AbstractMatrix, fields::CovarianceFields)
+    if workornorm isa AbstractLegendreNorm
+        T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
+        lmax = size(Cl, 1) - 1
+        work = PixelCovWork{T}(lmax, workornorm)
+        @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields)
+    else
+        @inbounds _pixelcovariance_impl!(workornorm, cov, pix, pixind, Cl, fields)
+    end
+    return cov
 end
 
-function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::AbstractMatrix)
-    T = eltype(cache.F)
+@propagate_inbounds function _pixelcovariance_impl!(work::PixelCovWork{T},
+        cov::AbstractMatrix, pix::AbstractVector, pixind::Integer,
+        Cl::AbstractMatrix, fields::CovarianceFields) where {T}
+    F = work.F
+    Fwork = work.Fwork
+    lmax = size(F, 1) - 1
     fourpi = 4 * convert(T, π)
+
     # N.B. In general, the spectrum causes Cl*F to decrease rapidly as ℓ → ∞; reverse
     #      the order of summation to accumulate from smallest to largest magnitude values.
     # TODO: Look into using and compare this assumption against Julia's built-in sum() which
     #       uses a divide-and-conquered summation to increase numerical precision in general
     #       cases.
-    R = reverse(axes(cache.F, 1))
+    R = reverse(axes(F, 1))
 
-    jj = cache.pixind[]
-    @inbounds for ii in axes(cache.r, 1)
-        z = cosdistance(cache.r[jj], cache.r[ii])
-        if cache.fields & (TPol | Pol) != NO_FIELD
-            c, s = bearing2(cache.r[ii], cache.r[jj])
+    jj = pixind
+    for ii in axes(pix, 1)
+        z = cosdistance(pix[ii], pix[jj])
+        if fields & (TPol | Pol) != NO_FIELD
+            c, s = bearing2(pix[ii], pix[jj])
             sij, cij = 2*c*s, c*c - s*s
-            c, s = bearing2(cache.r[jj], cache.r[ii])
+            c, s = bearing2(pix[jj], pix[ii])
             sji, cji = 2*c*s, c*c - s*s
         else
             sij, cij = zero(T), zero(T)
             sji, cji = zero(T), zero(T)
         end
 
-        Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
+        unsafe_Fweights!(Fwork, F, lmax, z)
 
         # TT
-        if cache.fields & TT != NO_FIELD
+        if fields & TT != NO_FIELD
             tt = zero(T)
             @simd for ll in R
                 ClTT = Cl[ll,1]
-                F00 = cache.F[ll, 1]
+                F00 = F[ll, 1]
                 tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
             end
             tt /= fourpi
@@ -315,7 +312,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
         end
 
         # TQ and TU
-        if cache.fields & TPol != NO_FIELD
+        if fields & TPol != NO_FIELD
             tq = zero(T)
             tu = zero(T)
             @simd for ll in R
@@ -334,7 +331,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
         end
 
         # QQ, QU, and UU
-        if cache.fields & Pol != NO_FIELD
+        if fields & Pol != NO_FIELD
             qq = zero(T)
             qu = zero(T)
             uu = zero(T)
@@ -342,8 +339,8 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
                 ClEE = Cl[ll,2]
                 ClBB = Cl[ll,3]
                 ClEB = Cl[ll,6]
-                F12 = cache.F[ll,3]
-                F22 = cache.F[ll,4]
+                F12 = F[ll,3]
+                F22 = F[ll,4]
 
                 qq = muladd(ClEE, F12, muladd(-ClBB, F22, qq)) # qq + ClEE*F12 - ClBB*F22
                 uu = muladd(ClBB, F12, muladd(-ClEE, F22, uu)) # uu + ClBB*F12 - ClEE*F22
@@ -363,4 +360,3 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
 end
 
 end # module PixelCovariance
-
