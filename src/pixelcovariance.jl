@@ -14,7 +14,8 @@ export Fweights!,
     pixelcovariance, pixelcovariance!
 
 using StaticArrays
-import Legendre: Legendre, AbstractLegendreNorm, unsafe_legendre!, _similar
+using Legendre
+using Legendre: unsafe_legendre!
 
 # For pixelcovariance() wrapper function
 import ..Sphere: bearing2, cosdistance
@@ -22,6 +23,21 @@ import ..Healpix: pix2vec
 import ..unchecked_sqrt
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
+
+struct FweightsWork{T,N,V<:AbstractArray{T}}
+    legwork::Legendre.Work{T,N,V}
+    x::V
+    y::V
+    xy::V
+end
+function FweightsWork(norm::AbstractLegendreNorm, F, z)
+    T = promote_type(eltype(norm), eltype(F), eltype(z))
+    legwork = Legendre.Work(norm, F, z)
+    x = legwork.z
+    y = similar(x)
+    xy = similar(x)
+    return FweightsWork(legwork, x, y, xy)
+end
 
 @inline function coeff_η(::Type{T}, l::Integer) where T
     return T(2l + 1)
@@ -77,7 +93,7 @@ end
     (size(F,1)≥lmax+1 && size(F,2)≥4) || throw(DimensionMismatch())
 end
 
-function unsafe_Fweights!(norm::AbstractLegendreNorm, F, lmax, x)
+function unsafe_Fweights!(workornorm::Union{AbstractLegendreNorm,FweightsWork}, F, lmax, x)
     if ndims(x) > 1
         M = ndims(F)
         N = ndims(x)
@@ -88,23 +104,26 @@ function unsafe_Fweights!(norm::AbstractLegendreNorm, F, lmax, x)
         x′ = x
         F′ = F
     end
-    @inbounds _Fweights_impl!(norm, F′, lmax, x′)
+    if workornorm isa AbstractLegendreNorm
+        work = FweightsWork(LegendreUnitNorm(), F′, x′)
+        @inbounds _Fweights_impl!(work, F′, lmax, x′)
+    else
+        @inbounds _Fweights_impl!(workornorm, F′, lmax, x′)
+    end
     return F
 end
 
-@propagate_inbounds function _Fweights_impl!(norm::AbstractLegendreNorm, F, lmax, z)
-    TF = eltype(F)
-    TV = eltype(z)
-    T = promote_type(eltype(norm), TF, TV)
-
+@propagate_inbounds function _Fweights_impl!(work::FweightsWork, F, lmax, z)
     # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
     # this implementation. (Probably related to the keyword-argument penalty?)
     local @inline ≈(x, y) = @fastmath x==y || abs(x-y) < eps(one(y))
-    half = one(T) / 2
 
-    x  = _similar(z, T)
-    y  = _similar(z, T)
-    xy = _similar(z, T)
+    x  = work.x
+    y  = work.y
+    xy = work.xy
+    legwork = work.legwork
+    T = eltype(x)
+    half = one(T) / 2
 
     Is = map(Slice, axes(x))
     I = CartesianIndices(Is)
@@ -121,7 +140,7 @@ end
     fill!(@view(F[Is...,1:2,:]), zero(T))
 
     # Fill with the P^2_ℓ(x) terms initially
-    unsafe_legendre!(norm, P, lmax, 2, x)
+    unsafe_legendre!(legwork, P, lmax, 2, x)
     # Calculate the F12 and F22 terms using P^2_ℓ
     for ll in 2:lmax
         η = coeff_η(T, ll)
@@ -156,7 +175,7 @@ end
         end
     end
     # Replace with P^0_ℓ(x) terms
-    unsafe_legendre!(norm, P, lmax, 0, x)
+    unsafe_legendre!(legwork, P, lmax, 0, x)
     # Then calculate the F10 terms
     for ll in 2:lmax
         lm1 = convert(T, ll) - one(T)

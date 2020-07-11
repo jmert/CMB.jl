@@ -46,9 +46,9 @@ uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.0"
 
 [[Legendre]]
-git-tree-sha1 = "5d2b7f402316f029325d10619cffb7be0d966260"
+git-tree-sha1 = "432249469e3a438f111de799de54061077716bc3"
 uuid = "7642852e-7f09-11e9-134e-0940411082b6"
-version = "0.2.0"
+version = "0.2.1"
 
 [[LibGit2]]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
