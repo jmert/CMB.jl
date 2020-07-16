@@ -75,4 +75,24 @@ using LinearAlgebra, Random
             @test FN[ii,lodd,4] ⩳ FN[jj,lodd,4]
         end
     end
+
+    @testset "Preallocated work space" begin
+        using CMB.PixelCovariance: unsafe_Fweights!
+        norm = LegendreUnitNorm()
+        work = PixelCovariance.FweightsWork(norm, FN, z)
+        # Check equality before allocations to ensure the methods have been compiled.
+        @test unsafe_Fweights!(norm, copy(FN), lmax, z) == unsafe_Fweights!(work, copy(FN), lmax, z)
+        # At minimum, `x`, `y`, and `xy` arrays with size of `z`; more from the internal
+        # allocations of the `legendre!` calls.
+        nb = sizeof(eltype(z)) * length(z) * 3
+        @test nb <= @allocated unsafe_Fweights!(norm, FN, lmax, z)
+        # Allocation tracking and/or compiler ellision less successful on versions older
+        # than v1.5. Just make sure we're not allocating all the temporary buffers, but
+        # allow for small allocations (like maybe a `view()` container).
+        @static if VERSION < v"1.5"
+            @test nb > @allocated unsafe_Fweights!(work, FN, lmax, z)
+        else
+            @test 0 == @allocated unsafe_Fweights!(work, FN, lmax, z)
+        end
+    end
 end
