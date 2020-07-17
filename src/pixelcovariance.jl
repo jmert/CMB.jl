@@ -10,7 +10,7 @@ module PixelCovariance
 
 export Fweights!,
     PixelCovarianceCache,
-    copyspectra!, makespectra!, applybeam!, selectpixel!,
+    selectpixel!,
     pixelcovariance, pixelcovariance!
 
 using BitFlags
@@ -216,8 +216,6 @@ function Fweights!(norm::AbstractLegendreNorm, F, lmax::Integer, x)
     return unsafe_Fweights!(norm, F, lmax, x)
 end
 
-@bitflag CovarianceSpectra ClTT ClEE ClBB ClTE ClTB ClEB
-
 """
     @bitflag CovarianceFields
 
@@ -244,8 +242,6 @@ struct PixelCovarianceCache
     pixels::Vector{Int}
     fields::CovarianceFields
 
-    spectra::Matrix{Float64}
-
     pixind::Ref{Int}
     r::Vector{SVector{3,Float64}}
     z::Vector{Float64}
@@ -263,8 +259,6 @@ struct PixelCovarianceCache
                                   fields::CovarianceFields = Pol)
         N = length(pixels)
 
-        spectra = zeros(Float64, lmax+1, 6)
-
         r = zeros(SVector{3,Float64}, N)
         z = zeros(Float64, N)
         cij = zeros(Float64, N)
@@ -277,7 +271,7 @@ struct PixelCovarianceCache
         # The pixel coordinates can all be precomputed just once
         r .= pix2vec.(nside, pixels)
 
-        return new(nside, lmax, pixels, bitfields, spectra,
+        return new(nside, lmax, pixels, bitfields,
                    1, r, z, cij, sij, cji, sji, F)
     end
 end
@@ -292,39 +286,6 @@ function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
     println(io, "    maximum ℓ mode: $(C.lmax)")
     println(io, "    selected pixel: ", pix, ", at r = $(C.r[pix])")
     println(io, "    covariance blocks: $(C.fields)")
-end
-
-function copyspectra!(cache, spectra)
-    cache.spectra .= spectra
-    return cache
-end
-
-function makespectra!(cache, f, fields::CovarianceSpectra = ClTT | ClEE)
-    lmax = cache.lmax
-
-    for ll in 0:lmax
-        Cl = f(ll)
-        Cl = isfinite(Cl) ? Cl : zero(eltype(cache.spectra))
-        Bool(fields & ClTT) && (cache.spectra[ll+1,1] = Cl)
-        Bool(fields & ClEE) && (cache.spectra[ll+1,2] = Cl)
-        Bool(fields & ClBB) && (cache.spectra[ll+1,3] = Cl)
-        Bool(fields & ClTE) && (cache.spectra[ll+1,4] = Cl)
-        Bool(fields & ClTB) && (cache.spectra[ll+1,5] = Cl)
-        Bool(fields & ClEB) && (cache.spectra[ll+1,6] = Cl)
-    end
-    return cache
-end
-
-function applybeam!(cache, fwhm)
-    lmax = cache.lmax
-    sigma = deg2rad(fwhm/60) / (2sqrt(2log(2)))
-
-    fac = -0.5 * sigma*sigma
-    for ll in 0:lmax
-        Bl = exp(ll*(ll+1) * fac)
-        cache.spectra[ll+1,:] .*= Bl
-    end
-    return cache
 end
 
 function selectpixel!(cache, pixind)
@@ -342,15 +303,14 @@ function selectpixel!(cache, pixind)
     return cache
 end
 
-function pixelcovariance(nside, pixels, pixind, spec)
+function pixelcovariance(nside, pixels, pixind)
     lmax = size(spec,1)
     cache = PixelCovarianceCache(nside, lmax, pixels)
-    updatespectra!(cache, spec)
     selectpixel!(cache, pixind)
     return cache
 end
 
-function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
+function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix, Cl::AbstractMatrix)
     T = eltype(cache.F)
     fourpi = 4 * convert(T, π)
     # N.B. In general, the spectrum causes Cl*F to decrease rapidly as ℓ → ∞; reverse
@@ -367,7 +327,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
         if cache.fields & TT != NO_FIELD
             tt = zero(T)
             @simd for ll in R
-                ClTT = cache.spectra[ll,1]
+                ClTT = Cl[ll,1]
                 tt = muladd(ClTT, cache.F[ll,1], tt) # tt + ClTT*cache.F[ll,1]
             end
             tt /= fourpi
@@ -379,8 +339,8 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
             tq = zero(T)
             tu = zero(T)
             @simd for ll in R
-                ClTE = cache.spectra[ll,4]
-                ClTB = cache.spectra[ll,5]
+                ClTE = Cl[ll,4]
+                ClTB = Cl[ll,5]
                 tq = muladd(-ClTE, cache.F[ll,2], tq) # tq - ClTE*cache.F[ll,2]
                 tu = muladd(-ClTB, cache.F[ll,2], tu) # tu - ClTB*cache.F[ll,2]
             end
@@ -398,9 +358,9 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix)
             qu = zero(T)
             uu = zero(T)
             @simd for ll in R
-                ClEE = cache.spectra[ll,2]
-                ClBB = cache.spectra[ll,3]
-                ClEB = cache.spectra[ll,6]
+                ClEE = Cl[ll,2]
+                ClBB = Cl[ll,3]
+                ClEB = Cl[ll,6]
                 F12 = cache.F[ll,3]
                 F22 = cache.F[ll,4]
 
