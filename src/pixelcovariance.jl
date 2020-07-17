@@ -328,7 +328,8 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
             tt = zero(T)
             @simd for ll in R
                 ClTT = Cl[ll,1]
-                tt = muladd(ClTT, cache.F[ll,1], tt) # tt + ClTT*cache.F[ll,1]
+                F00 = cache.F[ll, 1]
+                tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
             end
             tt /= fourpi
             cov[i,1] = tt # TT
@@ -341,8 +342,9 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
             @simd for ll in R
                 ClTE = Cl[ll,4]
                 ClTB = Cl[ll,5]
-                tq = muladd(-ClTE, cache.F[ll,2], tq) # tq - ClTE*cache.F[ll,2]
-                tu = muladd(-ClTB, cache.F[ll,2], tu) # tu - ClTB*cache.F[ll,2]
+                F10 = F[ll,2]
+                tq = muladd(-ClTE, F10, tq) # tq - ClTE*F10
+                tu = muladd(-ClTB, F10, tu) # tu - ClTB*F10
             end
             tq /= fourpi
             tu /= fourpi
