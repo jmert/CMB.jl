@@ -10,7 +10,6 @@ module PixelCovariance
 
 export Fweights!,
     PixelCovarianceCache,
-    selectpixel!,
     pixelcovariance, pixelcovariance!
 
 using BitFlags
@@ -244,12 +243,6 @@ struct PixelCovarianceCache
 
     pixind::Ref{Int}
     r::Vector{SVector{3,Float64}}
-    z::Vector{Float64}
-    cij::Vector{Float64}
-    sij::Vector{Float64}
-    cji::Vector{Float64}
-    sji::Vector{Float64}
-
     F::Matrix{Float64}
 
     """
@@ -258,21 +251,11 @@ struct PixelCovarianceCache
     function PixelCovarianceCache(nside, lmax, pixels,
                                   fields::CovarianceFields = Pol)
         N = length(pixels)
-
         r = zeros(SVector{3,Float64}, N)
-        z = zeros(Float64, N)
-        cij = zeros(Float64, N)
-        sij = zeros(Float64, N)
-        cji = zeros(Float64, N)
-        sji = zeros(Float64, N)
-
         F = zeros(Float64, lmax+1, 4)
-
-        # The pixel coordinates can all be precomputed just once
         r .= pix2vec.(nside, pixels)
-
         return new(nside, lmax, pixels, bitfields,
-                   1, r, z, cij, sij, cji, sji, F)
+                   1, r, F)
     end
 end
 
@@ -288,25 +271,9 @@ function Base.show(io::IO, ::MIME"text/plain", C::PixelCovarianceCache)
     println(io, "    covariance blocks: $(C.fields)")
 end
 
-function selectpixel!(cache, pixind)
-    cache.pixind[] = pixind
-    @inbounds for ii in 1:length(cache.z)
-        cache.z[ii] = cosdistance(cache.r[pixind], cache.r[ii])
-        c,s = bearing2(cache.r[ii], cache.r[pixind])
-        cache.sij[ii] = 2*c*s
-        cache.cij[ii] = c*c - s*s
-        c,s = bearing2(cache.r[pixind], cache.r[ii])
-        cache.sji[ii] = 2*c*s
-        cache.cji[ii] = c*c - s*s
-    end
-
-    return cache
-end
-
 function pixelcovariance(nside, pixels, pixind)
     lmax = size(spec,1)
     cache = PixelCovarianceCache(nside, lmax, pixels)
-    selectpixel!(cache, pixind)
     return cache
 end
 
@@ -320,7 +287,19 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
     #       cases.
     R = reverse(axes(cache.F, 1))
 
-    @inbounds for (i,z) in enumerate(cache.z)
+    jj = cache.pixind[]
+    @inbounds for ii in axes(cache.r, 1)
+        z = cosdistance(cache.r[jj], cache.r[ii])
+        if cache.fields & (TPol | Pol) != NO_FIELD
+            c, s = bearing2(cache.r[ii], cache.r[jj])
+            sij, cij = 2*c*s, c*c - s*s
+            c, s = bearing2(cache.r[jj], cache.r[ii])
+            sji, cji = 2*c*s, c*c - s*s
+        else
+            sij, cij = zero(T), zero(T)
+            sji, cji = zero(T), zero(T)
+        end
+
         Fweights!(LegendreUnitNorm(), cache.F, cache.lmax, z)
 
         # TT
@@ -332,7 +311,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
                 tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
             end
             tt /= fourpi
-            cov[i,1] = tt # TT
+            cov[ii,1] = tt # TT
         end
 
         # TQ and TU
@@ -348,10 +327,10 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
             end
             tq /= fourpi
             tu /= fourpi
-            cov[i,2] =  tq*cache.cij[i] + tu*cache.sij[i] # QT
-            cov[i,3] = -tq*cache.sij[i] + tu*cache.cij[i] # QU
-            cov[i,4] =  tq*cache.cji[i] + tu*cache.sji[i] # TQ
-            cov[i,7] = -tq*cache.sji[i] + tu*cache.cji[i] # TU
+            cov[ii,2] =  tq*cij + tu*sij # QT
+            cov[ii,3] = -tq*sij + tu*cij # QU
+            cov[ii,4] =  tq*cji + tu*sji # TQ
+            cov[ii,7] = -tq*sji + tu*cji # TU
         end
 
         # QQ, QU, and UU
@@ -373,14 +352,10 @@ function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::
             qq /= fourpi
             uu /= fourpi
             qu /= fourpi
-            cij = cache.cij[i]
-            cji = cache.cji[i]
-            sij = cache.sij[i]
-            sji = cache.sji[i]
-            cov[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
-            cov[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
-            cov[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
-            cov[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
+            cov[ii,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
+            cov[ii,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
+            cov[ii,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
+            cov[ii,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
         end
     end
 
