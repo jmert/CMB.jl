@@ -310,7 +310,7 @@ function pixelcovariance(nside, pixels, pixind)
     return cache
 end
 
-function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix, Cl::AbstractMatrix)
+function pixelcovariance!(cache::PixelCovarianceCache, cov::AbstractMatrix, Cl::AbstractMatrix)
     T = eltype(cache.F)
     fourpi = 4 * convert(T, π)
     # N.B. In general, the spectrum causes Cl*F to decrease rapidly as ℓ → ∞; reverse
@@ -331,7 +331,7 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix, Cl::Ab
                 tt = muladd(ClTT, cache.F[ll,1], tt) # tt + ClTT*cache.F[ll,1]
             end
             tt /= fourpi
-            C[i,1] = tt # TT
+            cov[i,1] = tt # TT
         end
 
         # TQ and TU
@@ -346,10 +346,10 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix, Cl::Ab
             end
             tq /= fourpi
             tu /= fourpi
-            C[i,2] =  tq*cache.cij[i] + tu*cache.sij[i] # QT
-            C[i,3] = -tq*cache.sij[i] + tu*cache.cij[i] # QU
-            C[i,4] =  tq*cache.cji[i] + tu*cache.sji[i] # TQ
-            C[i,7] = -tq*cache.sji[i] + tu*cache.cji[i] # TU
+            cov[i,2] =  tq*cache.cij[i] + tu*cache.sij[i] # QT
+            cov[i,3] = -tq*cache.sij[i] + tu*cache.cij[i] # QU
+            cov[i,4] =  tq*cache.cji[i] + tu*cache.sji[i] # TQ
+            cov[i,7] = -tq*cache.sji[i] + tu*cache.cji[i] # TU
         end
 
         # QQ, QU, and UU
@@ -375,14 +375,14 @@ function pixelcovariance!(cache::PixelCovarianceCache, C::AbstractMatrix, Cl::Ab
             cji = cache.cji[i]
             sij = cache.sij[i]
             sji = cache.sji[i]
-            C[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
-            C[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
-            C[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
-            C[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
+            cov[i,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
+            cov[i,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
+            cov[i,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
+            cov[i,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
         end
     end
 
-    return cache
+    return cov
 end
 
 end # module PixelCovariance
