@@ -40,15 +40,15 @@ using LinearAlgebra, Random
         using Base: OneTo
 
         nel = prod(length.(axs))
-        X1 = reshape(collect(range(-1, 1, length=nel)), length.(axs)...)
-        Xo = reshape(copy(X1), axs...)
-        F1 = zeros(length.(axs)..., lmax+1, 4)
+        Xr = reshape(collect(range(-1, 1, length=nel)), length.(axs)...)
+        Xo = reshape(copy(Xr), axs...)
+        Fr = zeros(length.(axs)..., lmax+1, 4)
         Fo = zeros(axs..., lmax+1, 4)
 
-        F!(F1, lmax, X1)
+        F!(Fr, lmax, Xr)
         F!(Fo, lmax, Xo)
-        @test F1 == parent(Fo) # Equality of values
-        @test_throws DimensionMismatch F!(F1, lmax, Xo) # Mismatched axes
+        @test Fr == parent(Fo) # Equality of values
+        @test_throws DimensionMismatch F!(Fr, lmax, Xo) # Mismatched axes
     end
 
     @testset "Even/Odd symmetry" begin
