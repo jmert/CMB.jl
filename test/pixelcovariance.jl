@@ -5,6 +5,10 @@ using LinearAlgebra, Random
 ⩳(x, y) = (isnan(x) && isnan(x)) || x == y
 ⩳(x::AbstractArray, y::AbstractArray) = mapreduce(⩳, &, x, y)
 
+# Number of allocating work buffers in internal Work structures.
+const nbufs_LegendreWork = 8 # z, y¹, y², pmm2, pm, plm2, plm1, pl
+const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre.Work member
+
 @testset "Polarization weights" begin
     nz = 10
     z = collect(range(-1.0, 1.0, length=nz))
@@ -78,21 +82,61 @@ using LinearAlgebra, Random
 
     @testset "Preallocated work space" begin
         using CMB.PixelCovariance: unsafe_Fweights!
+        x = z[2]
         norm = LegendreUnitNorm()
-        work = PixelCovariance.FweightsWork(norm, FN, z)
+        work1 = PixelCovariance.FweightsWork(norm, F1, x)
+        workN = PixelCovariance.FweightsWork(norm, FN, z)
         # Check equality before allocations to ensure the methods have been compiled.
-        @test unsafe_Fweights!(norm, copy(FN), lmax, z) == unsafe_Fweights!(work, copy(FN), lmax, z)
-        # At minimum, `x`, `y`, and `xy` arrays with size of `z`; more from the internal
-        # allocations of the `legendre!` calls.
-        nb = sizeof(eltype(z)) * length(z) * 3
-        @test nb <= @allocated unsafe_Fweights!(norm, FN, lmax, z)
-        # Allocation tracking and/or compiler ellision less successful on versions older
+        @test unsafe_Fweights!(norm, copy(F1), lmax, x) == unsafe_Fweights!(work1, F1, lmax, x)
+        @test unsafe_Fweights!(norm, copy(FN), lmax, z) == unsafe_Fweights!(workN, FN, lmax, z)
+        # Lower bounds on allocations required
+        nb1 = sizeof(work1.x) * nbufs_FweightsWork
+        nbN = sizeof(workN.x) * nbufs_FweightsWork
+        @test nb1 <= @allocated unsafe_Fweights!(norm, F1, lmax, x)
+        @test nbN <= @allocated unsafe_Fweights!(norm, FN, lmax, z)
+        # Allocation tracking and/or compiler ellision is less successful on versions older
         # than v1.5. Just make sure we're not allocating all the temporary buffers, but
         # allow for small allocations (like maybe a `view()` container).
-        @static if VERSION < v"1.5"
-            @test nb > @allocated unsafe_Fweights!(work, FN, lmax, z)
+        @static if VERSION < v"1.5-beta1"
+            @test nb1 > @allocated unsafe_Fweights!(work1, F1, lmax, x)
+            @test nbN > @allocated unsafe_Fweights!(workN, FN, lmax, z)
         else
-            @test 0 == @allocated unsafe_Fweights!(work, FN, lmax, z)
+            @test 0 == @allocated unsafe_Fweights!(work1, F1, lmax, x)
+            @test 0 == @allocated unsafe_Fweights!(workN, FN, lmax, z)
+        end
+    end
+end
+
+@testset "Pixel-pixel covariance" begin
+    nside = 4
+    lmax = 3nside - 1
+    pix = pix2vec.(nside, 0:nside2npix(nside)-1)
+    pixind = length(pix) ÷ 2
+    cov = zeros(length(pix), 9)
+    Cl = ones(lmax+1, 6)
+    fields = PixelCovariance.TT | PixelCovariance.TPol | PixelCovariance.Pol
+
+    @testset "Preallocated work space" begin
+        using CMB.PixelCovariance: unsafe_pixelcovariance!
+        norm = LegendreUnitNorm()
+        work = PixelCovariance.PixelCovWork{Float64}(lmax, norm)
+        # Check equality before allocations to ensure the methods have been compiled.
+        @test unsafe_pixelcovariance!(norm, copy(cov), pix, pixind, Cl, fields) ==
+                unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
+
+        # Lower bound on allocations required
+        nb  = sizeof(eltype(first(pix))) * nbufs_FweightsWork
+        nb += sizeof(eltype(first(pix))) * 4 * (lmax + 1)
+        @test nb <= @allocated unsafe_pixelcovariance!(norm, cov, pix, pixind, Cl, fields)
+
+        # Allocation tracking and/or compiler ellision is less successful on versions older
+        # than v1.5. The stated allocations seem to be much larger than the expected
+        # buffers (and output from `julia --track-allocation=user` shows clearly nonsensical
+        # allocations) so simply mark the test as broken on older versions.
+        @static if VERSION < v"1.5.0-beta1"
+            @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
+        else
+            @test 0 == @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
         end
     end
 end
