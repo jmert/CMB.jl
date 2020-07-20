@@ -95,7 +95,7 @@ function unsafe_Fweights!(workornorm::Union{AbstractLegendreNorm,FweightsWork}, 
         F′ = F
     end
     if workornorm isa AbstractLegendreNorm
-        work = FweightsWork(LegendreUnitNorm(), F′, x′)
+        work = FweightsWork(workornorm, F′, x′)
         @inbounds _Fweights_impl!(work, F′, lmax, x′)
     else
         @inbounds _Fweights_impl!(workornorm, F′, lmax, x′)
