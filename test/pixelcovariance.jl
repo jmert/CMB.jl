@@ -94,16 +94,9 @@ const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre
         nbN = sizeof(workN.x) * nbufs_FweightsWork
         @test nb1 <= @allocated unsafe_Fweights!(norm, F1, lmax, x)
         @test nbN <= @allocated unsafe_Fweights!(norm, FN, lmax, z)
-        # Allocation tracking and/or compiler ellision is less successful on versions older
-        # than v1.5. Just make sure we're not allocating all the temporary buffers, but
-        # allow for small allocations (like maybe a `view()` container).
-        @static if VERSION < v"1.5-beta1"
-            @test nb1 > @allocated unsafe_Fweights!(work1, F1, lmax, x)
-            @test nbN > @allocated unsafe_Fweights!(workN, FN, lmax, z)
-        else
-            @test 0 == @allocated unsafe_Fweights!(work1, F1, lmax, x)
-            @test 0 == @allocated unsafe_Fweights!(workN, FN, lmax, z)
-        end
+        # Pre-allocated version doesn't allocate
+        @test 0 == @allocated unsafe_Fweights!(work1, F1, lmax, x)
+        @test 0 == @allocated unsafe_Fweights!(workN, FN, lmax, z)
     end
 end
 
@@ -129,14 +122,8 @@ end
         nb += sizeof(eltype(first(pix))) * 4 * (lmax + 1)
         @test nb <= @allocated unsafe_pixelcovariance!(norm, cov, pix, pixind, Cl, fields)
 
-        # Allocation tracking and/or compiler ellision is less successful on versions older
-        # than v1.5. The stated allocations seem to be much larger than the expected
-        # buffers (and output from `julia --track-allocation=user` shows clearly nonsensical
-        # allocations) so simply mark the test as broken on older versions.
-        @static if VERSION < v"1.5.0-beta1"
-            @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
-        else
-            @test 0 == @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
-        end
+        # Currently broken, even on v1.5 --- haven't figured out where the allocations are
+        # happening
+        @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
     end
 end
