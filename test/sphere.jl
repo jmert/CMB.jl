@@ -177,6 +177,7 @@ end
     # Reckoning from the poles when called with colatitude-azimuth pairs takes advantage
     # of the given azimuth to move along the given meridian rather that of only the
     # prime meridian's great circle.
+    Random.seed!(1234)
     α = rand(T)
     @test all(reckon(zero(T), ϕ, rand(T), α)[2] ≈ mod2pi(T(π)-α + ϕ) for ϕ in rand(T, 50))
     @test all(reckon(T(π),    ϕ, rand(T), α)[2] ≈ α + ϕ              for ϕ in rand(T, 50))
