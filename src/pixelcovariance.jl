@@ -14,8 +14,9 @@ using StaticArrays
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
 
-struct FweightsWork{T,N,V<:AbstractArray{T}}
+struct FweightsWork{T,N,S<:AbstractArray{T},V<:AbstractArray{T}}
     legwork::Legendre.Work{T,N,V}
+    P::S
     x::V
     y::V
     xy::V
@@ -23,10 +24,11 @@ end
 function FweightsWork(norm::AbstractLegendreNorm, F, z)
     T = promote_type(eltype(norm), eltype(F), eltype(z))
     legwork = Legendre.Work(norm, F, z)
+    P = view(F, map(Slice, axes(z))..., :, 1)
     x = legwork.z
     y = similar(x)
     xy = similar(x)
-    return FweightsWork(legwork, x, y, xy)
+    return FweightsWork(legwork, P, x, y, xy)
 end
 
 @inline function coeff_η(::Type{T}, l::Integer) where T
@@ -108,6 +110,7 @@ end
     # this implementation. (Probably related to the keyword-argument penalty?)
     local @inline ≈(x, y) = @fastmath x==y || abs(x-y) < eps(one(y))
 
+    P  = work.P
     x  = work.x
     y  = work.y
     xy = work.xy
@@ -117,7 +120,6 @@ end
 
     Is = map(Slice, axes(x))
     I = CartesianIndices(Is)
-    P = @view F[Is..., :, 1]
 
     @simd for ii in I
         x[ii] = x′ = convert(T, z[ii])
@@ -125,9 +127,9 @@ end
         y[ii], xy[ii] = y′, x′ * y′
     end
 
-    # Calculations below implicitly assume P has been zeroed in domain where ℓ < m, so
-    # zero first two ℓ entries before filling the P^2_ℓ(x) terms
-    fill!(@view(F[Is...,1:2,:]), zero(T))
+    # Calculations below implicitly assume the out-of-bounds entries have zero value, so
+    # also clear out the first to ℓ entries.
+    fill!(@view(F[Is..., OneTo(2), :]), zero(T))
 
     # Fill with the P^2_ℓ(x) terms initially
     unsafe_legendre!(legwork, P, lmax, 2, x)
