@@ -136,6 +136,31 @@ end
         @test alltrue
     end
 
+    @testset "Field calculations" begin
+        using CMB.PixelCovariance: TT, TPol, Pol
+
+        # Check that specifying field types only writes to some of the output columns
+        changedfields(cov) = findall(dropdims(mapreduce(!isnan, &, cov, dims = 1), dims = 1))
+        for (field,changes) in zip((TT, TPol, Pol), ([1], [2, 3, 4, 7], [5, 6, 8, 9]))
+            fill!(cov, NaN)
+            pixelcovariance!(cov, pix, pixind, Cl, field)
+            @test changedfields(cov) == changes
+        end
+
+        # Similarly, all-zeros spectra should overwrite fields with zero values
+        zeroedfields(cov) = findall(dropdims(mapreduce(iszero, &, cov, dims = 1), dims = 1))
+        # spectra ordering is TT, EE, BB, TE, TB, EB
+        for (spec,filled) in zip((1, 4, 5, 2, 3, 6),
+                                 ([1], [2, 3, 4, 7], [2, 3, 4, 7],
+                                       [5, 6, 8, 9], [5, 6, 8, 9], [5, 6, 8, 9]))
+            fill!(cov, NaN)
+            Cl′ = zeros(lmax+1, 6)
+            Cl′[:,spec] .= 1.0
+            pixelcovariance!(cov, pix, pixind, Cl′, fields)
+            @test zeroedfields(cov) == setdiff(1:9, filled)
+        end
+    end
+
     @testset "Preallocated work space" begin
         using CMB.PixelCovariance: unsafe_pixelcovariance!
         norm = LegendreUnitNorm()
