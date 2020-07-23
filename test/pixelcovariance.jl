@@ -103,11 +103,23 @@ end
 @testset "Pixel-pixel covariance" begin
     nside = 4
     lmax = 3nside - 1
-    pix = pix2vec.(nside, 0:nside2npix(nside)-1)
+    npix = nside2npix(nside)
+    pix = pix2vec.(nside, 0:npix-1)
     pixind = length(pix) ÷ 2
     cov = zeros(length(pix), 9)
     Cl = ones(lmax+1, 6)
     fields = PixelCovariance.TT | PixelCovariance.TPol | PixelCovariance.Pol
+
+    @testset "Domain Checking" begin
+        # Incorrectly-sized output arrays
+        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 8), pix, 1, Cl, fields)
+        # Incorrectly-sized spectra arrays
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix, 1, zeros(lmax, 5), fields)
+        # Pixel indexing is inbounds
+        @test_throws BoundsError pixelcovariance!(cov, pix, -1, Cl, fields)
+        @test_throws BoundsError pixelcovariance!(cov, pix, npix+1, Cl, fields)
+    end
 
     @testset "Preallocated work space" begin
         using CMB.PixelCovariance: unsafe_pixelcovariance!

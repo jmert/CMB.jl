@@ -238,10 +238,11 @@ function pixelcovariance!(cov::AbstractMatrix, pix::AbstractVector, pixind,
                           Cl::AbstractMatrix, fields::CovarianceFields)
     axes(cov, 1) == axes(pix, 1) ||
         throw(DimensionMismatch("Axes of covariance matrix and pixel vector do not match"))
-    axes(cov, 2) == 9
+    size(cov, 2) == 9 ||
+        throw(DimensionMismatch("Output array expected to have 9 columns"))
+    size(Cl, 2) == 6 || throw(DimensionMismatch("Expected 6 Cl spectra"))
     Base.checkbounds(pix, pixind)
     Base.require_one_based_indexing(Cl)
-    size(Cl, 2) == 6 || throw(DimensionMismatch("Expected 6 Cl spectra"))
 
     return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields)
 end
