@@ -121,6 +121,21 @@ end
         @test_throws BoundsError pixelcovariance!(cov, pix, npix+1, Cl, fields)
     end
 
+    @testset "Field mask to row/col indexing" begin
+        using CMB.PixelCovariance: CovarianceFields, minrow, mincol
+        # There aren't that many combinations, so just exhaustively check them all.
+        # "Abuse" BitMatrix to interpret the bitfield as a 3x3 matrix, and use reductions
+        # to find the first selected row/column.
+        b = BitMatrix(undef, 3, 3)
+        alltrue = true
+        for ff in 1:(2^9-1)
+            b.chunks[1] = ff
+            alltrue &= minrow(CovarianceFields(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 2), dims = 2))
+            alltrue &= mincol(CovarianceFields(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 1), dims = 1))
+        end
+        @test alltrue
+    end
+
     @testset "Preallocated work space" begin
         using CMB.PixelCovariance: unsafe_pixelcovariance!
         norm = LegendreUnitNorm()
