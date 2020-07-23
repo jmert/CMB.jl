@@ -217,9 +217,22 @@ subblocks, named as the Cartesian product of elements T, Q, and U:
     QT  QQ  QU
     UT  UQ  UU
 """
-@bitflag CovarianceFields TT TQ TU QT QQ QU UT UQ UU NO_FIELD=0
+@bitflag CovarianceFields TT QT UT TQ QQ UQ TU QU UU NO_FIELD=0
 const TPol = TQ | TU | UT | QT
 const Pol  = QQ | UU | QU | UQ
+
+function minrow(fields::CovarianceFields)
+    F = Integer(fields)
+    f = (F | (F >> 0x3) | (F >> 0x6)) & 0x07
+    return trailing_zeros(f) + 0x1
+end
+
+function mincol(fields::CovarianceFields)
+    F = Integer(fields)
+    f = (F | (F >> 0x1) | (F >> 0x2)) & 0b001001001 #= 0x49 =#
+    f = (f | (f >> 0x2) | (f >> 0x4)) & 0b111 #= 0x07 =#
+    return trailing_zeros(f) + 0x1
+end
 
 function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::CovarianceFields)
     T = eltype(first(pix))
