@@ -178,4 +178,105 @@ end
         # happening
         @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
     end
+
+    @testset "Positive-definite covariance" begin
+        # The resulting covariance matrix should always be postive-definite for any
+        # combination of sub-fields (that is square and includes non-zeros on the diagonal,
+        # so e.g. TT + TPol - Pol is not a valid combination to check).
+        # Test this over combinations of fields and spectra.
+        using LinearAlgebra: isposdef, diagind
+        using .PixelCovariance: TT, TPol, Pol
+
+        # Using the spectra and pixels in the outer test set doesn't actually have a
+        # positive-definite matrix (only positive-semidefinite) since there are more
+        # pixels (degrees of freedom in pixel space) than there are input modes
+        # (degrees of freedom in harmonic space). Use spectra with higher lmax (that will
+        # alias power) to fill in more degrees of freedom, the +2 accounting for the fact
+        # that l == {0, 1} are unused in polarization (and l==0 uninteresting in T as well).
+        Cl′ = ones(npix+2, 6)
+        Cl′[1:2, :] .= 0
+
+        # Numerical calculation also means the output matrix will typically not be
+        # perfectly symmetric, which the `isposdef()` check will implicitly require by
+        # first checking `ishermitian()`. Here we construct an asymmetry test, and if
+        # that is small enough, the test can proceed with an assumed symmetric matrix.
+        function asymmetry(A::AbstractMatrix)
+            ir, ic = axes(A)
+            ir == ic || error("Not square")
+            maxvalue = zero(eltype(A))
+            maxerror = zero(eltype(A))
+            @inbounds for jj in ic
+                for ii in ir[jj:end]
+                    maxvalue = max(maxvalue, A[ii,jj])
+                    maxerror = max(maxerror, abs(A[ii,jj] - A[jj,ii]))
+                end
+            end
+            return maxerror, maxvalue
+        end
+        function isnearlysymmetric(A)
+            maxerr, maxval = asymmetry(A)
+            return maxerr / eps(maxval) < 0.01 # 1/100 of an ulp
+        end
+
+
+        # All spectra contribute
+
+        # TT only
+        C = pixelcovariance(pix, Cl′, TT)
+        C = C[1:npix, 1:npix]
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # Pol only
+        C = pixelcovariance(pix, Cl′, Pol)
+        C = C[npix+1:end, npix+1:end]
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # TT + TPol + Pol
+        C = pixelcovariance(pix, Cl′, TT | TPol | Pol)
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # Drop TE and TB. This only effects the TT + TPol + Pol case.
+        Cl′[:,4:5] .= 0
+
+        C = pixelcovariance(pix, Cl′, TT | TPol | Pol)
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # Now also drop EB. This effects both the Pol-only and (TT+TPol+Pol) cases.
+        Cl′[:,6] .= 0
+
+        # Pol only
+        C = pixelcovariance(pix, Cl′, Pol)
+        C = C[npix+1:end, npix+1:end]
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # TT + TPol + Pol
+        C = pixelcovariance(pix, Cl′, TT | TPol | Pol)
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+
+        # Finally, check that both EE-only and BB-only for Pol-only covariance is still
+        # positive definite.
+        #
+        # First EE:
+        Cl′[:,2:3] .= [1.0 0.0]
+
+        C = pixelcovariance(pix, Cl′, Pol)
+        C = C[npix+1:end, npix+1:end]
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+
+        # Then BB:
+        Cl′[:,2:3] .= [0.0 1.0]
+
+        C = pixelcovariance(pix, Cl′, Pol)
+        C = C[npix+1:end, npix+1:end]
+        @test isnearlysymmetric(C)
+        @test isposdef(Symmetric(C))
+    end
 end
