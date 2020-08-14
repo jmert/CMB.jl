@@ -32,7 +32,8 @@ function FweightsWork(norm::AbstractLegendreNorm, F, z)
 end
 
 @inline function coeff_η(::Type{T}, l::Integer) where T
-    return T(2l + 1)
+    lT = convert(T, l)
+    return T(2lT + one(T))
 end
 @inline function coeff_χ(::Type{T}, l::Integer) where T
     lT = convert(T, l)
@@ -42,7 +43,7 @@ end
 end
 @inline function coeff_γ(::Type{T}, l::Integer) where T
     lT = convert(T, l)
-    fac1 = 2 * T(lT + one(T))
+    fac1 = 2 * T(2lT + one(T))
     fac2 = @evalpoly(lT, 0, -2, -1, 2, 1)
     return fac1 / fac2
 end
