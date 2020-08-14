@@ -342,7 +342,7 @@ end
             tq /= fourpi
             tu /= fourpi
             cov[ii,2] =  tq*cij + tu*sij # QT
-            cov[ii,3] = -tq*sij + tu*cij # QU
+            cov[ii,3] = -tq*sij + tu*cij # UT
             cov[ii,4] =  tq*cji + tu*sji # TQ
             cov[ii,7] = -tq*sji + tu*cji # TU
         end
