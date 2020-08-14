@@ -114,6 +114,8 @@ const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre
 end
 
 @testset "Pixel-pixel covariance" begin
+    using CMB.PixelCovariance: TT, TPol, Pol
+
     nside = 4
     lmax = 3nside - 1
     npix = nside2npix(nside)
@@ -150,8 +152,6 @@ end
     end
 
     @testset "Field calculations" begin
-        using CMB.PixelCovariance: TT, TPol, Pol
-
         # Check that specifying field types only writes to some of the output columns
         changedfields(cov) = findall(dropdims(mapreduce(!isnan, &, cov, dims = 1), dims = 1))
         for (field,changes) in zip((TT, TPol, Pol), ([1], [2, 3, 4, 7], [5, 6, 8, 9]))
@@ -198,7 +198,6 @@ end
         # so e.g. TT + TPol - Pol is not a valid combination to check).
         # Test this over combinations of fields and spectra.
         using LinearAlgebra: isposdef, diagind
-        using .PixelCovariance: TT, TPol, Pol
 
         # Using the spectra and pixels in the outer test set doesn't actually have a
         # positive-definite matrix (only positive-semidefinite) since there are more
@@ -291,5 +290,56 @@ end
         C = C[npix+1:end, npix+1:end]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
+    end
+
+    function gen_test_cov(specind)
+        nx, ny = 361, 181
+        ell = 20
+
+        # Generate an equidistance cylindrical projection (ECP) grid over the entire
+        # sphere since it's trivial to define and work with.
+        px = range(-1.0π, 1.0π, length = nx + 1)
+        px = px[2:end] .- (step(px)/2)
+        py = range(0.0, 1.0π, length = ny + 1)
+        py = py[2:end] .- (step(py)/2)
+        rr = Sphere.cartvec.(py, px')
+
+        # Choose the point at (lat,lon) == (0°, 180°)
+        pixind = LinearIndices(rr)[CartesianIndex(ny÷2 + 1, nx÷2 + 1)]
+        cov1 = zeros(length(rr), 9)
+
+        # Generate and extract the polarization E-only covariance maps
+        Cl′ = zeros(ell+1, 6)
+        Cl′[ell+1, [specind]] .= 1.0
+
+        pixelcovariance!(cov1, vec(rr), pixind, Cl′, Pol)
+        return (;
+                QQ = reshape(cov1[:,5], size(rr)),
+                UQ = reshape(cov1[:,6], size(rr)),
+                QU = reshape(cov1[:,8], size(rr)),
+                UU = reshape(cov1[:,9], size(rr))
+              )
+    end
+
+    @testset "Covariance symmetries" begin
+        # There is a symmetry between Q/U and E/B wherein we can check a few invariants
+        # if we produce covariances with either only EE power or only BB power. Check
+        # those.
+
+        covEE = gen_test_cov(2)
+        covBB = gen_test_cov(3)
+        covEB = gen_test_cov(6)
+
+        # The patterns in QQ and UU swap with each other under a swap of the input spectra.
+        @test covEE.QQ == covBB.UU
+        @test covEE.UU == covBB.QQ
+        # Similarly, the cross QU and UQ fields follow the same patterns in opposite
+        # fields when swapping spectra, but there's an additional negation.
+        @test covEE.QU == -covBB.UQ
+        @test covEE.UQ == -covBB.QU
+        # For a covariance with only EB power, QQ and UU are negatives of one another, and
+        # the QU and UQ fields are the same
+        @test covEB.QQ == -covEB.UU
+        @test covEB.UQ ==  covEB.QU
     end
 end
