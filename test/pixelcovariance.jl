@@ -80,6 +80,19 @@ const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre
         end
     end
 
+    @testset "Limits at x = ±1" begin
+        x₁ = [-1.0, -1.0 + 2sqrt(eps(1.0))]
+        x₂ = [ 1.0,  1.0 - 2sqrt(eps(1.0))]
+        Fx = zeros(2, lmax+1, 4)
+
+        # Only a rough check of 1 part in 10000 agreement is sufficient to verify that
+        # a factor-of-2 bug no longer exists.
+        F!(Fx, lmax, x₁)
+        @test mapreduce(<(1e-4) ∘ abs, &, diff(Fx[:,2:4,:], dims=1))
+        F!(Fx, lmax, x₂)
+        @test mapreduce(<(1e-4) ∘ abs, &, diff(Fx[:,2:4,:], dims=1))
+    end
+
     @testset "Preallocated work space" begin
         using CMB.PixelCovariance: unsafe_Fweights!
         x = z[2]
