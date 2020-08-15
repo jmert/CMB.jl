@@ -1,3 +1,4 @@
+using CMB.PixelCovariance
 using LinearAlgebra, Random
 
 # Neither isequal nor == does what exactly we want --- `isequal(NaN, NaN) == true` but
@@ -94,7 +95,7 @@ const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre
     end
 
     @testset "Preallocated work space" begin
-        using CMB.PixelCovariance: unsafe_Fweights!
+        using .PixelCovariance: unsafe_Fweights!
         x = z[2]
         norm = LegendreUnitNorm()
         work1 = PixelCovariance.FweightsWork(norm, F1, x)
@@ -114,7 +115,8 @@ const nbufs_FweightsWork = 2 + nbufs_LegendreWork # y, xy; x aliased to Legendre
 end
 
 @testset "Pixel-pixel covariance" begin
-    using CMB.PixelCovariance: TT, TPol, Pol
+    using .PixelCovariance.CovarianceFields
+    using .PixelCovariance.PolarizationConventions
 
     nside = 4
     lmax = 3nside - 1
@@ -123,7 +125,7 @@ end
     pixind = length(pix) ÷ 2
     cov = zeros(length(pix), 9)
     Cl = ones(lmax+1, 6)
-    fields = PixelCovariance.TT | PixelCovariance.TPol | PixelCovariance.Pol
+    fields = TT | TPol | Pol
 
     @testset "Domain Checking" begin
         # Incorrectly-sized output arrays
@@ -137,7 +139,9 @@ end
     end
 
     @testset "Field mask to row/col indexing" begin
-        using CMB.PixelCovariance: CovarianceFields, minrow, mincol
+        using .PixelCovariance: minrow, mincol
+        using .PixelCovariance.CovarianceFields: Field
+
         # There aren't that many combinations, so just exhaustively check them all.
         # "Abuse" BitMatrix to interpret the bitfield as a 3x3 matrix, and use reductions
         # to find the first selected row/column.
@@ -145,8 +149,8 @@ end
         alltrue = true
         for ff in 1:(2^9-1)
             b.chunks[1] = ff
-            alltrue &= minrow(CovarianceFields(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 2), dims = 2))
-            alltrue &= mincol(CovarianceFields(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 1), dims = 1))
+            alltrue &= minrow(Field(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 2), dims = 2))
+            alltrue &= mincol(Field(ff)) == findfirst(==(true), dropdims(reduce(|, b, dims = 1), dims = 1))
         end
         @test alltrue
     end
@@ -175,7 +179,7 @@ end
     end
 
     @testset "Preallocated work space" begin
-        using CMB.PixelCovariance: unsafe_pixelcovariance!
+        using .PixelCovariance: unsafe_pixelcovariance!
         norm = LegendreUnitNorm()
         work = PixelCovariance.PixelCovWork{Float64}(lmax, norm)
         # Check equality before allocations to ensure the methods have been compiled.
@@ -292,7 +296,7 @@ end
         @test isposdef(Symmetric(C))
     end
 
-    function gen_test_cov(specind)
+    function gen_test_cov(specind, polconv = IAUConv)
         nx, ny = 361, 181
         ell = 20
 
@@ -310,9 +314,9 @@ end
 
         # Generate and extract the polarization E-only covariance maps
         Cl′ = zeros(ell+1, 6)
-        Cl′[ell+1, [specind]] .= 1.0
+        Cl′[ell+1, specind] .= 1.0
 
-        pixelcovariance!(cov1, vec(rr), pixind, Cl′, Pol)
+        pixelcovariance!(cov1, vec(rr), pixind, Cl′, Pol, polconv)
         return (;
                 QQ = reshape(cov1[:,5], size(rr)),
                 UQ = reshape(cov1[:,6], size(rr)),
@@ -326,9 +330,9 @@ end
         # if we produce covariances with either only EE power or only BB power. Check
         # those.
 
-        covEE = gen_test_cov(2)
-        covBB = gen_test_cov(3)
-        covEB = gen_test_cov(6)
+        covEE = gen_test_cov([2])
+        covBB = gen_test_cov([3])
+        covEB = gen_test_cov([6])
 
         # The patterns in QQ and UU swap with each other under a swap of the input spectra.
         @test covEE.QQ == covBB.UU
@@ -341,5 +345,60 @@ end
         # the QU and UQ fields are the same
         @test covEB.QQ == -covEB.UU
         @test covEB.UQ ==  covEB.QU
+    end
+
+    @testset "Polarization conventions" begin
+        covEE_hpix = gen_test_cov([2], HealpixConv)
+        covBB_hpix = gen_test_cov([3], HealpixConv)
+        covEB_hpix = gen_test_cov([6], HealpixConv)
+        covEE_iau  = gen_test_cov([2], IAUConv)
+        covBB_iau  = gen_test_cov([3], IAUConv)
+        covEB_iau  = gen_test_cov([6], IAUConv)
+
+        # For auto-covariances, pure E or pure B fields are invariant to polarization
+        # convention...
+        @test covEE_hpix.QQ == covEE_iau.QQ
+        @test covEE_hpix.UU == covEE_iau.UU
+        @test covBB_hpix.QQ == covBB_iau.QQ
+        @test covBB_hpix.UU == covBB_iau.UU
+        # ...but EB-correlated spectrum swaps roles.
+        @test covEB_hpix.QQ == covEB_iau.UU
+
+        # For cross-covariances, behavior reverses — QU/UQ are the same in EB-correlated
+        # spectra...
+        @test covEB_hpix.QU == covEB_iau.QU
+        @test covEB_hpix.UQ == covEB_iau.UQ
+        # ...and are sign-flips in the pure-E/pure-B cases.
+        @test covEE_hpix.QU == -covEE_iau.QU
+        @test covEE_hpix.UQ == -covEE_iau.UQ
+        @test covBB_hpix.QU == -covBB_iau.QU
+        @test covBB_hpix.UQ == -covBB_iau.UQ
+
+        # Simple sign flips only work for cases where EB spectrum is zero since the fields
+        # are mixed differently between the QQ/UU and QU components in the rotation.
+        cov_hpix = gen_test_cov([2, 6], HealpixConv)
+        cov_iau  = gen_test_cov([2, 6], IAUConv)
+        @test cov_hpix.QQ !=  cov_iau.QQ
+        @test cov_hpix.QQ != -cov_iau.QQ
+        @test cov_hpix.UU !=  cov_iau.QQ
+        @test cov_hpix.UU != -cov_iau.QQ
+        @test cov_hpix.QU !=  cov_iau.QU
+        @test cov_hpix.QU != -cov_iau.QU
+        @test cov_hpix.UQ !=  cov_iau.UQ
+        @test cov_hpix.UQ != -cov_iau.UQ
+
+        # The mixed case can be reproduced as a particular linear combination of the
+        # single-spectra cases, though:
+        #
+        # First check that same polarization convention is directly sum as expected.
+        @test cov_hpix.QQ ≈ covEE_hpix.QQ + covEB_hpix.QQ
+        @test cov_hpix.UU ≈ covEE_hpix.UU + covEB_hpix.UU
+        @test cov_hpix.QU ≈ covEE_hpix.QU + covEB_hpix.QU
+        @test cov_hpix.UQ ≈ covEE_hpix.UQ + covEB_hpix.UQ
+        # Then form linear combinations of IAUConv to produce HealpixConv
+        @test cov_hpix.QQ ≈  covEE_iau.QQ - covEB_iau.QQ
+        @test cov_hpix.UU ≈  covEE_iau.UU - covEB_iau.UU
+        @test cov_hpix.QU ≈ -covEE_iau.QU + covEB_iau.QU
+        @test cov_hpix.UQ ≈ -covEE_iau.UQ + covEB_iau.UQ
     end
 end
