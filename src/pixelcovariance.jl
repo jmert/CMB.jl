@@ -7,12 +7,63 @@ import ..Sphere: bearing2, cosdistance
 import ..Healpix: pix2vec
 import ..unchecked_sqrt
 
-using BitFlags
 using Legendre
 using Legendre: unsafe_legendre!
 using StaticArrays
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
+
+module CovarianceFields
+    using BitFlags
+    export TT, QT, UT, TQ, QQ, UQ, TU, QU, UU, NO_FIELD, TPol, Pol
+
+    """
+        @bitflag Field TT QT UT TQ QQ UQ TU QU UU NO_FIELD=0
+
+    A bitfield for identifying subblocks of the pixel-pixel covariance matrix. There are 9
+    subblocks, named as the Cartesian product of elements T, Q, and U:
+
+        TT  TQ  TU
+        QT  QQ  QU
+        UT  UQ  UU
+    """
+    @bitflag Field TT QT UT TQ QQ UQ TU QU UU NO_FIELD=0
+
+    """
+        const TPol = QT | UT | TQ | TU
+
+    An alias for the temperature-cross-polarization sub-blocks of the full covariance
+    matrix.
+    """
+    const TPol = QT | UT | TQ | TU
+
+    """
+        const Pol  = QQ | UQ | QU | UU
+
+    An alias for the polarization-only sub-blocks of the full covariance matrix.
+    """
+    const Pol  = QQ | UQ | QU | UU
+end
+using .CovarianceFields
+using .CovarianceFields: Field
+
+module PolarizationConventions
+    export IAUConv, HealpixConv
+
+    """
+        @enum Convention IAUConv HealpixConv
+
+    An enumeration to specify the two types of polarization conventions used to describe
+    Stokes Q/U coordinate systems.
+    """
+    @enum Convention IAUConv HealpixConv
+end
+using .PolarizationConventions
+using .PolarizationConventions: Convention
+
+####
+#### Polarization Weights
+####
 
 struct FweightsWork{T,N,S<:AbstractArray{T},V<:AbstractArray{T}}
     legwork::Legendre.Work{T,N,V}
@@ -208,48 +259,40 @@ function Fweights!(norm::AbstractLegendreNorm, F, lmax::Integer, x)
     return unsafe_Fweights!(norm, F, lmax, x)
 end
 
-"""
-    @bitflag CovarianceFields
+####
+#### Pixel-pixel covariance
+####
 
-A bitfield for identifying subblocks of the pixel-pixel covariance matrix. There are 9
-subblocks, named as the Cartesian product of elements T, Q, and U:
-
-    TT  TQ  TU
-    QT  QQ  QU
-    UT  UQ  UU
-"""
-@bitflag CovarianceFields TT QT UT TQ QQ UQ TU QU UU NO_FIELD=0
-const TPol = TQ | TU | UT | QT
-const Pol  = QQ | UU | QU | UQ
-
-function minrow(fields::CovarianceFields)
+function minrow(fields::Field)
     F = Integer(fields)
     f = (F | (F >> 0x3) | (F >> 0x6)) & 0x07
     return trailing_zeros(f) + 0x1
 end
 
-function mincol(fields::CovarianceFields)
+function mincol(fields::Field)
     F = Integer(fields)
     f = (F | (F >> 0x1) | (F >> 0x2)) & 0b001001001 #= 0x49 =#
     f = (f | (f >> 0x2) | (f >> 0x4)) & 0b111 #= 0x07 =#
     return trailing_zeros(f) + 0x1
 end
 
-function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::CovarianceFields)
+function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
+                         polconv::Convention = IAUConv)
     T = eltype(first(pix))
     npix = length(pix)
     cov = zeros(T, npix, 9, npix)
     lmax = size(Cl, 1) - 1
     work = PixelCovWork{T}(lmax, LegendreUnitNorm())
     for ii in axes(pix, 1)
-        @inbounds _pixelcovariance_impl!(work, view(cov, :, :, ii), pix, ii, Cl, fields)
+        @inbounds _pixelcovariance_impl!(work, view(cov, :, :, ii), pix, ii, Cl, fields, polconv)
     end
     cov = reshape(permutedims(reshape(cov, 3npix, 3, npix), (1, 3, 2)), 3npix, 3npix)
     return cov
 end
 
 function pixelcovariance!(cov::AbstractMatrix, pix::AbstractVector, pixind,
-                          Cl::AbstractMatrix, fields::CovarianceFields)
+                          Cl::AbstractMatrix, fields::Field,
+                          polconv::Convention = IAUConv)
     axes(cov, 1) == axes(pix, 1) ||
         throw(DimensionMismatch("Axes of covariance matrix and pixel vector do not match"))
     size(cov, 2) == 9 ||
@@ -258,7 +301,7 @@ function pixelcovariance!(cov::AbstractMatrix, pix::AbstractVector, pixind,
     Base.checkbounds(pix, pixind)
     Base.require_one_based_indexing(Cl)
 
-    return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields)
+    return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields, polconv)
 end
 
 struct PixelCovWork{T,N,V}
@@ -274,21 +317,22 @@ Base.eltype(::PixelCovWork{T}) where {T} = T
 
 function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
                                  cov::AbstractMatrix, pix::AbstractVector, pixind::Int,
-                                 Cl::AbstractMatrix, fields::CovarianceFields)
+                                 Cl::AbstractMatrix, fields::Field,
+                                 polconv::Convention = IAUConv)
     if workornorm isa AbstractLegendreNorm
         T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
         lmax = size(Cl, 1) - 1
         work = PixelCovWork{T}(lmax, workornorm)
-        @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields)
+        @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields, polconv)
     else
-        @inbounds _pixelcovariance_impl!(workornorm, cov, pix, pixind, Cl, fields)
+        @inbounds _pixelcovariance_impl!(workornorm, cov, pix, pixind, Cl, fields, polconv)
     end
     return cov
 end
 
 @propagate_inbounds function _pixelcovariance_impl!(work::PixelCovWork{T},
         cov::AbstractMatrix, pix::AbstractVector, pixind::Integer,
-        Cl::AbstractMatrix, fields::CovarianceFields) where {T}
+        Cl::AbstractMatrix, fields::Field, polconv::Convention) where {T}
     F = work.F
     Fwork = work.Fwork
     lmax = size(F, 1) - 1
@@ -301,6 +345,8 @@ end
     #       cases.
     R = reverse(axes(F, 1))
 
+    sij, cij = zero(T), zero(T)
+    sji, cji = zero(T), zero(T)
     jj = pixind
     for ii in axes(pix, 1)
         z = cosdistance(pix[ii], pix[jj])
@@ -309,9 +355,11 @@ end
             sij, cij = 2*c*s, c*c - s*s
             c, s = bearing2(pix[jj], pix[ii])
             sji, cji = 2*c*s, c*c - s*s
-        else
-            sij, cij = zero(T), zero(T)
-            sji, cji = zero(T), zero(T)
+            # If Healpix polarization convention requested, flip signs of sine terms to
+            # rotate in the opposite direction.
+            if polconv == HealpixConv
+                sij, sji = -sij, -sji
+            end
         end
 
         unsafe_Fweights!(Fwork, F, lmax, z)
@@ -341,10 +389,10 @@ end
             end
             tq /= fourpi
             tu /= fourpi
-            cov[ii,2] =  tq*cij + tu*sij # QT
-            cov[ii,3] = -tq*sij + tu*cij # UT
-            cov[ii,4] =  tq*cji + tu*sji # TQ
-            cov[ii,7] = -tq*sji + tu*cji # TU
+            cov[ii,2] = tq*cij - tu*sij # QT
+            cov[ii,3] = tq*sij + tu*cij # UT
+            cov[ii,4] = tq*cji - tu*sji # TQ
+            cov[ii,7] = tq*sji + tu*cji # TU
         end
 
         # QQ, QU, and UU
@@ -366,10 +414,10 @@ end
             qq /= fourpi
             uu /= fourpi
             qu /= fourpi
-            cov[ii,5] =  qq*cij*cji + qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
-            cov[ii,6] = -qq*sij*cji + qu*(cij*cji-sij*sji) + uu*cij*sji # UQ
-            cov[ii,8] = -qq*cij*sji + qu*(cij*cji-sij*sji) + uu*sij*cji # QU
-            cov[ii,9] =  qq*sij*sji - qu*(cij*sji+sij*cji) + uu*cij*cji # UU
+            cov[ii,5] = qq*cij*cji - qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
+            cov[ii,6] = qq*sij*cji + qu*(cij*cji-sij*sji) - uu*cij*sji # UQ
+            cov[ii,8] = qq*cij*sji + qu*(cij*cji-sij*sji) - uu*sij*cji # QU
+            cov[ii,9] = qq*sij*sji + qu*(cij*sji+sij*cji) + uu*cij*cji # UU
         end
     end
 
