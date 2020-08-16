@@ -125,7 +125,46 @@ end
     pixind = length(pix) ÷ 2
     cov = zeros(length(pix), 9)
     Cl = ones(lmax+1, 6)
+    ClTT = vcat(zeros(lmax, 6), [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]');
+    ClEE = vcat(zeros(lmax, 6), [0.0, 1.0, 0.0, 0.0, 0.0, 0.0]');
+    ClBB = vcat(zeros(lmax, 6), [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]');
+    ClTE = vcat(zeros(lmax, 6), [0.0, 0.0, 0.0, 1.0, 0.0, 0.0]');
+    ClEB = vcat(zeros(lmax, 6), [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]');
     fields = TT | TPol | Pol
+
+    # Numerical calculation also means the output matrix will typically not be
+    # perfectly symmetric, which the `isposdef()` check will implicitly require by
+    # first checking `ishermitian()`. Here we construct an asymmetry test, and if
+    # that is small enough, the test can proceed with an assumed symmetric matrix.
+    function asymmetry(A::AbstractMatrix)
+        ir, ic = axes(A)
+        ir == ic || error("Not square")
+        maxvalue = zero(eltype(A))
+        maxerror = zero(eltype(A))
+        @inbounds for jj in ic
+            for ii in ir[jj:end]
+                maxvalue = max(maxvalue, A[ii,jj])
+                maxerror = max(maxerror, abs(A[ii,jj] - A[jj,ii]))
+            end
+        end
+        return maxerror, maxvalue
+    end
+    function isnearlysymmetric(A; ulps = 0.01)
+        maxerr, maxval = asymmetry(A)
+        return maxerr / eps(maxval) ≤ ulps
+    end
+
+    function covblocks(cov)
+        axes(cov, 1) == axes(cov, 2) || throw(DimensionMismatch())
+        np, r = fldmod(size(cov, 1), 3)
+        r == 0 || throw(DimensionMismatch())
+        iT, iQ, iU = Iterators.partition(axes(cov, 1), np)
+        return (;
+                TT = cov[iT, iT], TQ = cov[iT, iQ], TU = cov[iT, iU],
+                QT = cov[iQ, iT], QQ = cov[iQ, iQ], QU = cov[iQ, iU],
+                UT = cov[iU, iT], UQ = cov[iU, iQ], UU = cov[iU, iU]
+               )
+    end
 
     @testset "Domain Checking" begin
         # Incorrectly-sized output arrays
@@ -212,29 +251,6 @@ end
         Cl′ = ones(npix+2, 6)
         Cl′[1:2, :] .= 0
 
-        # Numerical calculation also means the output matrix will typically not be
-        # perfectly symmetric, which the `isposdef()` check will implicitly require by
-        # first checking `ishermitian()`. Here we construct an asymmetry test, and if
-        # that is small enough, the test can proceed with an assumed symmetric matrix.
-        function asymmetry(A::AbstractMatrix)
-            ir, ic = axes(A)
-            ir == ic || error("Not square")
-            maxvalue = zero(eltype(A))
-            maxerror = zero(eltype(A))
-            @inbounds for jj in ic
-                for ii in ir[jj:end]
-                    maxvalue = max(maxvalue, A[ii,jj])
-                    maxerror = max(maxerror, abs(A[ii,jj] - A[jj,ii]))
-                end
-            end
-            return maxerror, maxvalue
-        end
-        function isnearlysymmetric(A)
-            maxerr, maxval = asymmetry(A)
-            return maxerr / eps(maxval) < 0.01 # 1/100 of an ulp
-        end
-
-
         # All spectra contribute
 
         # TT only
@@ -296,43 +312,22 @@ end
         @test isposdef(Symmetric(C))
     end
 
-    function gen_test_cov(specind, polconv = IAUConv)
-        nx, ny = 361, 181
-        ell = 20
-
-        # Generate an equidistance cylindrical projection (ECP) grid over the entire
-        # sphere since it's trivial to define and work with.
-        px = range(-1.0π, 1.0π, length = nx + 1)
-        px = px[2:end] .- (step(px)/2)
-        py = range(0.0, 1.0π, length = ny + 1)
-        py = py[2:end] .- (step(py)/2)
-        rr = Sphere.cartvec.(py, px')
-
-        # Choose the point at (lat,lon) == (0°, 180°)
-        pixind = LinearIndices(rr)[CartesianIndex(ny÷2 + 1, nx÷2 + 1)]
-        cov1 = zeros(length(rr), 9)
-
-        # Generate and extract the polarization E-only covariance maps
-        Cl′ = zeros(ell+1, 6)
-        Cl′[ell+1, specind] .= 1.0
-
-        pixelcovariance!(cov1, vec(rr), pixind, Cl′, Pol, polconv)
-        return (;
-                QQ = reshape(cov1[:,5], size(rr)),
-                UQ = reshape(cov1[:,6], size(rr)),
-                QU = reshape(cov1[:,8], size(rr)),
-                UU = reshape(cov1[:,9], size(rr))
-              )
-    end
-
     @testset "Covariance symmetries" begin
-        # There is a symmetry between Q/U and E/B wherein we can check a few invariants
-        # if we produce covariances with either only EE power or only BB power. Check
-        # those.
+        # The entire 3×3-block covariance matrix is symmetric, so there there are
+        # symmetric relationships among each of the blocks.
+        covTE = covblocks(pixelcovariance(pix, ClTT + ClTE, TT | TPol))
+        covEE = covblocks(pixelcovariance(pix, ClEE, Pol))
+        covBB = covblocks(pixelcovariance(pix, ClBB, Pol))
+        covEB = covblocks(pixelcovariance(pix, ClEB, Pol))
 
-        covEE = gen_test_cov([2])
-        covBB = gen_test_cov([3])
-        covEB = gen_test_cov([6])
+        # First, the block diagonals are individually self-symmetric.
+        @test covTE.TT ≈ covTE.TT'
+        @test covEE.QQ ≈ covEE.QQ'
+        @test covEE.UU ≈ covEE.UU'
+        # The off-diagonal blocks are then transpose-symmetric with each other
+        @test covTE.TQ ≈ covTE.QT'
+        @test covTE.TU ≈ covTE.UT'
+        @test covTE.UQ ≈ covTE.QU'
 
         # The patterns in QQ and UU swap with each other under a swap of the input spectra.
         @test covEE.QQ == covBB.UU
@@ -348,12 +343,12 @@ end
     end
 
     @testset "Polarization conventions" begin
-        covEE_hpix = gen_test_cov([2], HealpixConv)
-        covBB_hpix = gen_test_cov([3], HealpixConv)
-        covEB_hpix = gen_test_cov([6], HealpixConv)
-        covEE_iau  = gen_test_cov([2], IAUConv)
-        covBB_iau  = gen_test_cov([3], IAUConv)
-        covEB_iau  = gen_test_cov([6], IAUConv)
+        covEE_hpix = covblocks(pixelcovariance(pix, ClEE, Pol, HealpixConv))
+        covBB_hpix = covblocks(pixelcovariance(pix, ClBB, Pol, HealpixConv))
+        covEB_hpix = covblocks(pixelcovariance(pix, ClEB, Pol, HealpixConv))
+        covEE_iau  = covblocks(pixelcovariance(pix, ClEE, Pol, IAUConv))
+        covBB_iau  = covblocks(pixelcovariance(pix, ClBB, Pol, IAUConv))
+        covEB_iau  = covblocks(pixelcovariance(pix, ClEB, Pol, IAUConv))
 
         # For auto-covariances, pure E or pure B fields are invariant to polarization
         # convention...
@@ -376,16 +371,16 @@ end
 
         # Simple sign flips only work for cases where EB spectrum is zero since the fields
         # are mixed differently between the QQ/UU and QU components in the rotation.
-        cov_hpix = gen_test_cov([2, 6], HealpixConv)
-        cov_iau  = gen_test_cov([2, 6], IAUConv)
-        @test cov_hpix.QQ !=  cov_iau.QQ
-        @test cov_hpix.QQ != -cov_iau.QQ
-        @test cov_hpix.UU !=  cov_iau.QQ
-        @test cov_hpix.UU != -cov_iau.QQ
-        @test cov_hpix.QU !=  cov_iau.QU
-        @test cov_hpix.QU != -cov_iau.QU
-        @test cov_hpix.UQ !=  cov_iau.UQ
-        @test cov_hpix.UQ != -cov_iau.UQ
+        cov_hpix = covblocks(pixelcovariance(pix, ClEB + ClEE, Pol, HealpixConv))
+        cov_iau  = covblocks(pixelcovariance(pix, ClEB + ClEE, Pol, IAUConv))
+        @test !(cov_hpix.QQ ≈  cov_iau.QQ)
+        @test !(cov_hpix.QQ ≈ -cov_iau.QQ)
+        @test !(cov_hpix.UU ≈  cov_iau.QQ)
+        @test !(cov_hpix.UU ≈ -cov_iau.QQ)
+        @test !(cov_hpix.QU ≈  cov_iau.QU)
+        @test !(cov_hpix.QU ≈ -cov_iau.QU)
+        @test !(cov_hpix.UQ ≈  cov_iau.UQ)
+        @test !(cov_hpix.UQ ≈ -cov_iau.UQ)
 
         # The mixed case can be reproduced as a particular linear combination of the
         # single-spectra cases, though:
