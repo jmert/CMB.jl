@@ -348,79 +348,83 @@ end
 
     sij, cij = zero(T), zero(T)
     sji, cji = zero(T), zero(T)
-    jj = pixind
-    for ii in axes(pix, 1)
-        z = cosdistance(pix[ii], pix[jj])
-        if fields & (TPol | Pol) != NO_FIELD
-            c, s = bearing2(pix[ii], pix[jj])
-            sij, cij = 2*c*s, c*c - s*s
-            c, s = bearing2(pix[jj], pix[ii])
-            sji, cji = 2*c*s, c*c - s*s
-            # If Healpix polarization convention requested, flip signs of sine terms to
-            # rotate in the opposite direction.
-            if polconv == HealpixConv
-                sij, sji = -sij, -sji
+    for I in CartesianIndices(axes(pixind))
+        jj = pixind[I]
+        r₂ = pix[jj]
+        for ii in axes(pix, 1)
+            r₁ = pix[ii]
+            z = cosdistance(r₁, r₂)
+            if fields & (TPol | Pol) != NO_FIELD
+                c, s = bearing2(r₁, r₂)
+                sij, cij = 2*c*s, c*c - s*s
+                c, s = bearing2(r₂, r₁)
+                sji, cji = 2*c*s, c*c - s*s
+                # If Healpix polarization convention requested, flip signs of sine terms to
+                # rotate in the opposite direction.
+                if polconv == HealpixConv
+                    sij, sji = -sij, -sji
+                end
             end
-        end
 
-        unsafe_Fweights!(Fwork, F, lmax, z)
+            unsafe_Fweights!(Fwork, F, lmax, z)
 
-        # TT
-        if fields & TT != NO_FIELD
-            tt = zero(T)
-            @simd for ll in R
-                ClTT = Cl[ll,1]
-                F00 = F[ll, 1]
-                tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
+            # TT
+            if fields & TT != NO_FIELD
+                tt = zero(T)
+                @simd for ll in R
+                    ClTT = Cl[ll,1]
+                    F00 = F[ll, 1]
+                    tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
+                end
+                tt /= fourpi
+                cov[ii,I,1] = tt # TT
             end
-            tt /= fourpi
-            cov[ii,1] = tt # TT
-        end
 
-        # TQ and TU
-        if fields & TPol != NO_FIELD
-            tq = zero(T)
-            tu = zero(T)
-            @simd for ll in R
-                ClTE = Cl[ll,4]
-                ClTB = Cl[ll,5]
-                F10 = F[ll,2]
-                tq = muladd(-ClTE, F10, tq) # tq - ClTE*F10
-                tu = muladd(-ClTB, F10, tu) # tu - ClTB*F10
+            # TQ and TU
+            if fields & TPol != NO_FIELD
+                tq = zero(T)
+                tu = zero(T)
+                @simd for ll in R
+                    ClTE = Cl[ll,4]
+                    ClTB = Cl[ll,5]
+                    F10 = F[ll,2]
+                    tq = muladd(-ClTE, F10, tq) # tq - ClTE*F10
+                    tu = muladd(-ClTB, F10, tu) # tu - ClTB*F10
+                end
+                tq /= fourpi
+                tu /= fourpi
+                cov[ii,I,2] = tq*cij - tu*sij # QT
+                cov[ii,I,3] = tq*sij + tu*cij # UT
+                cov[ii,I,4] = tq*cji - tu*sji # TQ
+                cov[ii,I,7] = tq*sji + tu*cji # TU
             end
-            tq /= fourpi
-            tu /= fourpi
-            cov[ii,2] = tq*cij - tu*sij # QT
-            cov[ii,3] = tq*sij + tu*cij # UT
-            cov[ii,4] = tq*cji - tu*sji # TQ
-            cov[ii,7] = tq*sji + tu*cji # TU
-        end
 
-        # QQ, QU, and UU
-        if fields & Pol != NO_FIELD
-            qq = zero(T)
-            qu = zero(T)
-            uu = zero(T)
-            @simd for ll in R
-                ClEE = Cl[ll,2]
-                ClBB = Cl[ll,3]
-                ClEB = Cl[ll,6]
-                F12 = F[ll,3]
-                F22 = F[ll,4]
+            # QQ, QU, and UU
+            if fields & Pol != NO_FIELD
+                qq = zero(T)
+                qu = zero(T)
+                uu = zero(T)
+                @simd for ll in R
+                    ClEE = Cl[ll,2]
+                    ClBB = Cl[ll,3]
+                    ClEB = Cl[ll,6]
+                    F12 = F[ll,3]
+                    F22 = F[ll,4]
 
-                qq = muladd(ClEE, F12, muladd(-ClBB, F22, qq)) # qq + ClEE*F12 - ClBB*F22
-                uu = muladd(ClBB, F12, muladd(-ClEE, F22, uu)) # uu + ClBB*F12 - ClEE*F22
-                qu = muladd(ClEB, F12 + F22, qu)               # qu + ClEB*(F12 + F22)
+                    qq = muladd(ClEE, F12, muladd(-ClBB, F22, qq)) # qq + ClEE*F12 - ClBB*F22
+                    uu = muladd(ClBB, F12, muladd(-ClEE, F22, uu)) # uu + ClBB*F12 - ClEE*F22
+                    qu = muladd(ClEB, F12 + F22, qu)               # qu + ClEB*(F12 + F22)
+                end
+                qq /= fourpi
+                uu /= fourpi
+                qu /= fourpi
+                cov[ii,I,5] = qq*cij*cji - qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
+                cov[ii,I,6] = qq*sij*cji + qu*(cij*cji-sij*sji) - uu*cij*sji # UQ
+                cov[ii,I,8] = qq*cij*sji + qu*(cij*cji-sij*sji) - uu*sij*cji # QU
+                cov[ii,I,9] = qq*sij*sji + qu*(cij*sji+sij*cji) + uu*cij*cji # UU
             end
-            qq /= fourpi
-            uu /= fourpi
-            qu /= fourpi
-            cov[ii,5] = qq*cij*cji - qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
-            cov[ii,6] = qq*sij*cji + qu*(cij*cji-sij*sji) - uu*cij*sji # UQ
-            cov[ii,8] = qq*cij*sji + qu*(cij*cji-sij*sji) - uu*sij*cji # QU
-            cov[ii,9] = qq*sij*sji + qu*(cij*sji+sij*cji) + uu*cij*cji # UU
-        end
-    end
+        end # ii in pix
+    end # jj in pixind
 
     return cov
 end

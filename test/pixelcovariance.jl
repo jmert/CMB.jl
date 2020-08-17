@@ -149,7 +149,7 @@ end
         end
         return maxerror, maxvalue
     end
-    function isnearlysymmetric(A; ulps = 0.01)
+    function isnearlysymmetric(A; ulps = 0.1)
         maxerr, maxval = asymmetry(A)
         return maxerr / eps(maxval) ≤ ulps
     end
