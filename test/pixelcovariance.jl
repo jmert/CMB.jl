@@ -130,7 +130,7 @@ end
     ClBB = vcat(zeros(lmax, 6), [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]');
     ClTE = vcat(zeros(lmax, 6), [0.0, 0.0, 0.0, 1.0, 0.0, 0.0]');
     ClEB = vcat(zeros(lmax, 6), [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]');
-    fields = TT | TPol | Pol
+    allfields = TT | TPol | Pol
 
     # Numerical calculation also means the output matrix will typically not be
     # perfectly symmetric, which the `isposdef()` check will implicitly require by
@@ -168,26 +168,29 @@ end
 
     @testset "Domain Checking" begin
         # Bad pixind shape
-        @test_throws DimensionMismatch pixelcovariance!(cov, pix, ones(2, 2), Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix, ones(2, 2), Cl, allfields)
 
         # Incorrectly-sized output arrays
-        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 8), pix, 1, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1:npix, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 9), pix, 1:npix, Cl, fields)
-
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix,   9), pix, 1, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix-1, 9), pix, 1:npix, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix,   8), pix, 1:npix, Cl, fields)
-
-        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix, 9, 1), pix, 1:npix, Cl, fields)
+        #   - wrong dim 1
+        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1:npix, Cl, allfields)
+        #   - wrong dim 2 (scalar pixind)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 0), pix, 1, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 9), pix, 1, Cl, Pol)
+        #   - wrong dim 2 (vector pixind)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix,    9), pix, 1:npix, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 0, 9), pix, 1:npix, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 1, 9), pix, 1:npix, Cl, allfields)
+        #   - wrong dim 3 (vector pixind)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix, 0), pix, 1:npix, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix, 9), pix, 1:npix, Cl, Pol)
 
         # Incorrectly-sized spectra arrays
-        @test_throws DimensionMismatch pixelcovariance!(cov, pix, 1, zeros(lmax, 5), fields)
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix, 1, zeros(lmax, 5), allfields)
 
         # Pixel indexing is inbounds
-        @test_throws BoundsError pixelcovariance!(cov, pix, -1, Cl, fields)
-        @test_throws BoundsError pixelcovariance!(cov, pix, npix+1, Cl, fields)
+        @test_throws BoundsError pixelcovariance!(cov, pix, -1, Cl, allfields)
+        @test_throws BoundsError pixelcovariance!(cov, pix, npix+1, Cl, allfields)
     end
 
     @testset "Field mask to row/col indexing" begin
@@ -218,15 +221,7 @@ end
     end
 
     @testset "Field calculations" begin
-        # Check that specifying field types only writes to some of the output columns
-        changedfields(cov) = findall(dropdims(mapreduce(!isnan, &, cov, dims = 1), dims = 1))
-        for (field,changes) in zip((TT, TPol, Pol), ([1], [2, 3, 4, 7], [5, 6, 8, 9]))
-            fill!(cov, NaN)
-            pixelcovariance!(cov, pix, pixind, Cl, field)
-            @test changedfields(cov) == changes
-        end
-
-        # Similarly, all-zeros spectra should overwrite fields with zero values
+        # all-zeros spectra should overwrite fields with zero values
         zeroedfields(cov) = findall(dropdims(mapreduce(iszero, &, cov, dims = 1), dims = 1))
         # spectra ordering is TT, EE, BB, TE, TB, EB
         for (spec,filled) in zip((1, 4, 5, 2, 3, 6),
@@ -235,7 +230,7 @@ end
             fill!(cov, NaN)
             Cl′ = zeros(lmax+1, 6)
             Cl′[:,spec] .= 1.0
-            pixelcovariance!(cov, pix, pixind, Cl′, fields)
+            pixelcovariance!(cov, pix, pixind, Cl′, allfields)
             @test zeroedfields(cov) == setdiff(1:9, filled)
         end
     end
@@ -245,17 +240,17 @@ end
         norm = LegendreUnitNorm()
         work = PixelCovariance.PixelCovWork{Float64}(lmax, norm)
         # Check equality before allocations to ensure the methods have been compiled.
-        @test unsafe_pixelcovariance!(norm, copy(cov), pix, pixind, Cl, fields) ==
-                unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
+        @test unsafe_pixelcovariance!(norm, copy(cov), pix, pixind, Cl, allfields) ==
+                unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, allfields)
 
         # Lower bound on allocations required
         nb  = sizeof(eltype(first(pix))) * nbufs_FweightsWork
         nb += sizeof(eltype(first(pix))) * 4 * (lmax + 1)
-        @test nb <= @allocated unsafe_pixelcovariance!(norm, cov, pix, pixind, Cl, fields)
+        @test nb <= @allocated unsafe_pixelcovariance!(norm, cov, pix, pixind, Cl, allfields)
 
         # Currently broken, even on v1.5 --- haven't figured out where the allocations are
         # happening
-        @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields)
+        @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, allfields)
     end
 
     @testset "Positive-definite covariance" begin
@@ -278,13 +273,11 @@ end
 
         # TT only
         C = pixelcovariance(pix, Cl′, TT)
-        C = C[1:npix, 1:npix]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
 
         # Pol only
         C = pixelcovariance(pix, Cl′, Pol)
-        C = C[npix+1:end, npix+1:end]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
 
@@ -305,7 +298,6 @@ end
 
         # Pol only
         C = pixelcovariance(pix, Cl′, Pol)
-        C = C[npix+1:end, npix+1:end]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
 
@@ -322,7 +314,6 @@ end
         Cl′[:,2:3] .= [1.0 0.0]
 
         C = pixelcovariance(pix, Cl′, Pol)
-        C = C[npix+1:end, npix+1:end]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
 
@@ -330,7 +321,6 @@ end
         Cl′[:,2:3] .= [0.0 1.0]
 
         C = pixelcovariance(pix, Cl′, Pol)
-        C = C[npix+1:end, npix+1:end]
         @test isnearlysymmetric(C)
         @test isposdef(Symmetric(C))
     end
@@ -338,10 +328,10 @@ end
     @testset "Covariance symmetries" begin
         # The entire 3×3-block covariance matrix is symmetric, so there there are
         # symmetric relationships among each of the blocks.
-        covTE = covblocks(pixelcovariance(pix, ClTT + ClTE, TT | TPol))
-        covEE = covblocks(pixelcovariance(pix, ClEE, Pol))
-        covBB = covblocks(pixelcovariance(pix, ClBB, Pol))
-        covEB = covblocks(pixelcovariance(pix, ClEB, Pol))
+        covTE = covblocks(pixelcovariance(pix, ClTT + ClTE, allfields))
+        covEE = covblocks(pixelcovariance(pix, ClEE, allfields))
+        covBB = covblocks(pixelcovariance(pix, ClBB, allfields))
+        covEB = covblocks(pixelcovariance(pix, ClEB, allfields))
 
         # First, the block diagonals are individually self-symmetric.
         @test covTE.TT ≈ covTE.TT'
@@ -366,12 +356,12 @@ end
     end
 
     @testset "Polarization conventions" begin
-        covEE_hpix = covblocks(pixelcovariance(pix, ClEE, Pol, HealpixConv))
-        covBB_hpix = covblocks(pixelcovariance(pix, ClBB, Pol, HealpixConv))
-        covEB_hpix = covblocks(pixelcovariance(pix, ClEB, Pol, HealpixConv))
-        covEE_iau  = covblocks(pixelcovariance(pix, ClEE, Pol, IAUConv))
-        covBB_iau  = covblocks(pixelcovariance(pix, ClBB, Pol, IAUConv))
-        covEB_iau  = covblocks(pixelcovariance(pix, ClEB, Pol, IAUConv))
+        covEE_hpix = covblocks(pixelcovariance(pix, ClEE, allfields, HealpixConv))
+        covBB_hpix = covblocks(pixelcovariance(pix, ClBB, allfields, HealpixConv))
+        covEB_hpix = covblocks(pixelcovariance(pix, ClEB, allfields, HealpixConv))
+        covEE_iau  = covblocks(pixelcovariance(pix, ClEE, allfields, IAUConv))
+        covBB_iau  = covblocks(pixelcovariance(pix, ClBB, allfields, IAUConv))
+        covEB_iau  = covblocks(pixelcovariance(pix, ClEB, allfields, IAUConv))
 
         # For auto-covariances, pure E or pure B fields are invariant to polarization
         # convention...
@@ -394,8 +384,8 @@ end
 
         # Simple sign flips only work for cases where EB spectrum is zero since the fields
         # are mixed differently between the QQ/UU and QU components in the rotation.
-        cov_hpix = covblocks(pixelcovariance(pix, ClEB + ClEE, Pol, HealpixConv))
-        cov_iau  = covblocks(pixelcovariance(pix, ClEB + ClEE, Pol, IAUConv))
+        cov_hpix = covblocks(pixelcovariance(pix, ClEB + ClEE, allfields, HealpixConv))
+        cov_iau  = covblocks(pixelcovariance(pix, ClEB + ClEE, allfields, IAUConv))
         @test !(cov_hpix.QQ ≈  cov_iau.QQ)
         @test !(cov_hpix.QQ ≈ -cov_iau.QQ)
         @test !(cov_hpix.UU ≈  cov_iau.QQ)
@@ -428,21 +418,34 @@ end
         off  = first(axes(pix′, 1)) - first(axes(pix, 1))
         cov′ = reshape(copy(cov), ax, 9)
 
-        pixelcovariance!(cov, pix, pixind, Cl, fields)
-        pixelcovariance!(cov′, pix′, pixind+off, Cl, fields)
+        pixelcovariance!(cov, pix, pixind, Cl, allfields)
+        pixelcovariance!(cov′, pix′, pixind+off, Cl, allfields)
         @test cov == parent(cov′)
 
         # First dimension axis of cov and pix must agree
-        @test_throws DimensionMismatch pixelcovariance!(cov′, pix, pixind, Cl, fields)
-        @test_throws DimensionMismatch pixelcovariance!(cov, pix′, pixind, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(cov′, pix, pixind, Cl, allfields)
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix′, pixind, Cl, allfields)
 
         # Trailing dimension of cov must have 1-based indexing
         @test_throws DimensionMismatch pixelcovariance!(
-                reshape(cov, ax, 0:8), pix′, pixind, Cl, fields)
+                reshape(cov, ax, 0:8), pix′, pixind, Cl, allfields)
         # Similarly, the spectra must be 1-indexed
         @test_throws ArgumentError pixelcovariance!(
-                cov′, pix′, pixind, reshape(Cl, 0:lmax, 6), fields)
+                cov′, pix′, pixind, reshape(Cl, 0:lmax, 6), allfields)
         @test_throws ArgumentError pixelcovariance!(
-                cov′, pix′, pixind, reshape(Cl, lmax+1, 2:7), fields)
+                cov′, pix′, pixind, reshape(Cl, lmax+1, 2:7), allfields)
+    end
+
+    @testset "Full matrix convenience interface" begin
+        # Contiguous rectangular sub-blocks of the full matrix
+        @test size(pixelcovariance(pix, Cl, TT)) == (npix, npix)
+        @test size(pixelcovariance(pix, Cl, TT | TQ)) == (npix, 2npix)
+        @test size(pixelcovariance(pix, Cl, TT | TQ | TU)) == (npix, 3npix)
+        @test size(pixelcovariance(pix, Cl, Pol)) == (2npix, 2npix)
+        @test size(pixelcovariance(pix, Cl, allfields)) == (3npix, 3npix)
+
+        # Non-contiguous blocks are an error
+        @test_throws ErrorException pixelcovariance(pix, Cl, TT | TU)
+        @test_throws ErrorException pixelcovariance(pix, Cl, TT | QQ)
     end
 end

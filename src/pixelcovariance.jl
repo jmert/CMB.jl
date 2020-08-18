@@ -77,7 +77,7 @@ module CovarianceFields
     const Pol  = QQ | UQ | QU | UU
 end
 using .CovarianceFields
-using .CovarianceFields: Field
+using .CovarianceFields: Field, field_offsets, field_count, minrow, maxrow, mincol, maxcol
 
 module PolarizationConventions
     export IAUConv, HealpixConv
@@ -299,11 +299,23 @@ function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
                          polconv::Convention = IAUConv)
     T = eltype(first(pix))
     npix = length(pix)
-    cov = zeros(T, npix, npix, 9)
+
+    # This interface can only handle square outputs. Validate the field selection.
+    fmask = BitMatrix(undef, 3, 3)
+    fmask[:] .= (!iszero).(field_offsets(fields))
+    frows = minrow(fields):maxrow(fields)
+    fcols = mincol(fields):maxcol(fields)
+    if !all(fmask[frows,fcols])
+        error("The field subset must select a contiguous, rectangular sub-covariance matrix.")
+    end
+
+    cov = zeros(T, npix, npix, field_count(fields))
     lmax = size(Cl, 1) - 1
     work = PixelCovWork{T}(lmax, LegendreUnitNorm())
     @inbounds unsafe_pixelcovariance!(work, cov, pix, OneTo(npix), Cl, fields, polconv)
-    return reshape(permutedims(reshape(cov, npix, npix, 3, 3), (1,3,2,4)), 3npix, 3npix)
+
+    nr, nc = length(frows), length(fcols)
+    return reshape(permutedims(reshape(cov, npix, npix, nr, nc), (1,3,2,4)), nr*npix, nc*npix)
 end
 
 function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
@@ -313,6 +325,8 @@ function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
             "Pixel index list must be a scalar or vector"))
     @noinline _chkbounds_throw_dims(M, N) = throw(DimensionMismatch(
             "Output has $M dimensions, expected $(N+2)"))
+    @noinline _chkbounds_throw_numfields(nfld) = throw(DimensionMismatch(
+            "Covariance output expected to have trailing dimension of length $nfld"))
 
     N = ndims(pixind)
     M = ndims(cov)
@@ -331,10 +345,11 @@ function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
         size(cov, 2) == size(pixind, 1) ||
             throw(DimensionMismatch("Middle axis of covariance and pixind list have incompatible sizes"))
     end
-    # Finally, the trailing dimension of the covariance should correspond to the
-    # individual sub-fields
-    axes(cov, M) == OneTo(9) ||
-        throw(DimensionMismatch("Covariance output expected to have trailing dimension of length 9"))
+    # Finally, the trailing dimension of the covariance should correspond to the subset
+    # of covariance fields requested (in order of the bit field from lsb to msb)
+    nfld = field_count(fields)
+    covfld = axes(cov, M)
+    covfld == OneTo(nfld) || _chkbounds_throw_numfields(nfld)
     # Check that the pixind indices properly access the pixel list
     Base.checkbounds(pix, pixind)
 
@@ -376,6 +391,8 @@ end
 
     F = work.F
     Fwork = work.Fwork
+
+    off = NamedTuple{(:TT,:QT,:UT,:TQ,:QQ,:UQ,:TU,:QU,:UU)}(field_offsets(fields))
     lmax = size(F, 1) - 1
     fourpi = 4 * convert(T, π)
 
@@ -417,7 +434,7 @@ end
                     tt = muladd(ClTT, F00, tt) # tt + ClTT*F00
                 end
                 tt /= fourpi
-                cov[ii,I,1] = tt # TT
+                cov[ii,I,off.TT] = tt
             end
 
             # TQ and TU
@@ -433,10 +450,10 @@ end
                 end
                 tq /= fourpi
                 tu /= fourpi
-                cov[ii,I,2] = tq*cij - tu*sij # QT
-                cov[ii,I,3] = tq*sij + tu*cij # UT
-                cov[ii,I,4] = tq*cji - tu*sji # TQ
-                cov[ii,I,7] = tq*sji + tu*cji # TU
+                !iszero(off.QT) && (cov[ii,I,off.QT] = tq*cij - tu*sij)
+                !iszero(off.UT) && (cov[ii,I,off.UT] = tq*sij + tu*cij)
+                !iszero(off.TQ) && (cov[ii,I,off.TQ] = tq*cji - tu*sji)
+                !iszero(off.TU) && (cov[ii,I,off.TU] = tq*sji + tu*cji)
             end
 
             # QQ, QU, and UU
@@ -458,10 +475,10 @@ end
                 qq /= fourpi
                 uu /= fourpi
                 qu /= fourpi
-                cov[ii,I,5] = qq*cij*cji - qu*(cij*sji+sij*cji) + uu*sij*sji # QQ
-                cov[ii,I,6] = qq*sij*cji + qu*(cij*cji-sij*sji) - uu*cij*sji # UQ
-                cov[ii,I,8] = qq*cij*sji + qu*(cij*cji-sij*sji) - uu*sij*cji # QU
-                cov[ii,I,9] = qq*sij*sji + qu*(cij*sji+sij*cji) + uu*cij*cji # UU
+                !iszero(off.QQ) && (cov[ii,I,off.QQ] = qq*cij*cji - qu*(cij*sji+sij*cji) + uu*sij*sji)
+                !iszero(off.UQ) && (cov[ii,I,off.UQ] = qq*sij*cji + qu*(cij*cji-sij*sji) - uu*cij*sji)
+                !iszero(off.QU) && (cov[ii,I,off.QU] = qq*cij*sji + qu*(cij*cji-sij*sji) - uu*sij*cji)
+                !iszero(off.UU) && (cov[ii,I,off.UU] = qq*sij*sji + qu*(cij*sji+sij*cji) + uu*cij*cji)
             end
         end # ii in pix
     end # jj in pixind
