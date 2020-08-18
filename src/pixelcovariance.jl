@@ -280,14 +280,11 @@ function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
                          polconv::Convention = IAUConv)
     T = eltype(first(pix))
     npix = length(pix)
-    cov = zeros(T, npix, 9, npix)
+    cov = zeros(T, npix, npix, 9)
     lmax = size(Cl, 1) - 1
     work = PixelCovWork{T}(lmax, LegendreUnitNorm())
-    for ii in axes(pix, 1)
-        @inbounds _pixelcovariance_impl!(work, view(cov, :, :, ii), pix, ii, Cl, fields, polconv)
-    end
-    cov = reshape(permutedims(reshape(cov, 3npix, 3, npix), (1, 3, 2)), 3npix, 3npix)
-    return cov
+    @inbounds unsafe_pixelcovariance!(work, cov, pix, OneTo(npix), Cl, fields, polconv)
+    return reshape(permutedims(reshape(cov, npix, npix, 3, 3), (1,3,2,4)), 3npix, 3npix)
 end
 
 function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
@@ -341,9 +338,8 @@ end
 Base.eltype(::PixelCovWork{T}) where {T} = T
 
 function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
-                                 cov::AbstractMatrix, pix::AbstractVector, pixind::Int,
-                                 Cl::AbstractMatrix, fields::Field,
-                                 polconv::Convention = IAUConv)
+                                 cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
+                                 fields::Field, polconv::Convention = IAUConv)
     if workornorm isa AbstractLegendreNorm
         T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
         lmax = size(Cl, 1) - 1
@@ -356,8 +352,9 @@ function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCov
 end
 
 @propagate_inbounds function _pixelcovariance_impl!(work::PixelCovWork{T},
-        cov::AbstractMatrix, pix::AbstractVector, pixind::Integer,
-        Cl::AbstractMatrix, fields::Field, polconv::Convention) where {T}
+        cov, pix::AbstractVector, pixind, Cl::AbstractMatrix, fields::Field,
+        polconv::Convention) where {T}
+
     F = work.F
     Fwork = work.Fwork
     lmax = size(F, 1) - 1
