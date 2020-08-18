@@ -290,16 +290,40 @@ function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
     return cov
 end
 
-function pixelcovariance!(cov::AbstractMatrix, pix::AbstractVector, pixind,
-                          Cl::AbstractMatrix, fields::Field,
-                          polconv::Convention = IAUConv)
-    N = ndims(cov)
+function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
+                          fields::Field, polconv::Convention = IAUConv)
+
+    @noinline _chkbounds_throw_scalarorvec(N) = throw(DimensionMismatch(
+            "Pixel index list must be a scalar or vector"))
+    @noinline _chkbounds_throw_dims(M, N) = throw(DimensionMismatch(
+            "Output has $M dimensions, expected $(N+2)"))
+
+    N = ndims(pixind)
+    M = ndims(cov)
+
+    # pixind should only be a scalar or vector
+    N ≤ 1 || _chkbounds_throw_scalarorvec(N)
+    # Then output matrix should have size 2-dims larger than the dimensionality of the
+    # pixind list (or scalar)
+    M == N + 2 || _chkbounds_throw_dims(M, N)
+
+    # First axis of cov should correspond to pix
     axes(cov, 1) == axes(pix, 1) ||
-        throw(DimensionMismatch("Axes of covariance matrix and pixel vector do not match"))
-    axes(cov, N) == OneTo(9) ||
+        throw(DimensionMismatch("Leading axis of covariance and pixel vector do not match"))
+    # Then if N > 0, the second axis should have equal length with the pixind vector
+    if N == 1
+        size(cov, 2) == size(pixind, 1) ||
+            throw(DimensionMismatch("Middle axis of covariance and pixind list have incompatible sizes"))
+    end
+    # Finally, the trailing dimension of the covariance should correspond to the
+    # individual sub-fields
+    axes(cov, M) == OneTo(9) ||
         throw(DimensionMismatch("Covariance output expected to have trailing dimension of length 9"))
-    size(Cl, 2) == 6 || throw(DimensionMismatch("Expected 6 Cl spectra"))
+    # Check that the pixind indices properly access the pixel list
     Base.checkbounds(pix, pixind)
+
+    # The 6 unique input spectra must all be provided, and these must be 1-indexed arrays
+    size(Cl, 2) == 6 || throw(DimensionMismatch("Expected 6 Cl spectra"))
     Base.require_one_based_indexing(Cl)
 
     return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields, polconv)
