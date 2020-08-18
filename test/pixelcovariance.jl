@@ -167,11 +167,24 @@ end
     end
 
     @testset "Domain Checking" begin
+        # Bad pixind shape
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix, ones(2, 2), Cl, fields)
+
         # Incorrectly-sized output arrays
         @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1, Cl, fields)
         @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 8), pix, 1, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(   0, 9), pix, 1:npix, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, 9), pix, 1:npix, Cl, fields)
+
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix,   9), pix, 1, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix-1, 9), pix, 1:npix, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix,   8), pix, 1:npix, Cl, fields)
+
+        @test_throws DimensionMismatch pixelcovariance!(zeros(npix, npix, 9, 1), pix, 1:npix, Cl, fields)
+
         # Incorrectly-sized spectra arrays
         @test_throws DimensionMismatch pixelcovariance!(cov, pix, 1, zeros(lmax, 5), fields)
+
         # Pixel indexing is inbounds
         @test_throws BoundsError pixelcovariance!(cov, pix, -1, Cl, fields)
         @test_throws BoundsError pixelcovariance!(cov, pix, npix+1, Cl, fields)
