@@ -409,4 +409,30 @@ end
         @test cov_hpix.QU ≈ -covEE_iau.QU + covEB_iau.QU
         @test cov_hpix.UQ ≈ -covEE_iau.UQ + covEB_iau.UQ
     end
+
+    @testset "Offset axes" begin
+        using OffsetArrays
+
+        ax = 0:npix-1
+        pix′ = reshape(pix, ax)
+        off  = first(axes(pix′, 1)) - first(axes(pix, 1))
+        cov′ = reshape(copy(cov), ax, 9)
+
+        pixelcovariance!(cov, pix, pixind, Cl, fields)
+        pixelcovariance!(cov′, pix′, pixind+off, Cl, fields)
+        @test cov == parent(cov′)
+
+        # First dimension axis of cov and pix must agree
+        @test_throws DimensionMismatch pixelcovariance!(cov′, pix, pixind, Cl, fields)
+        @test_throws DimensionMismatch pixelcovariance!(cov, pix′, pixind, Cl, fields)
+
+        # Trailing dimension of cov must have 1-based indexing
+        @test_throws DimensionMismatch pixelcovariance!(
+                reshape(cov, ax, 0:8), pix′, pixind, Cl, fields)
+        # Similarly, the spectra must be 1-indexed
+        @test_throws ArgumentError pixelcovariance!(
+                cov′, pix′, pixind, reshape(Cl, 0:lmax, 6), fields)
+        @test_throws ArgumentError pixelcovariance!(
+                cov′, pix′, pixind, reshape(Cl, lmax+1, 2:7), fields)
+    end
 end
