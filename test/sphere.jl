@@ -232,3 +232,24 @@ end
 
     @test anal_deriv1(pts) ≈ @inferred dual_deriv1(pts)
 end
+
+@testset "Require 3-vectors" begin
+    vec2a = SVector{2,Float64}(1.0, 0.0)
+    vec2b = SVector{2,Float64}(sqrt(2)/2, sqrt(2)/2)
+    vec4a = SVector{4,Float64}(0.0, 0.0, 0.0, 1.0)
+    vec4b = SVector{4,Float64}(sqrt(2)/2, sqrt(2)/2, 0.0, 0.0)
+
+    @test_throws DimensionMismatch bearing(vec2a, vec2b)
+    @test_throws DimensionMismatch bearing(Vector(vec2a), Vector(vec2b))
+    @test_throws DimensionMismatch bearing2(vec2a, vec2b)
+    @test_throws DimensionMismatch bearing2(Vector(vec2a), Vector(vec2b))
+    @test_throws DimensionMismatch distance(vec2a, vec2b)
+    @test_throws DimensionMismatch distance(Vector(vec2a), Vector(vec2b))
+    @test_throws DimensionMismatch cosdistance(vec2a, vec2b)
+    @test_throws DimensionMismatch cosdistance(Vector(vec2a), Vector(vec2b))
+
+    @test_throws DimensionMismatch reckon(vec2a, π/4, π/2)
+    @test_throws DimensionMismatch reckon(Vector(vec2a), π/4, π/2)
+    @test_throws DimensionMismatch reckon(vec4a, π/4, π/2)
+    @test_throws DimensionMismatch reckon(Vector(vec4a), π/4, π/2)
+end
