@@ -13,6 +13,8 @@ using StaticArrays
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
 
+const PointsVector{T} = AbstractVector{V} where {T, V <: AbstractVector{T}}
+
 module CovarianceFields
     using BitFlags
     export TT, QT, UT, TQ, QQ, UQ, TU, QU, UU, NO_FIELD, TPol, Pol
@@ -295,7 +297,7 @@ end
 #### Pixel-pixel covariance
 ####
 
-function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
+function pixelcovariance(pix::PointsVector, Cl::AbstractMatrix, fields::Field,
                          polconv::Convention = IAUConv)
     T = eltype(first(pix))
     npix = length(pix)
@@ -318,7 +320,7 @@ function pixelcovariance(pix::AbstractVector, Cl::AbstractMatrix, fields::Field,
     return reshape(permutedims(reshape(cov, npix, npix, nr, nc), (1,3,2,4)), nr*npix, nc*npix)
 end
 
-function pixelcovariance!(cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
+function pixelcovariance!(cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
                           fields::Field, polconv::Convention = IAUConv)
 
     @noinline _chkbounds_throw_scalarorvec(N) = throw(DimensionMismatch(
@@ -372,7 +374,7 @@ end
 Base.eltype(::PixelCovWork{T}) where {T} = T
 
 function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
-                                 cov, pix::AbstractVector, pixind, Cl::AbstractMatrix,
+                                 cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
                                  fields::Field, polconv::Convention = IAUConv)
     if workornorm isa AbstractLegendreNorm
         T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
@@ -386,7 +388,7 @@ function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCov
 end
 
 @propagate_inbounds function _pixelcovariance_impl!(work::PixelCovWork{T},
-        cov, pix::AbstractVector, pixind, Cl::AbstractMatrix, fields::Field,
+        cov, pix::PointsVector, pixind, Cl::AbstractMatrix, fields::Field,
         polconv::Convention) where {T}
 
     F = work.F
