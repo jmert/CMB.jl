@@ -7,10 +7,14 @@ export
     bearing, bearing2, distance, cosdistance, reckon
 
 using StaticArrays
-import Base: @propagate_inbounds
 import LinearAlgebra: ⋅, ×, normalize
 
 rtepsone(::Type{T}) where T = sqrt(eps(one(T)))
+
+function _promote_sphere_type(r₁, r₂)
+    T₁, T₂ = float(eltype(r₁)), float(eltype(r₂))
+    promote_type(T₁, T₂, typeof(zero(T₁)*zero(T₂) + zero(T₁)*zero(T₂)))
+end
 
 """
     ∥(u, v) -> Bool
@@ -19,7 +23,7 @@ Test whether vector ``u`` is parallel to vector ``v``. Assumes that both are uni
 normalized.
 """
 function ∥(u, v)
-    T = float(promote_type(eltype(u), eltype(v)))
+    T = _promote_sphere_type(u, v)
     return (one(T) - abs(u⋅v)) < rtepsone(T)
 end
 
@@ -43,9 +47,8 @@ const ẑ = SVector(0, 0, 1)
 Converts the colatitude-azimuth pair `(θ, ϕ)` to a Cartesian unit vector `r`.
 """
 function cartvec(θ, ϕ)
-    θ′, ϕ′ = promote(float(θ), float(ϕ))
-    sθ, cθ = sincos(θ′)
-    sϕ, cϕ = sincos(ϕ′)
+    sθ, cθ = sincos(float(θ))
+    sϕ, cϕ = sincos(float(ϕ))
     return SVector(sθ * cϕ, sθ * sϕ, cθ)
 end
 @inline cartvec((θ, ϕ)::Tuple{Any,Any}) = cartvec(θ, ϕ)
@@ -142,16 +145,18 @@ julia> bearing([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 0.6154797086703873
 ```
 """
-@propagate_inbounds function bearing(r₁::AbstractVector, r₂::AbstractVector)
-    T = promote_type(float(eltype(r₁)), float(eltype(r₂)))
-    r₁ ∥ r₂ && return r₁ ⋅ r₂ < zero(T) ? convert(T, π) : zero(T)
-    r₁ ∥ ẑ  && return r₁[3] > zero(T) ? convert(T, π) : zero(T)
-    r₂ ∥ ẑ  && return r₂[3] > zero(T) ? zero(T) : convert(T, π)
-    r₁₂ = r₁ × r₂
-    r₁′ = r₁ × ẑ
-    num = (r₁₂ × r₁′) ⋅ r₁
-    den = r₁₂ ⋅ r₁′
-    return atan(num, den)
+function bearing(r₁::AbstractVector, r₂::AbstractVector)
+    T = _promote_sphere_type(r₁, r₂)
+    let r₁ = SVector{3,T}(r₁), r₂ = SVector{3,T}(r₂)
+        r₁ ∥ r₂ && return r₁ ⋅ r₂ < zero(T) ? convert(T, π) : zero(T)
+        r₁ ∥ ẑ  && return r₁[3] > zero(T) ? convert(T, π) : zero(T)
+        r₂ ∥ ẑ  && return r₂[3] > zero(T) ? zero(T) : convert(T, π)
+        r₁₂ = r₁ × r₂
+        r₁′ = r₁ × ẑ
+        num = (r₁₂ × r₁′) ⋅ r₁
+        den = r₁₂ ⋅ r₁′
+        return atan(num, den)
+    end
 end
 
 """
@@ -192,16 +197,18 @@ julia> bearing2([1.0, 0.0, 0.0], [0.5, 0.5, sqrt(2)/2])
 (0.816496580927726, 0.5773502691896257)
 ```
 """
-@propagate_inbounds function bearing2(r₁::AbstractVector, r₂::AbstractVector)
-    T = promote_type(float(eltype(r₁)), float(eltype(r₂)))
-    r₁ ∥ r₂ && return (copysign(one(T), r₁ ⋅ r₂), zero(T))
-    r₁ ∥ ẑ  && return (copysign(one(T), -r₁[3]), zero(T))
-    r₂ ∥ ẑ  && return (copysign(one(T),  r₂[3]), zero(T))
-    r₁₂ = normalize(r₁ × r₂)
-    r₁′ = normalize(r₁ × ẑ)
-    num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(T), one(T))
-    den = clamp(r₁₂ ⋅ r₁′, -one(T), one(T))
-    return (den, num)
+function bearing2(r₁::AbstractVector, r₂::AbstractVector)
+    T = _promote_sphere_type(r₁, r₂)
+    let r₁ = SVector{3,T}(r₁), r₂ = SVector{3,T}(r₂)
+        r₁ ∥ r₂ && return (copysign(one(T), r₁ ⋅ r₂), zero(T))
+        r₁ ∥ ẑ  && return (copysign(one(T), -r₁[3]), zero(T))
+        r₂ ∥ ẑ  && return (copysign(one(T),  r₂[3]), zero(T))
+        r₁₂ = normalize(r₁ × r₂)
+        r₁′ = normalize(r₁ × ẑ)
+        num = clamp((r₁₂ × r₁′) ⋅ r₁, -one(T), one(T))
+        den = clamp(r₁₂ ⋅ r₁′, -one(T), one(T))
+        return (den, num)
+    end
 end
 
 """
@@ -240,8 +247,11 @@ julia> distance([1.,0.,0.], [0.5,0.5,sqrt(2)/2])
 1.0471975511965979
 ```
 """
-@propagate_inbounds function distance(r₁::AbstractVector, r₂::AbstractVector)
-    return acos(cosdistance(r₁, r₂))
+function distance(r₁::AbstractVector, r₂::AbstractVector)
+    T = _promote_sphere_type(r₁, r₂)
+    let r₁ = SVector{3,T}(r₁), r₂ = SVector{3,T}(r₂)
+        return acos(cosdistance(r₁, r₂))
+    end
 end
 
 """
@@ -280,9 +290,11 @@ julia> cosdistance([1.,0.,0.], [0.5,0.5,sqrt(2)/2])
 0.5
 ```
 """
-@propagate_inbounds function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
-    o = one(promote_type(float(eltype(r₁)), float(eltype(r₂))))
-    return clamp(r₁ ⋅ r₂, -o, o)
+function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
+    T = _promote_sphere_type(r₁, r₂)
+    let r₁ = SVector{3,T}(r₁), r₂ = SVector{3,T}(r₂)
+        return clamp(r₁ ⋅ r₂, -one(T), one(T))
+    end
 end
 
 """
