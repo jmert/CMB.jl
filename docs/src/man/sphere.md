@@ -12,15 +12,15 @@ see the [`HEALPix` Pixelization](@ref man_healpix) documentation instead.
 
 ## [Definitions](@id sphere_defn)
 
-* A colatitude-azimuth pair ``(θ, ϕ)`` are coordinates on the sphere measuring
+* A colatitude-azimuth pair ``(\theta, \phi)`` are coordinates on the sphere measuring
   the angular distance (in radians) from the North pole and east of the Prime
   Meridian, respectively. The coordinates will typically be normalized to
-  the range ``θ ∈ [0, π]`` and ``ϕ ∈ [0, 2π)``.
+  the range ``\theta \in [0, \pi]`` and ``\phi \in [0, 2\pi)``.
 
-* A latitude-longitude pair ``(δ, λ)`` are coordinates on the sphere measuring
+* A latitude-longitude pair ``(\delta, \lambda)`` are coordinates on the sphere measuring
   the angular distance (in degrees) north or south of the Equator and east
   or west of the Prime Meridian, respectively. The coordinates will typically
-  be normalized to the range ``δ ∈ [-90, 90]`` and ``λ ∈ [-180, 180]``.
+  be normalized to the range ``\delta \in [-90, 90]`` and ``\lambda \in [-180, 180]``.
 
 * A Cartesian unit vector ``\vec r`` centered at the origin of a sphere
   has its end-point at a location on the unit sphere.
@@ -89,7 +89,7 @@ orientation of the two points; the orientation angle of the great circle
 connecting the two must be given with respect to some reference. A common
 choice is the bearing angle[^1]. It measures the angle between the meridian
 (at one of the points) and the great circle connecting the two, as shown by
-the angle ``α_{ij}`` in Figure 1.
+the angle ``\alpha_{ij}`` in Figure 1.
 
 ```@raw html
 <figure>
@@ -98,12 +98,12 @@ the angle ``α_{ij}`` in Figure 1.
 ```@raw html
 <figcaption style="font-size:smaller; text-align:left; font-style: normal;">
 ```
-**Figure 1:** Example showing the angular separation ``σ_{ij}`` and bearing
-angle ``α_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The great
+**Figure 1:** Example showing the angular separation ``\sigma_{ij}`` and bearing
+angle ``\alpha_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The great
 arc indicates the great circle path passing between both coordinates, and the
 blue arc is the meridian which passes through ``r_i``. Only the bearing angle
-at ``r_i`` is shown; a second bearing angle ``α_{ji}`` at ``r_j`` also exists
-(and is in general different that ``α_{ij}``) but is not shown.
+at ``r_i`` is shown; a second bearing angle ``\alpha_{ji}`` at ``r_j`` also exists
+(and is in general different that ``\alpha_{ij}``) but is not shown.
 The additional vectors ``\hat{n}_i^*`` and ``\hat{n}_{ij}`` are used to
 derive the distance and bearing angle calculations and can be ignored.
 
@@ -137,7 +137,7 @@ trigonometric operations and instead use [`bearing2`](@ref):
 julia> δn, δe = bearing2(r₁, r₂)
 (0.9385101625713766, 0.34525161078588545)
 ```
-For instance, calculating ``\cos(2α)`` and ``\sin(2α)`` can be calculated
+For instance, calculating ``\cos(2\alpha)`` and ``\sin(2\alpha)`` can be calculated
 easily a couple of trigonometric identities and is faster.
 
 The inverse operation is [`reckon`](@ref) which calculates the coordinate of

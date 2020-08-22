@@ -6,7 +6,7 @@ doctest = "--fix"  in ARGS ? :fix :
 DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
 
 makedocs(
-    format = Documenter.HTML(mathengine=MathJax()),
+    format = Documenter.HTML(mathengine = Documenter.MathJax3()),
     sitename = "CMB Analysis",
     authors = "Justin Willmert",
     modules = [CMB],
