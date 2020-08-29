@@ -55,5 +55,6 @@ end
     @include "healpix.jl" "HEALPix functions"
     @include "pixelizations.jl" "Pixelizations"
     @include "pixelcovariance.jl" "Pixel Covariance functions"
+    @include "fileio.jl" "File I/O"
     @include "doctests.jl" "Doctests"
 end

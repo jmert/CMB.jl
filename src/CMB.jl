@@ -19,6 +19,9 @@ module CMB
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
 
+    include("fileio.jl")
+    @reexport using .Files
+
     include("precompile.jl")
     _precompile_()
 end
