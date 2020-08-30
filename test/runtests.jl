@@ -2,6 +2,29 @@ using Test, TestSetExtensions
 using CMB # For doctests, include CMB as a binding in Main
 const NumTypes = (Float32, Float64, BigFloat)
 
+struct IsEqualMatch{T} <: AbstractString
+    msg::T
+end
+Base.isequal(m::IsEqualMatch, o) = occursin(m.msg, o)
+function Base.show(io::IO, m::IsEqualMatch)
+    print(io, "match")
+    if m isa IsEqualMatch{Regex}
+        Base.print_quoted(io, m.msg.pattern)
+        print(io, "r")
+    else
+        Base.print_quoted(io, m.msg)
+    end
+end
+macro match_str(msg, flags="")
+    if flags == "r"
+        return IsEqualMatch(Regex(msg))
+    elseif flags == ""
+        return IsEqualMatch(msg)
+    else
+        error("Unrecognized flag(s) `$flags`.")
+    end
+end
+
 function prettytime(t)
     v, u = t < 1e3 ? (t, "ns") :
            t < 1e6 ? (t/1e3, "μs") :
@@ -17,7 +40,7 @@ macro include(file, desc)
         @testset $desc begin
             @eval module $mod
                 using Test, CMB
-                import ..NumTypes
+                import ..NumTypes, ..@match_str
                 include($file)
             end
         end
