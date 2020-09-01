@@ -9,14 +9,14 @@ using SparseArrays: getcolptr
 export read_obsmat, write_obsmat
 
 """
-    read_obsmat(filename::String, name)
+    read_obsmat(filename::String, name; kws...)
 
 Read a sparse observing matrix from `filename`, where the data structure is identified
 by `name` (which is file type specific).
 """
-function read_obsmat(filename::String, name)
+function read_obsmat(filename::String, name; kws...)
     file = query(filename)
-    return read_obsmat(file, name)
+    return read_obsmat(file, name; kws...)
 end
 
 """

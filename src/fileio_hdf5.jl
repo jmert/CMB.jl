@@ -1,7 +1,7 @@
 # Attributes on the data group which must be present to interpret the rest of the
 # data stream.
-const FORMAT_ATTR_NAMES = ["h5sparse_format"]
-const SHAPE_ATTR_NAMES  = ["h5sparse_shape"]
+const FORMAT_ATTR_NAMES = ["h5sparse_format", "format"]
+const SHAPE_ATTR_NAMES  = ["h5sparse_shape", "shape"]
 
 # Recognizable names of the formats which are supported
 const CSR_NAMES = ["csr"]
@@ -12,14 +12,19 @@ const CSX_INDICES_NAMES = ["indices"]
 const CSX_POINTER_NAMES = ["indptr"]
 const CSX_VALUES_NAMES  = ["data"]
 
-function read_obsmat(file::File{format"HDF5"}, name)
+function read_obsmat(file::File{format"HDF5"}, name;
+                     kws...)
     h5open(FileIO.filename(file), "r") do hfile
-        return read_obsmat(hfile, name)
+        return read_obsmat(hfile, name; kws...)
     end
 end
 
-function read_obsmat(hfile::HDF5File, name::String, indtype::Type=Int, valtype=Float64)
+function read_obsmat(hfile::HDF5File, name::String;
+                     mmap::Union{Val{true},Val{false}} = Val(false),
+                     indtype::Type = Int,
+                     valtype::Type = Float64)
     @noinline throw_msg(hfile, name, msg) = error("$name $msg in $(file(hfile))")
+
     @inline function matchname(names, choices, errmsg)
         for nn in choices
             nn in names && return nn
@@ -27,6 +32,7 @@ function read_obsmat(hfile::HDF5File, name::String, indtype::Type=Int, valtype=F
         throw_msg(hfile, name, errmsg)
     end
 
+    usemmap = mmap === Val{true}()
     group = hfile[name]
     if !isa(group, HDF5Group)
         throw_msg(hfile, name, "is not a group")
@@ -48,14 +54,37 @@ function read_obsmat(hfile::HDF5File, name::String, indtype::Type=Int, valtype=F
     if format != "csc" && format != "csr"
         throw_msg(hfile, name, "is not a recognized sparse format")
     end
+    if usemmap && format != "csc"
+        throw_msg(hfile, name, "cannot be memory mapped; not a CSC sparse matrix")
+    end
+
     indicesfld  = matchname(CSX_INDICES_NAMES, dsetnames, "does not have a recognized CSC/CSR indices array")
     pointersfld = matchname(CSX_POINTER_NAMES, dsetnames, "does not have a recognized CSC/CSR pointer array")
     valuesfld   = matchname(CSX_VALUES_NAMES,  dsetnames, "does not have a recognized CSC/CSR values array")
-    indices  = read(group[indicesfld], Array{indtype})::Vector{indtype}
-    pointers = read(group[pointersfld], Array{indtype})::Vector{indtype}
-    values   = read(group[valuesfld], Array{valtype})::Vector{valtype}
-    indices  .+= one(indtype)
-    pointers .+= one(indtype)
+
+    if usemmap
+        indices  = readmmap(group[indicesfld])
+        pointers = readmmap(group[pointersfld])
+        values   = readmmap(group[valuesfld])
+        if eltype(indices) != eltype(pointers)
+            throw_msg(hfile, name, "cannot be memory mapped; indptr and indices array types differ")
+        end
+    else
+        indices  = read(group[indicesfld], Array{indtype})::Vector{indtype}
+        pointers = read(group[pointersfld], Array{indtype})::Vector{indtype}
+        values   = read(group[valuesfld], Array{valtype})::Vector{valtype}
+    end
+
+    if length(pointers) > 0 && iszero(pointers[1])
+        if usemmap
+            throw_msg(hfile, name, "is 0-indexed, but 1-indexing required if memory-mapping")
+        else
+            # adjust for 0-based indexing
+            indices  .+= one(indtype)
+            pointers .+= one(indtype)
+        end
+    end
+
     if format == "csr"
         R = SparseMatrixCSC(shape[2], shape[1], pointers, indices, values)
         R = permutedims(R)
