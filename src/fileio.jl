@@ -4,8 +4,9 @@ using HDF5
 using FileIO
 using Requires
 using SparseArrays
+using SparseArrays: getcolptr
 
-export read_obsmat
+export read_obsmat, write_obsmat
 
 """
     read_obsmat(filename::String, name)
@@ -17,6 +18,11 @@ function read_obsmat(filename::String, name)
     file = query(filename)
     return read_obsmat(file, name)
 end
+
+"""
+    write_obsmat(filename::String, obsmat::SparseMatrixCSC)
+"""
+function write_obsmat end
 
 include("fileio_hdf5.jl")
 

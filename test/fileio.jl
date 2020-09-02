@@ -80,3 +80,12 @@ const pathbase = joinpath(@__DIR__, "testdata")
         @test R == obsmat_ref
     end
 end
+
+@testset "Writing observing matrices" begin
+    mktemp() do path, io
+        write_obsmat(path, obsmat_ref)
+        flush(io)
+        @test HDF5.ishdf5(path)
+        @test read_obsmat(path, "R") == obsmat_ref
+    end
+end

@@ -65,3 +65,35 @@ function read_obsmat(hfile::HDF5File, name::String, indtype::Type=Int, valtype=F
 
     return R
 end
+
+import Base: datatype_alignment
+
+function write_obsmat(filename, obsmat::SparseMatrixCSC)
+    indptr  = getcolptr(obsmat)
+    indices = rowvals(obsmat)
+    data    = nonzeros(obsmat)
+
+    TI = eltype(indptr)
+    TV = eltype(data)
+    align = max(datatype_alignment.((TI, TV))...)
+
+    h5open(filename, "w", "alignment", (0, align)) do hfile
+        g = g_create(hfile, "R")
+
+        EARLY = HDF5.H5D_ALLOC_TIME_EARLY
+        d_indptr  = d_create(g, "indptr",  datatype(TI), dataspace(size(indptr)),  "alloc_time", EARLY)
+        d_indices = d_create(g, "indices", datatype(TI), dataspace(size(indices)), "alloc_time", EARLY)
+        d_data    = d_create(g, "data",    datatype(TV), dataspace(size(data)),    "alloc_time", EARLY)
+
+        # Now actually write out the data to disk
+        write(d_indptr, indptr)
+        write(d_indices, indices)
+        write(d_data, data)
+
+        # Finally, fill in the attributes required to make this a valid observing matrix
+        # to be read back in with `read_obsmat`.
+        attrs(g)["format"] = "csc"
+        attrs(g)["shape"] = [size(obsmat)...]
+    end
+    return nothing
+end
