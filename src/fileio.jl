@@ -5,6 +5,7 @@ using FileIO
 using Requires
 using SparseArrays
 using SparseArrays: getcolptr
+import UnixMmap
 
 export read_obsmat, write_obsmat
 
@@ -27,6 +28,10 @@ function write_obsmat end
 include("fileio_hdf5.jl")
 
 function __init__()
+    if Sys.islinux()
+        READ_OBSMAT_MMAP_FLAGS[] |= UnixMmap.MAP_POPULATE
+    end
+
     @require JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8" begin
         using .JLD
         read_obsmat(file::File{format"JLD"}, name::String) = JLD.load(FileIO.filename(file), name)::SparseMatrixCSC

@@ -10,6 +10,8 @@ const obsmat_ref = sparse(
         ])
 const pathbase = joinpath(@__DIR__, "testdata")
 
+CMB.Files.READ_OBSMAT_MMAP[] = false
+
 @testset "Reading observing matrices" begin
     @testset "Julia JLD" begin
         !isdefined(Main, :SparseArrays) && @eval Main using SparseArrays
@@ -98,8 +100,6 @@ end
         flush(io)
         R = read_obsmat(path, "R", mmap = Val(true))
         @test R == obsmat_ref
-        # If properly aligned, components will be Vectors and not ReinterpretArrays
-        @test !(nonzeros(R) isa Base.ReinterpretArray{T,1,UInt8,Vector{UInt8}} where T)
     end
 
     # Construct matrix which requires padding --- Int16 pointers for a 6x4 matrix with
@@ -112,7 +112,6 @@ end
         flush(io)
         R = read_obsmat(path, "R", mmap = Val(true))
         @test R == R′
-        @test !(nonzeros(R) isa Base.ReinterpretArray{T,1,UInt8,Vector{UInt8}} where T)
     end
 
     # Cannot mmap a non-CSC matrix
