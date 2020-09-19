@@ -17,6 +17,14 @@ Modules = [CMB.Healpix]
 Private = false
 ```
 
+## File I/O
+```@docs
+CMB.Files.read_obsmat
+CMB.Files.READ_OBSMAT_MMAP
+CMB.Files.READ_OBSMAT_MMAP_FLAGS
+CMB.Files.write_obsmat
+```
+
 ## Pixel Covariance
 ```@autodocs
 Modules = [CMB.PixelCovariance]

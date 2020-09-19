@@ -1,5 +1,8 @@
 # Private Documentation
 
+This page documents private functions which may be useful but which have no guarantee of
+stability across any change in versions of this package.
+
 ## Contents
 ```@contents
 Pages = ["private.md"]

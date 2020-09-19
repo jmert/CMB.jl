@@ -20,6 +20,7 @@ makedocs(
         "Manual" => [
             "HEALPix Pixelization" => "man/healpix.md",
             "Spherical Functions" => "man/sphere.md",
+            "Observing Matrices" => "man/obsmat.md",
             "Pixel-pixel Covariance" => "man/pixelcov.md",
             "References" => "man/references.md"
         ],
