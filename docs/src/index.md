@@ -18,6 +18,7 @@ Design goals of this package include:
 Pages = [
     "man/healpix.md",
     "man/sphere.md",
+    "man/obsmat.md",
     "man/pixelcov.md",
     "man/references.md"
 ]

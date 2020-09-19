@@ -1,4 +1,4 @@
-# [Pixel-pixel Covariance](@id man_pixelcov)
+# [Pixel-Pixel Covariance](@id man_pixelcov)
 ```@meta
 DocTestFilters = Regex[
         r"Ptr{0x[0-9a-f]+}",
@@ -176,7 +176,11 @@ covariance matrix as
 \end{align}
 ```
 
-## Properties and Symmetries
+## [Ideal Pixel-Pixel Covariance](@id pixelcov_theory)
+
+## [Reobserved Pixel-Pixel Covariance](@id pixelcov_reobs)
+
+## [Properties and Symmetries](@id pixelcov_properties)
 
 - The entire covariance matrix ``\mat C`` is symmetric.
   Therefore the on-diagonal sub-blocks ``\mat C^{TT}``, ``\mat C^{QQ}``, and
@@ -222,7 +226,7 @@ covariance matrix as
   ```
   and the remaining block components are unchanged.
 
-## Mathematical Details
+## [Mathematical Details](@id pixelcov_details)
 
 It is often useful to have the fully-expanded expressions for each of the pixel-pixel
 covariance terms after applying the local-to-global coordinate system rotations.
