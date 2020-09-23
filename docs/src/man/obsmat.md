@@ -41,8 +41,10 @@ J. Willmert).
 ## Loading an Observing Matrix
 
 It is assumed that all observing matrices are sparse, and the native format used by this
-package is of compressed sparse column (CSC) matrices in accordance with Julia's
-`SparseMatrixCSC` type from the `SparseArrays` standard library.
+package is of
+[compressed sparse column (CSC)](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_column_(CSC_or_CCS))
+matrices in accordance with Julia's `SparseMatrixCSC` type from the `SparseArrays`
+standard library.
 Observing matrices are read from disk with the [`read_obsmat`](@ref) function, and the
 following formats are supported:
 
@@ -50,7 +52,8 @@ following formats are supported:
 
 2. `numpy` sparse matrices saved to an HDF5 file by
    [`h5sparse`](https://pypi.org/project/h5sparse/) in either CSC or
-   compressed sparse row (CSR) format.
+   [compressed sparse row (CSR)](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format))
+   format.
 
 3. MATLAB save files.
    Requires explicitly loading [`MAT.jl`](https://github.com/JuliaIO/MAT.jl) first.
@@ -68,6 +71,18 @@ For repeated computation, the first format should be preferred due to its suppor
     In particular, it is not possible to memory map the on-disk arrays saved by `numpy`
     and MATLAB because the internal data structures use 0-indexed pointers which are
     incompatible with Julia's use of 1-indexing.
+
+The return is a `NamedTuple` with the following fields:
+- `R` — the `SparseMatrixCSC` observing matrix ``\mat R``.
+- `pixr` — a description of the "right-hand side" map pixelization, i.e. the pixelization of
+  a map-vector ``\mat{\hat m}`` for which the product ``\mat R \mat{\hat m}`` is defined.
+- `pixl` — a description of the "left-hand side" map pixelization, i.e. the pixelization of
+  the resultant map-vector ``\mat{\tilde m} = \mat R \mat{\hat m}``.
+
+The pixelization descriptions are in general data-format and situation specific.
+For the HDF5 backend, the pixelization description may be any "native" `HDF5.jl` data
+type (such as numbers, strings, or arrays thereof) or an HDF5 group which is loaded
+recursively into a `Dict{String,Any}` with leaf-nodes which are a native type.
 
 ## Exporting an Observing Matrix
 
