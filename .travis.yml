@@ -9,6 +9,9 @@ branches:
     - /^release-.*$/
 notifications:
   email: false
+cache:
+  directories:
+    - $HOME/.julia/artifacts
 
 before_script:
   - julia --project -e '

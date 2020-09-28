@@ -26,6 +26,9 @@ function minimize_versions()
     minjulia = VersionNumber("$(minjulia.major).$(minjulia.minor+1)")
     VERSION ≤ minjulia || return
 
+    # Instantiate packages before starting to pin packages
+    Pkg.instantiate()
+
     # Now pin every package version to the minimum bound (excluding Julia itself)
     delete!(compat, "julia")
     for (proj, vers) in compat
