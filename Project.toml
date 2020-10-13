@@ -5,6 +5,7 @@ version = "0.2.4-dev"
 
 [deps]
 BitFlags = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Legendre = "7642852e-7f09-11e9-134e-0940411082b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -13,6 +14,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+Compat = "3.18"
 FFTW = "1"
 Legendre = "0.2.1"
 Reexport = "0.2"

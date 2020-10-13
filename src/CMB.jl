@@ -13,6 +13,9 @@ module CMB
     include("healpix.jl")
     @reexport using .Healpix
 
+    include("pixelizations.jl")
+    @reexport using .Pixelizations
+
     include("pixelcovariance.jl")
     @reexport using .PixelCovariance
 
