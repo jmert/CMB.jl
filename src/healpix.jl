@@ -294,10 +294,10 @@ index validity.
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
         i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
-        z′ = one(F) - i′^2 / (3nside^2)
+        z′ = one(F) - i′^2 / (F(3) * nside^2)
     else
         i′ = div(p′-nside2npixcap(nside), 4nside) + nside
-        z′ = 4/3 - 2i′ / (3nside)
+        z′ = (4nside - 2i′) / (F(3) * nside)
     end
     z = p < nside2npixequ(nside) ? z′ : -z′
     return z
@@ -339,22 +339,23 @@ index validity.
 """
 @fastmath function unsafe_pix2phi(nside::I, p::I) where I<:Integer
     F = float(I)
+    pio2 = F(0.5) * convert(F, π)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
         i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
         j′ = p′ + one(I) - nside2npixcap(i′)
-        ϕ′ = (π/2)/i′ * (j′ - 0.5)
+        ϕ′ = pio2 / i′ * (j′ - F(0.5))
     else
         i′,j′ = divrem(p′-nside2npixcap(nside), 4nside)
         i′ += nside
         j′ += one(I)
         δ′ = rem(i′ - nside, 2)
-        ϕ′ = (π/2/nside) * (j′ - 0.5*(one(I) + δ′))
+        ϕ′ = (pio2/nside) * (j′ - F(0.5)*(one(I) + δ′))
         if issouth(nside, p) && δ′ ≠ 0
-            ϕ′ += π/2/nside
+            ϕ′ += pio2/nside
         end
     end
-    ϕ = isnorth(nside, p) ? ϕ′ : (2π - ϕ′)
+    ϕ = isnorth(nside, p) ? ϕ′ : (4pio2 - ϕ′)
     return ϕ
 end
 

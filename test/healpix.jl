@@ -129,7 +129,7 @@ end
     end
 end
 
-@testset "Type stability" begin
+@testset "Internal type stability" begin
     for T in (Int32, Int64)
         @test npix2nside(T(length(hpix4_pix))) isa T
         @test nring2nside(T(hpix4_ring[end])) isa T
@@ -138,7 +138,18 @@ end
         @test nside2npixcap(T(4)) isa T
         @test nside2npixequ(T(4)) isa T
         @test nside2pixarea(4) isa float(T)
+
+        @test pix2ring(T(4), T(0)) isa T
+        @test pix2ringidx(T(4), T(0)) isa T
     end
-    # π conversion done at correct precision
-    @test nside2pixarea(BigInt(1)) == 4BigFloat(π) / 12
+    for T in (Int32, BigInt)
+        Tπ = convert(float(T), π)
+        # π conversion done at correct precision
+        @test nside2pixarea(T(1)) == 4Tπ / 12
+        @test pix2theta(T(4), T(88)) == Tπ / 2
+        @test pix2phi(T(4), T(44)) == Tπ / 2
+
+        @test pix2z(T(4), T(40)) == convert(float(T), 0.5)
+        @test pix2theta(T(4), T(40)) ≈ Tπ/3 rtol=eps(Tπ/3)
+    end
 end
