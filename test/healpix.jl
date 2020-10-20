@@ -128,3 +128,17 @@ end
         @test pix == ang2pix(nside, θ, 2π + ϕ₀)
     end
 end
+
+@testset "Type stability" begin
+    for T in (Int32, Int64)
+        @test npix2nside(T(length(hpix4_pix))) isa T
+        @test nring2nside(T(hpix4_ring[end])) isa T
+        @test nside2npix(T(4)) isa T
+        @test nside2nring(T(4)) isa T
+        @test nside2npixcap(T(4)) isa T
+        @test nside2npixequ(T(4)) isa T
+        @test nside2pixarea(4) isa float(T)
+    end
+    # π conversion done at correct precision
+    @test nside2pixarea(BigInt(1)) == 4BigFloat(π) / 12
+end
