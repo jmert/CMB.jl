@@ -60,8 +60,8 @@ Base.showerror(io::IO, e::InvalidPixel) =
         print(io, "$(e.pix) is not a valid pixel index for Nside = $(e.nside) " *
               "(must be from 0 to $(nside2npix(e.nside)-1))")
 
-Base.@pure isvalidnside(nside) = (1 ≤ nside ≤ MAX_NSIDE) && ispow2(nside)
-Base.@pure isvalidpixel(nside, pix) = 0 ≤ pix < nside2npix(nside)
+isvalidnside(nside) = (1 ≤ nside ≤ MAX_NSIDE) && ispow2(nside)
+isvalidpixel(nside, pix) = 0 ≤ pix < nside2npix(nside)
 
 """
     ishealpixok(nside)
@@ -69,7 +69,7 @@ Base.@pure isvalidpixel(nside, pix) = 0 ≤ pix < nside2npix(nside)
 Returns `true` if `nside` is a power of two in the range `1` to
 `2^$(Int(log2(MAX_NSIDE)))`, otherwise `false`.
 """
-Base.@pure ishealpixok(nside) = isvalidnside(nside)
+ishealpixok(nside) = isvalidnside(nside)
 
 """
     isheapixok(nside, pix)
@@ -77,7 +77,7 @@ Base.@pure ishealpixok(nside) = isvalidnside(nside)
 Returns `true` if `nside` is valid and `pix` is in the range `0` to `nside2npix(nside) - 1`,
 otherwise `false`.
 """
-Base.@pure ishealpixok(nside, pix) = isvalidnside(nside) && isvalidpixel(nside, pix)
+ishealpixok(nside, pix) = isvalidnside(nside) && isvalidpixel(nside, pix)
 
 """
     checkhealpix(nside)
@@ -104,25 +104,25 @@ end
 
 # As relatively low-level functions, we don't validate nside or pixel values
 
-Base.@pure npix2nside(npix::Integer)   = trunc(typeof(npix), sqrt(npix/12))
-Base.@pure nring2nside(nring::Integer) = (nring + one(nring)) ÷ 4
+npix2nside(npix::Integer)   = trunc(typeof(npix), sqrt(npix/12))
+nring2nside(nring::Integer) = (nring + one(nring)) ÷ 4
 
-Base.@pure nside2npix(nside::Integer)    = 12*nside*nside
-Base.@pure nside2nring(nside::Integer)   =  4*nside - one(nside)
-Base.@pure nside2npixcap(nside::Integer) =  2*nside*(nside - one(nside))
-Base.@pure nside2npixequ(nside::Integer) =  2*nside*(3*nside + one(nside))
-Base.@pure nside2pixarea(nside::Integer) = 4π / nside2npix(nside)
+nside2npix(nside::Integer)    = 12*nside*nside
+nside2nring(nside::Integer)   =  4*nside - one(nside)
+nside2npixcap(nside::Integer) =  2*nside*(nside - one(nside))
+nside2npixequ(nside::Integer) =  2*nside*(3*nside + one(nside))
+nside2pixarea(nside::Integer) = 4π / nside2npix(nside)
 
-Base.@pure isnorth(nside, p) = p < nside2npixequ(nside)
-Base.@pure issouth(nside, p) = p ≥ nside2npixequ(nside)
+isnorth(nside, p) = p < nside2npixequ(nside)
+issouth(nside, p) = p ≥ nside2npixequ(nside)
 
-Base.@pure isnorthcap(nside, p) = p < nside2npixcap(nside)
-Base.@pure issouthcap(nside, p) = p ≥ nside2npix(nside) - nside2npixcap(nside)
-Base.@pure iscap(nside, p)      = isnorthcap(nside, p) | issouthcap(nside, p)
+isnorthcap(nside, p) = p < nside2npixcap(nside)
+issouthcap(nside, p) = p ≥ nside2npix(nside) - nside2npixcap(nside)
+iscap(nside, p)      = isnorthcap(nside, p) | issouthcap(nside, p)
 
-Base.@pure isnorthequbelt(nside, p) = isnorth(nside, p) & ~isnorthcap(nside, p)
-Base.@pure issouthequbelt(nside, p) = issouth(nside, p) & ~issouthcap(nside, p)
-Base.@pure isequbelt(nside, p)      = ~iscap(nside, p)
+isnorthequbelt(nside, p) = isnorth(nside, p) & ~isnorthcap(nside, p)
+issouthequbelt(nside, p) = issouth(nside, p) & ~issouthcap(nside, p)
+isequbelt(nside, p)      = ~iscap(nside, p)
 
 # The function definitions are short enough that I wanted to keep them visually together
 # without having the documentation break them up. Add documentation now
