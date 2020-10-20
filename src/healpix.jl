@@ -104,14 +104,14 @@ end
 
 # As relatively low-level functions, we don't validate nside or pixel values
 
-npix2nside(npix::Integer)   = trunc(typeof(npix), sqrt(npix/12))
-nring2nside(nring::Integer) = (nring + one(nring)) ÷ 4
+npix2nside(npix::T) where {T<:Integer}   = trunc(T, sqrt(npix / T(12)))
+nring2nside(nring::T) where {T<:Integer} = div(nring + one(nring), T(4))
 
-nside2npix(nside::Integer)    = 12*nside*nside
-nside2nring(nside::Integer)   =  4*nside - one(nside)
-nside2npixcap(nside::Integer) =  2*nside*(nside - one(nside))
-nside2npixequ(nside::Integer) =  2*nside*(3*nside + one(nside))
-nside2pixarea(nside::Integer) = 4π / nside2npix(nside)
+nside2npix(nside::T) where {T<:Integer}    = T(12)*nside*nside
+nside2nring(nside::T) where {T<:Integer}   =  T(4)*nside - one(nside)
+nside2npixcap(nside::T) where {T<:Integer} =  T(2)*nside*(nside - one(nside))
+nside2npixequ(nside::T) where {T<:Integer} =  T(2)*nside*(T(3)*nside + one(nside))
+nside2pixarea(nside::T) where {T<:Integer} = 4convert(float(T), π) / nside2npix(nside)
 
 isnorth(nside, p) = p < nside2npixequ(nside)
 issouth(nside, p) = p ≥ nside2npixequ(nside)
