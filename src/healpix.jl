@@ -20,6 +20,7 @@ export
 
 using Base: @propagate_inbounds
 using StaticArrays
+import ..unchecked_sqrt
 
 """
     const UNSEEN = -1.6375e+30
@@ -230,17 +231,25 @@ equatorial ring) for an `nside` HEALPix map.
 
 ####
 
+# internal method - pixel ring index for polar cap pixel
+@inline function _capring(p::I) where {I <: Integer}
+    F = float(I)
+    pp1 = p + one(p)
+    ring0 = unchecked_sqrt(muladd(F(pp1), F(0.5), -unchecked_sqrt(pp1 >> 1)))
+    return unsafe_trunc(I, ring0) + one(I)
+end
+
 """
     i = pix2ring(nside, p)
 
 Computes the ring index `i` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
-@fastmath function pix2ring(nside::I, p::I) where I<:Integer
+function pix2ring(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
-        i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
+        i′ = _capring(p′)
     else
         i′ = div(p′-nside2npixcap(nside), 4nside) + nside
     end
@@ -255,11 +264,11 @@ pix2ring(nside, p) = pix2ring(promote(nside, p)...)
 Computes the index `j` within the ring for the given pixel `p`, where `nside` is the Nside
 resolution factor.
 """
-@fastmath function pix2ringidx(nside::I, p::I) where I<:Integer
+function pix2ringidx(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
-        i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
+        i′ = _capring(p′)
         j′ = p′ + one(I) - nside2npixcap(i′)
         l′ = 4i′
     else
@@ -289,11 +298,11 @@ pix2z(nside, p) = pix2z(promote(nside, p)...)
 Like [`pix2z`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
 """
-@fastmath function unsafe_pix2z(nside::I, p::I) where I<:Integer
+function unsafe_pix2z(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
-        i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
+        i′ = _capring(p′)
         z′ = one(F) - i′^2 / (F(3) * nside^2)
     else
         i′ = div(p′-nside2npixcap(nside), 4nside) + nside
@@ -309,7 +318,7 @@ end
 Computes the colatitude `θ` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
-pix2theta(nside, p) = @fastmath acos(pix2z(promote(nside, p)...))
+pix2theta(nside, p) = acos(pix2z(promote(nside, p)...))
 
 """
     (θ,ϕ) = unsafe_pix2theta(nside, p)
@@ -337,12 +346,12 @@ pix2phi(nside, p) = pix2phi(promote(nside, p)...)
 Like [`pix2phi`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
 """
-@fastmath function unsafe_pix2phi(nside::I, p::I) where I<:Integer
+function unsafe_pix2phi(nside::I, p::I) where I<:Integer
     F = float(I)
     pio2 = F(0.5) * convert(F, π)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
-        i′ = trunc(I, sqrt((p′+one(I))/2 - sqrt(convert(F,(p′+one(I))>>1)))) + one(I)
+        i′ = _capring(p′)
         j′ = p′ + one(I) - nside2npixcap(i′)
         ϕ′ = pio2 / i′ * (j′ - F(0.5))
     else
@@ -393,7 +402,7 @@ pix2vec(nside, p) = pix2vec(promote(nside, p)...)
 Like [`pix2vec`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
 """
-@fastmath function unsafe_pix2vec(nside::I, p::I) where I<:Integer
+function unsafe_pix2vec(nside::I, p::I) where I<:Integer
     z = unsafe_pix2z(nside, p)
     ϕ = unsafe_pix2phi(nside, p)
     # If z ≈ ±1, this form should cause less "catastrophic cancellation" than the simpler
@@ -409,7 +418,7 @@ end
 Computes the HEALPix pixel index `p` which contains the point ``(θ,ϕ)`` given by the
 colatitude `θ` and azimuth `ϕ`, where `nside` is the Nside resolution factor.
 """
-@fastmath function ang2pix(nside, θ, ϕ)
+function ang2pix(nside, θ, ϕ)
     checkhealpix(nside)
     zero(θ) ≤ θ ≤ oftype(θ, π) || throw(DomainError("θ must be in [0,π], but got $θ"))
     ϕ = mod2pi(ϕ)
@@ -434,7 +443,7 @@ end
 Like [`ang2pix`](@ref) but neither calls [`checkhealpix`](@ref) to check the validity of
 `nside` nor checks the domain of the spherical coordinates `θ` and `ϕ`.
 """
-@fastmath function unsafe_ang2pix(nside, θ, ϕ)
+function unsafe_ang2pix(nside, θ, ϕ)
     z = cos(θ)
     return unsafe_zphi2pix(nside, z, ϕ)
 end
@@ -444,7 +453,7 @@ end
 
 Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length of `r`.
 """
-@fastmath @propagate_inbounds function unsafe_vec2pix(nside, r)
+@propagate_inbounds function unsafe_vec2pix(nside, r)
     z = r[3]
     ϕ = atan(r[2], r[1])
     ϕ += ifelse(ϕ < zero(ϕ), 2oftype(ϕ, π), zero(ϕ))
@@ -456,7 +465,7 @@ end
 
 Like [`unsafe_ang2pix`](@ref) but uses the value ``z = \\cos(θ)`` instead.
 """
-@fastmath function unsafe_zphi2pix(nside, z, ϕ)
+function unsafe_zphi2pix(nside, z, ϕ)
     z′ = abs(z)
     α = 2ϕ / π      # scaled distance around ring in [0,4)
                     # later advantage is that mod(ϕ, π/2) becomes modf(α)
