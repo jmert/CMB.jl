@@ -456,7 +456,7 @@ end
 Computes the HEALPix pixel index `p` which contains the point ``(θ,ϕ)`` given by the
 colatitude `θ` and azimuth `ϕ`, where `nside` is the Nside resolution factor.
 """
-function ang2pix(nside, θ, ϕ)
+function ang2pix(nside::Integer, θ, ϕ)
     checkhealpix(nside)
     zero(θ) ≤ θ ≤ oftype(θ, π) || throw(DomainError("θ must be in [0,π], but got $θ"))
     ϕ = mod2pi(ϕ)
@@ -469,7 +469,7 @@ end
 Computes the HEALPix pixel index `p` which contains the point at the end of the unit
 vector `r`, where `nside` is the Nside resolution factor.
 """
-function vec2pix(nside, r)
+function vec2pix(nside::Integer, r)
     checkhealpix(nside)
     length(r) == 3 || throw(DimensionMismatch("r must be a 3-vector"))
     return @inbounds unsafe_vec2pix(nside, r)
@@ -481,7 +481,7 @@ end
 Like [`ang2pix`](@ref) but neither calls [`checkhealpix`](@ref) to check the validity of
 `nside` nor checks the domain of the spherical coordinates `θ` and `ϕ`.
 """
-function unsafe_ang2pix(nside, θ, ϕ)
+function unsafe_ang2pix(nside::Integer, θ, ϕ)
     z = cos(θ)
     return unsafe_zphi2pix(nside, z, ϕ)
 end
@@ -491,7 +491,7 @@ end
 
 Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length of `r`.
 """
-@propagate_inbounds function unsafe_vec2pix(nside, r)
+@propagate_inbounds function unsafe_vec2pix(nside::Integer, r)
     z = r[3]
     ϕ = atan(r[2], r[1])
     ϕ += ifelse(ϕ < zero(ϕ), 2oftype(ϕ, π), zero(ϕ))
@@ -503,7 +503,7 @@ end
 
 Like [`unsafe_ang2pix`](@ref) but uses the value ``z = \\cos(θ)`` instead.
 """
-function unsafe_zphi2pix(nside, z, ϕ)
+function unsafe_zphi2pix(nside::Integer, z, ϕ)
     z′ = abs(z)
     α = 2ϕ / π      # scaled distance around ring in [0,4)
                     # later advantage is that mod(ϕ, π/2) becomes modf(α)
