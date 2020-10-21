@@ -399,12 +399,7 @@ index validity.
     # If z ≈ ±1, this form should cause less "catastrophic cancellation" than the simpler
     # invocation `one(z) - z*z` (I think...).
     sinθ = sqrt((one(z)-z)*(one(z)+z))
-    @static if isdefined(Base, :sincos)
-        y,x = sinθ .* sincos(ϕ)
-    else
-        x = sinθ * cos(ϕ)
-        y = sinθ * sin(ϕ)
-    end
+    y, x = sinθ .* sincos(ϕ)
     return SVector{3}(x, y, z)
 end
 
