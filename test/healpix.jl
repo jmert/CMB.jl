@@ -87,13 +87,22 @@ end
 end
 
 @testset "Validity checks" begin
-    @test all(ishealpixok.(2 .^ (0:29)) .== true)
-    @test all(ishealpixok.([0, 2^30]) .== false)
-    @test_throws InvalidNside checkhealpix(0)
+    # HEALPix pixelization is defined to be valid for pixel indices up to near limits of
+    # Int64, but the corresponding Nside fits within Int32. Make sure internal type
+    # promotion rules mix these facts appropriately.
+    @testset "$T Nside" for T in (Int32, Int64)
+        @test all(ishealpixok, T(2) .^ (0:29))
+        @test all(!ishealpixok, (T(0), T(2)^30))
+        @test_throws InvalidNside checkhealpix(T(0))
 
-    @test all(ishealpixok.(4, hpix4_pix) .== true)
-    @test all(ishealpixok.(4, [-1, 192]) .== false)
-    @test_throws InvalidPixel checkhealpix(4, 192)
+        @test all(p -> ishealpixok(T(4), p), hpix4_pix)
+        @test all(p -> !ishealpixok(T(4), p), (-1, 192))
+        @test_throws InvalidPixel checkhealpix(T(4), 192)
+    end
+    @test !ishealpixok(BigInt(2)^300)
+    @test_throws InvalidNside checkhealpix(BigInt(2)^300)
+    @test !ishealpixok(4, BigInt(2)^300)
+    @test_throws InvalidPixel checkhealpix(4, BigInt(2)^300)
 
     for pix2fn in (pix2z, pix2theta, pix2phi, pix2ang, pix2vec)
         @test_throws InvalidNside pix2fn(5,  0)
@@ -130,28 +139,42 @@ end
 end
 
 @testset "Internal type stability" begin
-    for T in (Int32, Int64)
-        @test npix2nside(T(length(hpix4_pix))) isa T
-        @test nring2nside(T(hpix4_ring[end])) isa T
-        @test nside2npix(T(4)) isa T
-        @test nside2nring(T(4)) isa T
-        @test nside2npixcap(T(4)) isa T
-        @test nside2npixequ(T(4)) isa T
-        @test nside2pixarea(4) isa float(T)
-
-        @test pix2ring(T(4), T(0)) isa T
-        @test pix2ringidx(T(4), T(0)) isa T
+    @testset "nside query functions Nside type $T" for T in (Int32, Int64, BigInt)
+        # small types promote up to Int64, otherwise type stable
+        S = T <: Base.BitInteger32 ? Int64 : T
+        @test npix2nside(T(length(hpix4_pix))) isa S
+        @test nring2nside(T(hpix4_ring[end])) isa S
+        @test nside2npix(T(4)) isa S
+        @test nside2nring(T(4)) isa S
+        @test nside2npixcap(T(4)) isa S
+        @test nside2npixequ(T(4)) isa S
+        @test nside2pixarea(T(4)) isa float(T)
     end
-    for T in (Int32, BigInt)
-        Tπ = convert(float(T), π)
+    @testset "pixel query functions for Nside type $T" for T in (Int32, Int64, BigInt)
+        S = T <: Base.BitInteger32 ? Int64 : T
+        # promoted type
+        @test pix2ring(T(4), T(0)) isa S
+        @test pix2ringidx(T(4), T(0)) isa S
+
+        Tπ = convert(float(S), π)
         # π conversion done at correct precision
         # N.B. constants are all easily obtained from Fig. 4 of Górski, et al (2005).
         @test nside2pixarea(T(1)) == 4Tπ / 12
         @test pix2theta(T(4), T(88)) == Tπ / 2
         @test pix2phi(T(4), T(44)) == Tπ / 2
-
         @test pix2z(T(4), T(40)) == convert(float(T), 0.5)
         @test pix2theta(T(4), T(40)) ≈ Tπ/3 rtol=eps(Tπ/3)
+
+        # also check that internal integer calculations do not overflow (by preemptively
+        # promoting --- `unsafe_pix2*` variants are not similarly protected).
+        # - (2^16)^2 > typemax(Int32)
+        @test pix2ring(T(2)^16, T(0)) == pix2ring(S(2)^16, T(0))
+        @test pix2ringidx(T(2)^16, T(0)) == pix2ringidx(T(2)^16, T(0))
+        @test pix2z(T(2)^16, T(0)) == pix2z(S(2)^16, S(0))
+        @test pix2theta(T(2)^16, T(0)) == pix2theta(S(2)^16, S(0))
+        @test pix2phi(T(2)^16, T(0)) == pix2phi(S(2)^16, S(0))
+        @test pix2ang(T(2)^16, T(0)) == pix2ang(S(2)^16, S(0))
+        @test pix2vec(T(2)^16, T(0)) == pix2vec(S(2)^16, S(0))
     end
 end
 
