@@ -145,11 +145,41 @@ end
     for T in (Int32, BigInt)
         Tπ = convert(float(T), π)
         # π conversion done at correct precision
+        # N.B. constants are all easily obtained from Fig. 4 of Górski, et al (2005).
         @test nside2pixarea(T(1)) == 4Tπ / 12
         @test pix2theta(T(4), T(88)) == Tπ / 2
         @test pix2phi(T(4), T(44)) == Tπ / 2
 
         @test pix2z(T(4), T(40)) == convert(float(T), 0.5)
         @test pix2theta(T(4), T(40)) ≈ Tπ/3 rtol=eps(Tπ/3)
+    end
+end
+
+@testset "Accuracy of pix2vec" begin
+    import LinearAlgebra: norm
+    function simple_pix2vec(nside, p)
+        z = Healpix.unsafe_pix2z(nside, p)
+        ϕ = Healpix.unsafe_pix2phi(nside, p)
+        sinθ = sqrt(fma(-z, z, one(z)))
+        y, x = sinθ .* sincos(ϕ)
+        return [x, y, z]
+    end
+    # First check that the specialized implementation is largely correct.
+    @test all(pix2vec.(4, hpix4_pix) .≈ simple_pix2vec.(4, hpix4_pix))
+
+    # Now check that we do get more accurate results than the simple implementation.
+    for n in 10:29 # Nside 1024 through MAX_NSIDE
+        nside = 2^n
+        npix = nside2npix(nside)
+        # use the first two and last two rings near the poles where |z| ≈ 1
+        pix = [0:11; npix-12:npix-1]
+        ref = [Float64.(v) for v in simple_pix2vec.(big(nside), big.(pix))]
+        v0 = simple_pix2vec.(nside, pix)
+        v1 = pix2vec.(nside, pix)
+        # z coordinates are the same since it is only internal uses which can be optimized
+        @test all(getindex.(v1, 3) .== getindex.(ref, 3))
+        # the optized implementation should match more closely the vector at extended
+        # precision than the simple version does
+        @test all(norm.(v1 .- ref) .< norm.(v0 .- ref))
     end
 end

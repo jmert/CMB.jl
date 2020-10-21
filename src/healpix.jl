@@ -299,17 +299,39 @@ Like [`pix2z`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` a
 index validity.
 """
 function unsafe_pix2z(nside::I, p::I) where I<:Integer
+    z, iscap = _pix2z_capcompl(nside, p)
+    z = iscap ? copysign(one(z), z) - z : z
+    return z
+end
+
+# Internal helper that helps preserve precision for further internal use.
+# The return value is location dependent --- if the pixel `p` is within the equatorial
+# belt, then the return value is `(z, iscap == false)`, while for the polar caps the
+# return value instead gives the "complement" `(±(1 - z), iscap == true)`.
+# The advantage is that as `|z| → 1` approaches the poles, there is loss of precision
+# while for the complement `|1 - z| → 0` the density of floating point values is
+# increasing.
+#
+# The later definition of `pix2vec` can make use of this to eek out a bit more precision
+# because for z = ±(1 - 𝓏),
+#   sin θ == sin[acos(z)] == √(1 - z²)
+#                         == √(1 - (1 - 𝓏)²)
+#                         == √(2𝓏 - 𝓏²)
+#                         == sqrt(fma(-𝓏, 𝓏, 2𝓏))
+@inline function _pix2z_capcompl(nside::I, p::I) where I<:Integer
     F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
         i′ = _capring(p′)
-        z′ = one(F) - i′^2 / (F(3) * nside^2)
+        z′ = i′^2 / (F(3) * nside^2)
+        iscap = true
     else
         i′ = div(p′-nside2npixcap(nside), 4nside) + nside
         z′ = (4nside - 2i′) / (F(3) * nside)
+        iscap = false
     end
     z = p < nside2npixequ(nside) ? z′ : -z′
-    return z
+    return z, iscap
 end
 
 """
@@ -403,11 +425,14 @@ Like [`pix2vec`](@ref) but does not call [`checkhealpix`](@ref) to check `nside`
 index validity.
 """
 function unsafe_pix2vec(nside::I, p::I) where I<:Integer
-    z = unsafe_pix2z(nside, p)
+    z, iscap = _pix2z_capcompl(nside, p)
     ϕ = unsafe_pix2phi(nside, p)
-    # If z ≈ ±1, this form should cause less "catastrophic cancellation" than the simpler
-    # invocation `one(z) - z*z` (I think...).
-    sinθ = sqrt((one(z)-z)*(one(z)+z))
+    if iscap
+        sinθ = unchecked_sqrt(fma(-z, z, 2abs(z)))
+        z = copysign(one(z), z) - z
+    else
+        sinθ = unchecked_sqrt(fma(-z, z, one(z)))
+    end
     y, x = sinθ .* sincos(ϕ)
     return SVector{3}(x, y, z)
 end
