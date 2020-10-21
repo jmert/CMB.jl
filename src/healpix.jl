@@ -35,15 +35,15 @@ const UNSEEN = -1.6375e+30
 
 Maximum valid ``N_\\mathrm{side}`` parameter value.
 """
-const MAX_NSIDE = 2^29
+const MAX_NSIDE = Int64(2)^29
 
 """
     InvalidNside(nside)
 
 An invalid `nside` value was provided.
 """
-struct InvalidNside <: Exception
-    nside::Int
+struct InvalidNside{T} <: Exception
+    nside::T
 end
 Base.showerror(io::IO, e::InvalidNside) =
         print(io, "$(e.nside) is not a valid Nside parameter (must be power of 2)")
@@ -53,16 +53,22 @@ Base.showerror(io::IO, e::InvalidNside) =
 
 An invalid pixel index `pix` was provided for the given `nside`.
 """
-struct InvalidPixel <: Exception
-    nside::Int
-    pix::Int
+struct InvalidPixel{T} <: Exception
+    nside::T
+    pix::T
 end
 Base.showerror(io::IO, e::InvalidPixel) =
         print(io, "$(e.pix) is not a valid pixel index for Nside = $(e.nside) " *
               "(must be from 0 to $(nside2npix(e.nside)-1))")
 
-isvalidnside(nside) = (1 ≤ nside ≤ MAX_NSIDE) && ispow2(nside)
-isvalidpixel(nside, pix) = 0 ≤ pix < nside2npix(nside)
+function isvalidnside(nside)
+    nside′, _ = promote(nside, Int64(0))
+    return (Int64(1) ≤ nside′ ≤ MAX_NSIDE) && ispow2(nside′)
+end
+function isvalidpixel(nside, pix)
+    nside′, pix′, _ = promote(nside, pix, Int64(0))
+    return Int64(0) ≤ pix′ < nside2npix(nside′)
+end
 
 """
     ishealpixok(nside)
@@ -98,8 +104,9 @@ Throws an [`InvalidNside`](@ref) exception if `nside` is not a valid value or an
 ``N_\\mathrm{side}``.
 """
 @noinline function checkhealpix(nside, pix)
-    isvalidnside(nside) || throw(InvalidNside(nside))
-    isvalidpixel(nside, pix) || throw(InvalidPixel(nside, pix))
+    nside′, pix′, _ = promote(nside, pix, Int64(0))
+    isvalidnside(nside′) || throw(InvalidNside(nside′))
+    isvalidpixel(nside′, pix′) || throw(InvalidPixel(nside′, pix′))
     return nothing
 end
 
@@ -246,7 +253,6 @@ Computes the ring index `i` for the given pixel `p`, where `nside` is the Nside 
 factor.
 """
 function pix2ring(nside::I, p::I) where I<:Integer
-    F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
         i′ = _capring(p′)
@@ -265,7 +271,6 @@ Computes the index `j` within the ring for the given pixel `p`, where `nside` is
 resolution factor.
 """
 function pix2ringidx(nside::I, p::I) where I<:Integer
-    F = float(I)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-1) - p
     if isnorthcap(nside, p′)
         i′ = _capring(p′)
@@ -539,4 +544,23 @@ function unsafe_zphi2pix(nside, z, ϕ)
     return p
 end
 
+# Types smaller than 64-bits may overflow when doing pixel indexing calculations, so
+# forceably promote those up to Int64
+import Base: BitInteger32
+
+npix2nside(npix::T) where {T<:BitInteger32} = npix2nside(Int64(npix))
+nring2nside(npix::T) where {T<:BitInteger32} = nring2nside(Int64(npix))
+nside2npix(npix::T) where {T<:BitInteger32} = nside2npix(Int64(npix))
+nside2nring(npix::T) where {T<:BitInteger32} = nside2nring(Int64(npix))
+nside2npixcap(npix::T) where {T<:BitInteger32} = nside2npixcap(Int64(npix))
+nside2npixequ(npix::T) where {T<:BitInteger32} = nside2npixequ(Int64(npix))
+nside2pixarea(npix::T) where {T<:BitInteger32} = nside2pixarea(Int64(npix))
+
+pix2ring(nside::I, pix::I) where {I<:BitInteger32} = pix2ring(Int64(nside), Int64(pix))
+pix2ringidx(nside::I, pix::I) where {I<:BitInteger32} = pix2ringidx(Int64(nside), Int64(pix))
+pix2z(nside::I, pix::I) where {I<:BitInteger32} = pix2z(Int64(nside), Int64(pix))
+pix2theta(nside::I, pix::I) where {I<:BitInteger32} = pix2theta(Int64(nside), Int64(pix))
+pix2phi(nside::I, pix::I) where {I<:BitInteger32} = pix2phi(Int64(nside), Int64(pix))
+pix2ang(nside::I, pix::I) where {I<:BitInteger32} = pix2ang(Int64(nside), Int64(pix))
+pix2vec(nside::I, pix::I) where {I<:BitInteger32} = pix2vec(Int64(nside), Int64(pix))
 end # module Healpix
