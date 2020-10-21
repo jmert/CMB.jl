@@ -168,9 +168,9 @@ end
     @test all(pix2vec.(4, hpix4_pix) .≈ simple_pix2vec.(4, hpix4_pix))
 
     # Now check that we do get more accurate results than the simple implementation.
-    for n in 10:29 # Nside 1024 through MAX_NSIDE
-        nside = 2^n
+    @testset "Nside = $nside" for nside in 2 .^ (10:29) # Nside 1024 through MAX_NSIDE
         npix = nside2npix(nside)
+
         # use the first two and last two rings near the poles where |z| ≈ 1
         pix = [0:11; npix-12:npix-1]
         ref = [Float64.(v) for v in simple_pix2vec.(big(nside), big.(pix))]
@@ -182,4 +182,17 @@ end
         # precision than the simple version does
         @test all(norm.(v1 .- ref) .< norm.(v0 .- ref))
     end
+
+    # the azimuthal angle inversion also has an optimized path, so check the equatorial
+    # ring for more accurate alignment as well
+    #
+    # check only the first quadrant of Nside == 2^16 since that's already *many* pixels
+    nside = 2^16
+    pix = (0:nside-1) .+ (nside2npixequ(nside) - 4nside)
+    ref = [Float64.(v) for v in simple_pix2vec.(big(nside), big.(pix))]
+    v0 = simple_pix2vec.(nside, pix)
+    v1 = pix2vec.(nside, pix)
+    # only test that the large-scale view gets more accurate since small jitters in
+    # which way rounding occurs makes testing every individual pixel hard
+    @test sum(norm.(v1 .- ref)) < sum(norm.(v0 .- ref))
 end

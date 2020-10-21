@@ -20,7 +20,7 @@ export
 
 using Base: @propagate_inbounds
 using StaticArrays
-import ..unchecked_sqrt
+import ..sincospi, ..unchecked_sqrt
 
 """
     const UNSEEN = -1.6375e+30
@@ -85,7 +85,7 @@ ishealpixok(nside, pix) = isvalidnside(nside) && isvalidpixel(nside, pix)
 
 Throws an [`InvalidNside`](@ref) exception if `nside` is not a valid value.
 """
-function checkhealpix(nside)
+@noinline function checkhealpix(nside)
     isvalidnside(nside) || throw(InvalidNside(nside))
     return nothing
 end
@@ -97,8 +97,8 @@ Throws an [`InvalidNside`](@ref) exception if `nside` is not a valid value or an
 [`InvalidPixel`](@ref) exception if `pix` is out of range for the given
 ``N_\\mathrm{side}``.
 """
-function checkhealpix(nside, pix)
-    checkhealpix(nside)
+@noinline function checkhealpix(nside, pix)
+    isvalidnside(nside) || throw(InvalidNside(nside))
     isvalidpixel(nside, pix) || throw(InvalidPixel(nside, pix))
     return nothing
 end
@@ -368,25 +368,33 @@ pix2phi(nside, p) = pix2phi(promote(nside, p)...)
 Like [`pix2phi`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
 """
-function unsafe_pix2phi(nside::I, p::I) where I<:Integer
+unsafe_pix2phi(nside::I, p::I) where {I<:Integer} = convert(float(I), π) * _pix2phibypi(nside, p)
+
+# Internal helper that helps preserve precision for further internal use.
+# Since π is trancendental, truncating it to any given precision necessarily loses
+# information. We can eliminate the rounding in some cases by instead returning the scaled
+# angle ``ϕ/π`` which is naturally calculated by the geometric construction of the grid.
+#
+# This is used later in `pix2vec` to eek out a little bit more precision for all azimuthal
+# angles and is a good complement to the earlier optimization of `_pix2z_capcompl`.
+@inline function _pix2phibypi(nside::I, p::I) where I<:Integer
     F = float(I)
-    pio2 = F(0.5) * convert(F, π)
     p′ = isnorth(nside, p) ? p : (nside2npix(nside)-one(I)) - p
     if isnorthcap(nside, p′)
         i′ = _capring(p′)
         j′ = p′ + one(I) - nside2npixcap(i′)
-        ϕ′ = pio2 / i′ * (j′ - F(0.5))
+        ϕ′ = (j′ - F(0.5)) / 2i′
     else
         i′,j′ = divrem(p′-nside2npixcap(nside), 4nside)
         i′ += nside
         j′ += one(I)
         δ′ = rem(i′ - nside, 2)
-        ϕ′ = (pio2/nside) * (j′ - F(0.5)*(one(I) + δ′))
+        ϕ′ = (j′ - F(0.5)*(one(I) + δ′)) / 2nside
         if issouth(nside, p) && δ′ ≠ 0
-            ϕ′ += pio2/nside
+            ϕ′ += one(F) / 2nside
         end
     end
-    ϕ = isnorth(nside, p) ? ϕ′ : (4pio2 - ϕ′)
+    ϕ = isnorth(nside, p) ? ϕ′ : (F(2) - ϕ′)
     return ϕ
 end
 
@@ -426,14 +434,14 @@ index validity.
 """
 function unsafe_pix2vec(nside::I, p::I) where I<:Integer
     z, iscap = _pix2z_capcompl(nside, p)
-    ϕ = unsafe_pix2phi(nside, p)
+    φbypi = _pix2phibypi(nside, p)
     if iscap
         sinθ = unchecked_sqrt(fma(-z, z, 2abs(z)))
         z = copysign(one(z), z) - z
     else
         sinθ = unchecked_sqrt(fma(-z, z, one(z)))
     end
-    y, x = sinθ .* sincos(ϕ)
+    y, x = sinθ .* sincospi(φbypi)
     return SVector{3}(x, y, z)
 end
 
