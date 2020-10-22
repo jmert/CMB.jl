@@ -456,12 +456,13 @@ end
 Computes the HEALPix pixel index `p` which contains the point ``(θ,ϕ)`` given by the
 colatitude `θ` and azimuth `ϕ`, where `nside` is the Nside resolution factor.
 """
-function ang2pix(nside::Integer, θ, ϕ)
+function ang2pix(nside::Integer, θ::F, ϕ::F) where {F}
     checkhealpix(nside)
     zero(θ) ≤ θ ≤ oftype(θ, π) || throw(DomainError("θ must be in [0,π], but got $θ"))
     ϕ = mod2pi(ϕ)
     return unsafe_ang2pix(nside, θ, ϕ)
 end
+ang2pix(nside::Integer, θ, ϕ) = ang2pix(nside, promote(θ, ϕ)...)
 
 """
     p = vec2pix(nside, r)
@@ -503,43 +504,43 @@ end
 
 Like [`unsafe_ang2pix`](@ref) but uses the value ``z = \\cos(θ)`` instead.
 """
-function unsafe_zphi2pix(nside::Integer, z, ϕ)
+function unsafe_zphi2pix(nside::I, z::F, ϕ::F) where {I<:Integer, F}
     z′ = abs(z)
     α = 2ϕ / π      # scaled distance around ring in [0,4)
                     # later advantage is that mod(ϕ, π/2) becomes modf(α)
 
-    if z′ > 2/3
-        αt,_ = modf(α)  # fraction across first quadrant
+    if z′ > 2/F(3)
+        αt, _ = modf(α)  # fraction across first quadrant
 
-        σ = nside * sqrt(3 * (1 - z′))
-        kp = unsafe_trunc(Int, σ * αt)          # NW pixel boundary
-        km = unsafe_trunc(Int, σ * (1 - αt))    # SW pixel boundary
+        σ = nside * sqrt(F(3) * (one(F) - z′))
+        kp = unsafe_trunc(I, σ * αt)               # NW pixel boundary
+        km = unsafe_trunc(I, σ * (one(F) - αt))    # SW pixel boundary
 
-        i = kp + km + 1     # intersection of (kp, km+1) or (kp+1, km) lines
-        j = unsafe_trunc(Int, i * α) + 1
+        i = kp + km + one(I)    # intersection of (kp, km+1) or (kp+1, km) lines
+        j = unsafe_trunc(I, i * α) + one(I)
 
-        if z > 0
+        if z > zero(z)
             # counting from north pole
-            p = nside2npixcap(i) + j - 1
+            p = nside2npixcap(i) + j - one(I)
         else
             # counting from south pole
-            p = nside2npix(nside) - nside2npixcap(i+1) + j - 1
+            p = nside2npix(nside) - nside2npixcap(i+one(I)) + j - one(I)
         end
     else
-        tmp = 3z / 4
-        kp = unsafe_trunc(Int, nside * (1/2 - tmp + α)) # NW pixel boundary
-        km = unsafe_trunc(Int, nside * (1/2 + tmp + α)) # SW pixel boundary
+        tmp = F(0.75) * z
+        kp = unsafe_trunc(I, nside * (F(0.5) - tmp + α)) # NW pixel boundary
+        km = unsafe_trunc(I, nside * (F(0.5) + tmp + α)) # SW pixel boundary
         i′ = nside + kp - km  # ring offset w.r.t. northernmost equatorial belt ring
 
-        s = mod(i′, 2) + 1
-        j = (km + kp + s - nside) >> 1
+        s = mod(i′, I(2)) + one(I)
+        j = (km + kp + s - nside) >> one(I)
         # rings with first pixel center at ϕ == 0 have region where ϕ == 2π - δ "wrap
         # around" back to first pixel
-        if j == 4nside
-            j = 0
+        if j == I(4) * nside
+            j = zero(I)
         end
 
-        p = nside2npixcap(nside) + 4nside * i′ + j
+        p = nside2npixcap(nside) + I(4)*nside * i′ + j
     end
     return p
 end
