@@ -176,6 +176,14 @@ end
         @test pix2ang(T(2)^16, T(0)) == pix2ang(S(2)^16, S(0))
         @test pix2vec(T(2)^16, T(0)) == pix2vec(S(2)^16, S(0))
     end
+    @testset "Mixed input type promotions ($fn)" for fn in (pix2ring, pix2ringidx,
+                                                pix2z, pix2theta,
+                                                pix2phi, pix2ang, pix2vec)
+        @test fn(4, BigInt(0)) == fn(BigInt(4), BigInt(0))
+        @test fn(BigInt(4), 0) == fn(BigInt(4), BigInt(0))
+    end
+    @test ang2pix(4, 1f0, 1e0) == ang2pix(4, 1e0, 1e0)
+    @test ang2pix(4, 1e0, 1f0) == ang2pix(4, 1e0, 1e0)
 end
 
 @testset "Accuracy of pix2vec" begin
