@@ -71,19 +71,19 @@ end
 end
 
 @testset "Pixel indices" begin
-    @test all(pix2ring.(4, hpix4_pix) .== hpix4_ring)
-    @test all(pix2ringidx.(4, hpix4_pix) .== hpix4_ringidx)
+    @test pix2ring.(4, hpix4_pix) == hpix4_ring
+    @test pix2ringidx.(4, hpix4_pix) == hpix4_ringidx
 end
 
 @testset "Pixel classification" begin
-    @test all(isnorth.(       4, hpix4_pix) .== hpix4_isnorth)
-    @test all(issouth.(       4, hpix4_pix) .== hpix4_issouth)
-    @test all(iscap.(         4, hpix4_pix) .== hpix4_iscap)
-    @test all(isnorthcap.(    4, hpix4_pix) .== hpix4_isnorthcap)
-    @test all(issouthcap.(    4, hpix4_pix) .== hpix4_issouthcap)
-    @test all(isequbelt.(     4, hpix4_pix) .== hpix4_isequbelt)
-    @test all(isnorthequbelt.(4, hpix4_pix) .== hpix4_isnorthequbelt)
-    @test all(issouthequbelt.(4, hpix4_pix) .== hpix4_issouthequbelt)
+    @test isnorth.(       4, hpix4_pix) == hpix4_isnorth
+    @test issouth.(       4, hpix4_pix) == hpix4_issouth
+    @test iscap.(         4, hpix4_pix) == hpix4_iscap
+    @test isnorthcap.(    4, hpix4_pix) == hpix4_isnorthcap
+    @test issouthcap.(    4, hpix4_pix) == hpix4_issouthcap
+    @test isequbelt.(     4, hpix4_pix) == hpix4_isequbelt
+    @test isnorthequbelt.(4, hpix4_pix) == hpix4_isnorthequbelt
+    @test issouthequbelt.(4, hpix4_pix) == hpix4_issouthequbelt
 end
 
 @testset "Validity checks" begin
@@ -95,8 +95,8 @@ end
         @test all(!ishealpixok, (T(0), T(2)^30))
         @test_throws InvalidNside checkhealpix(T(0))
 
-        @test all(p -> ishealpixok(T(4), p), hpix4_pix)
-        @test all(p -> !ishealpixok(T(4), p), (-1, 192))
+        @test all(ishealpixok.(T(4), hpix4_pix))
+        @test all((!ishealpixok).(T(4), (-1, 192)))
         @test_throws InvalidPixel checkhealpix(T(4), 192)
     end
     @test !ishealpixok(BigInt(2)^300)
