@@ -163,8 +163,8 @@ The corresponding vector for a given pixel is retrieved with
 ```jldoctest healpix
 julia> pix2vec(nside, 103)
 3-element StaticArrays.SArray{Tuple{3},Float64,1,3} with indices SOneTo(3):
-  0.9807852804032303
- -0.19509032201612872
+  0.9807852804032304
+ -0.19509032201612828
   0.0
 ```
 where the elements correspond to the typical ``(x, y, z)`` right-handed coordinates with
