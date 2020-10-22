@@ -409,7 +409,11 @@ end
 Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`, where
 `nside` is the Nside resolution factor.
 """
-pix2ang(nside, p) = (pix2theta(nside, p), pix2phi(nside, p))
+function pix2ang(nside::I, p::I) where {I<:Integer}
+    checkhealpix(nside, p)
+    return unsafe_pix2ang(nside, p)
+end
+pix2ang(nside, p) = pix2ang(promote(nside, p)...)
 
 """
     (θ,ϕ) = unsafe_pix2ang(nside, p)
@@ -417,7 +421,11 @@ pix2ang(nside, p) = (pix2theta(nside, p), pix2phi(nside, p))
 Like [`pix2ang`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
 """
-unsafe_pix2ang(nside, p) = (unsafe_pix2theta(nside, p), unsafe_pix2phi(nside, p))
+function unsafe_pix2ang(nside::I, p::I) where {I<:Integer}
+    z = unsafe_pix2z(nside, p)
+    ϕ = unsafe_pix2phi(nside, p)
+    return (acos(z), ϕ)
+end
 
 """
     r = pix2vec(nside, p)
