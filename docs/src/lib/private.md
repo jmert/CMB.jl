@@ -26,12 +26,6 @@ Modules = [CMB.Healpix]
 Public = false
 ```
 
-## Spherical Harmonics
-```@autodocs
-Modules = [CMB.SphericalHarmonics]
-Public = false
-```
-
 ## Pixel Covariance
 ```@autodocs
 Modules = [CMB.PixelCovariance]

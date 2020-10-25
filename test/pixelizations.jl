@@ -2,57 +2,46 @@
     using Compat # requires v3.18 for reinterpret(reshape, ...)
 end
 import .Sphere: colataz, cartvec
-import .Pixelizations: Vec3, VecVec3, Pixelization, pixelization
-
-@testset "pixelization types" begin
-    # constructors
-    @test Pixelization("healpix") isa Pixelization{:healpix}
-    @test Pixelization(:healpix) isa Pixelization{:healpix}
-    @test Pixelization{:healpix}() isa Pixelization{:healpix}
-
-    # getting the specific pixelization name
-    @test pixelization(Pixelization(:healpix)) === :healpix
-
-    # pretty-printing of generic pixelizations
-    @test sprint(show, Pixelization(:healpix)) == "healpix pixelization"
-end
+import .Pixelizations: Vec3
 
 @testset "parsing pixelization descriptions" begin
-    @testset "unit vectors ($(float(I)))" for I in (Int, BigInt)
-        T = float(I)
-        # unit vectors on sphere, naturally created as VecVec3
-        rvecs = pix2vec.(I(4), 0:191)
-        @test rvecs isa VecVec3{T}
+    @testset "unit vectors" begin
+        # unit vectors on sphere, naturally created as Vector{Vec3}
+        rvecs = pix2vec.(4, 0:191)
+        @test rvecs isa Vector{Vec3{Float64}}
         # copy of unit vectors as 3×N matrix
         rvecs_mat = reduce(hcat, rvecs)
-        @test rvecs_mat isa Matrix{T}
+        @test rvecs_mat isa Matrix{Float64}
 
         # pass-through of VecVec3
-        @test @inferred(parse(Pixelization, rvecs)) === rvecs
+        pix = @inferred(parse_pixelization(rvecs))
+        @test pix isa ArbitraryPixelization
 
         # matrices can be reinterpreted as vector of Vec3
-        rvecs_reshape = @inferred(parse(Pixelization, rvecs_mat))
-        @test rvecs_reshape == rvecs
-        @test eltype(rvecs_reshape) <: Vec3{T}
+        rvecs_reshape = @inferred(parse_pixelization(rvecs_mat))
+        @test pix isa ArbitraryPixelization
+
+        @test rvecs_mat == export_pixelization(pix)
+
         wrong_shape = vcat(rvecs_mat, rvecs_mat[1:1,:])
         @test_throws DimensionMismatch("Cannot interpret 4×192 matrix as vector of pointing vectors"
-                                      ) parse(Pixelization, wrong_shape)
+                                      ) parse_pixelization(wrong_shape)
         @test_throws DimensionMismatch("Cannot interpret 2×192 matrix as vector of pointing vectors"
-                                      ) parse(Pixelization, wrong_shape[1:2, :])
+                                      ) parse_pixelization(wrong_shape[1:2, :])
     end
 
     @testset "HEALPix" begin
         nside = 4
         desc = Dict("type" => "healpix",
                     "nside" => nside)
-        rvecs = parse(Pixelization, desc)
-        @test rvecs isa VecVec3{Float64}
-        @test rvecs == pix2vec.(nside, 0:nside2npix(nside)-1)
+        pix = parse_pixelization(desc)
+        @test pix isa HealpixPixelization
+        @test desc == export_pixelization(pix)
 
-        desc["pixels"] = 0:3nside
-        rvecs = parse(Pixelization, desc)
-        @test rvecs isa VecVec3{Float64}
-        @test rvecs == pix2vec.(nside, 0:3nside)
+        desc["pixels"] = collect(0:3nside)
+        pix = parse_pixelization(desc)
+        @test pix isa HealpixPixelization
+        @test desc == export_pixelization(pix)
     end
 
     @testset "RA/Dec" begin
@@ -63,13 +52,39 @@ end
         dy = (hy - ly) / (ny ÷ res)
         ra  = range(lx + dx/2,  hx - dx/2, length=nx÷res)
         dec = range(ly + dy/2,  hy - dy/2, length=ny÷res)
-        # BICEP's canonical unraveling is as iso-latitude rings
-        radec = copy(reinterpret(reshape, Float64, vec(tuple.(ra, dec'))))
         desc = Dict("type" => "radec",
-                    "pixels" => radec)
-        rvecs = vec(cartvec.(colataz.(dec', ra)))
+                    "ra" => collect(ra),
+                    "dec" => collect(dec),
+                    "order" => "row")
 
-        @test radec isa Matrix{Float64}
-        @test parse(Pixelization, desc) == rvecs
+        pix = parse_pixelization(desc)
+        @test pix isa RADecPixelization
+        @test desc == export_pixelization(pix)
+
+        @test_throws ErrorException(match"RA range must span 360 degrees or less"
+                ) RADecPixelization(0.0:1.0:360.0, -1:0.5:1, true)
+        @test_throws ErrorException(match"Dec range must be in [-90, 90]"
+                ) RADecPixelization(-1:0.5:1, 0.0:10.0:90, true)
+    end
+
+    @testset "custom show" begin
+        show3(io::IO, x) = show(io, MIME"text/plain"(), x)
+
+        rvecs = pix2vec.(4, 0:3)
+        pix = ArbitraryPixelization(rvecs)
+        msg = sprint(show3, pix)
+        @test startswith(msg, "ArbitraryPixelization with $(length(rvecs)) pixels:")
+        @test contains(msg, sprint(Base.print_array, rvecs))
+
+        pix = HealpixPixelization(4, 0:3)
+        msg = sprint(show3, pix)
+        @test startswith(msg, "Nside = 4 HealpixPixelization with 4 pixels:")
+        @test contains(msg, sprint(Base.print_array, 0:3))
+
+        pix = RADecPixelization(-0.125:0.25:0.125, -0.125:0.25:0.125, true)
+        msg = sprint(show3, pix)
+        @test startswith(msg, "RADecPixelization with 2 × 2 = 4 pixels:")
+        @test contains(msg, "RA ∈ [-0.25, 0.25] (step 0.25)")
+        @test contains(msg, "Dec ∈ [-0.25, 0.25] (step 0.25)")
     end
 end

@@ -17,6 +17,12 @@ Modules = [CMB.Healpix]
 Private = false
 ```
 
+## Pixelizations
+```@autodocs
+Modules = [CMB.Pixelizations]
+Private = false
+```
+
 ## File I/O
 ```@docs
 CMB.Files.read_obsmat
