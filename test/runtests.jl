@@ -50,6 +50,7 @@ end
 
 @testset ExtendedTestSet "CMB" begin
     @include "numerics.jl" "Numerics utilities"
+    @include "conventions.jl" "Conventions and Definitions"
     @include "sphere.jl" "Spherical functions"
     @include "sphericalharmonics.jl" "Spherical Harmonics"
     @include "healpix.jl" "HEALPix functions"
