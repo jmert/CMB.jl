@@ -72,13 +72,18 @@ Converts the latitude-longitude pair `(δ, λ)` in degrees to colatitude-azimuth
 radians.
 """
 function colataz(δ, λ)
-    δ′, λ′ = promote(float(δ), float(λ))
-    local pi = oftype(δ′, π)
-    θ = pi/2 - deg2rad(δ′)
-    ϕ = rem2pi(deg2rad(λ′), RoundDown)
-    return (θ, ϕ)
+    θ, ϕ = unsafe_colataz(δ, λ)
+    return (θ, rem2pi(ϕ, RoundDown))
 end
 @inline colataz((δ, λ)::Tuple{Any,Any}) = colataz(δ, λ)
+
+function unsafe_colataz(δ, λ)
+    δ′, λ′ = promote(float(δ), float(λ))
+    θ = oftype(δ′, π)/2 - deg2rad(δ′)
+    ϕ = deg2rad(λ′)
+    return (θ, ϕ)
+end
+@inline unsafe_colataz((δ, λ)::Tuple{Any,Any}) = unsafe_colataz(δ, λ)
 
 """
     δ, λ = latlon(r)
