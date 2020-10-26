@@ -27,6 +27,21 @@ module StokesCrossFields
         UT  UQ  UU
     """
     @bitflag Field TT QT UT TQ QQ UQ TU QU UU NO_FIELD=0
+    @doc (@doc Field) TT, QT, UT, TQ, QQ, UQ, TU, QU, UU, NO_FIELD
+
+    """
+        const TPol = QT | UT | TQ | TU
+
+    An alias for the temperature-cross-polarization Stokes field combinations.
+    """
+    const TPol = QT | UT | TQ | TU
+
+    """
+        const Pol  = QQ | UQ | QU | UU
+
+    An alias for the polarization-only sub-blocks Stokes field combinations.
+    """
+    const Pol  = QQ | UQ | QU | UU
 
     @inline function count_pos(b, i::Int)
         isset = b & (one(b) << (i - 1)) != zero(b)
@@ -61,17 +76,36 @@ module StokesCrossFields
     end
 
     """
-        const TPol = QT | UT | TQ | TU
+        parse(fields::AbstractString)
 
-    An alias for the temperature-cross-polarization Stokes field combinations.
-    """
-    const TPol = QT | UT | TQ | TU
+    Parse a string containing some combination of the characters `'T'`, `'Q'`, & `'U'`
+    into a [`Field`](@ref) that corresponds to the block-symmetric combination of auto-
+    and cross-fields.
 
+    # Example
+    ```julia
+    julia> StokesCrossFields.parse("QU")
+    (UU | QU | UQ | QQ)::CMB.StokesCrossFields.Field = 0x000001b0
+    ```
     """
-        const Pol  = QQ | UQ | QU | UU
+    function parse(fields::AbstractString)
+        bitfield = NO_FIELD
+        for F in fields
+            bitfield |= (F == 'T') ? TT :
+                        (F == 'Q') ? QQ :
+                        (F == 'U') ? UU :
+                        error("Invalid field type `", F, "`; expected combination of \"T\", \"Q\", \"U\"")
+        end
 
-    An alias for the polarization-only sub-blocks Stokes field combinations.
-    """
-    const Pol  = QQ | UQ | QU | UU
+        for F1 in (TT, QQ, UU)
+            (bitfield & F1) == F1 || continue
+            for F2 in (TT, QQ, UU)
+                F1 == F2 && continue
+                (bitfield & F2) == F2 || continue
+                bitfield |= Field(0x1 << (3(minrow(F1) - 1) + mincol(F2) - 1))
+                bitfield |= Field(0x1 << (3(mincol(F1) - 1) + minrow(F2) - 1))
+            end
+        end
+        return bitfield
+    end
 end
-

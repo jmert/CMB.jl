@@ -31,3 +31,10 @@ using .PolarizationConventions
     @test field_count(TT|Pol) == 5
 end
 
+@testset "Parsing" begin
+    @test StokesCrossFields.parse("T") == TT
+    @test StokesCrossFields.parse("Q") == QQ
+    @test StokesCrossFields.parse("QU") == Pol
+    @test StokesCrossFields.parse("TQU") == TT | TPol | Pol
+end
+
