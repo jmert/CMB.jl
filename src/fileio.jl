@@ -138,6 +138,24 @@ function __init__()
         # FileIO doesn't define a MAT format, so do it ourselves
         add_format(format"MAT", FileIO.detecthdf5, [".mat"], [:MAT])
         using .MAT
+
+        # Because Matlab doesn't have vectors, we're forced to try to infer a vector
+        # from a matrix based on its size. ಠ_ಠ Gahh!!!
+        _mat2vec(x::Any) = x
+        function _mat2vec(x::AbstractDict)
+            for (k, v) in x
+                x[k] = _mat2vec(v)
+            end
+            return x
+        end
+        function _mat2vec(x::AbstractMatrix)
+            if size(x, 2) == 1
+                return vec(x)
+            else
+                return x
+            end
+        end
+
         """
             read_obsmat(file::FileIO.File{format"MAT"}; keywords...)
 
@@ -153,10 +171,16 @@ function __init__()
             hid = matopen(FileIO.filename(file))
             try
                 R = name !== nothing ? read(hid, name) : missing
-                pixelsr = (pixr !== nothing && exists(hid, pixr)) ?
-                        read(hid, pixr) : missing
-                pixelsl = (pixr !== nothing && exists(hid, pixl)) ?
-                        read(hid, pixl) : missing
+                if pixr !== nothing && exists(hid, pixr)
+                    pixelsr = _mat2vec(read(hid, pixr))
+                else
+                    pixelsr = missing
+                end
+                if pixl !== nothing && exists(hid, pixl)
+                    pixelsl = _mat2vec(read(hid, pixl))
+                else
+                    pixelsl = missing
+                end
                 return (; R = R, pixr = pixelsr, pixl = pixelsl)
             finally
                 close(hid)

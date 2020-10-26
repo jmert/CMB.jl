@@ -151,10 +151,6 @@ CMB.Files.READ_OBSMAT_MMAP[] = false
         @test obsmat.R isa SparseMatrixCSC
         @test obsmat.R == obsmat_ref
 
-        # Matlab doesn't have true vectors... ಠ_ಠ
-        obsmat.pixr["index"] = dropdims(obsmat.pixr["index"], dims = 2)
-        obsmat = merge(obsmat, (; pixl = dropdims(obsmat.pixl, dims = 2)))
-
         @test obsmat.pixr isa Dict
         @test obsmat.pixr == pixr_ref
         @test obsmat.pixl isa Vector
