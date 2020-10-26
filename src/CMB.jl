@@ -2,6 +2,7 @@ module CMB
     import Reexport.@reexport
 
     include("numerics.jl")
+    include("conventions.jl")
 
     include("sphere.jl")
     @reexport using .Sphere
