@@ -1,7 +1,7 @@
 module Pixelizations
 
 export AbstractPixelization, ArbitraryPixelization, HealpixPixelization, RADecPixelization,
-       parse_pixelization, export_pixelization
+       parse_pixelization, export_pixelization, pointing
 
 @static if VERSION < v"1.6.0-DEV.1083"
     using Compat # requires v3.18 for reinterpret(reshape, ...)
@@ -9,7 +9,7 @@ end
 using StaticArrays
 using ..Healpix
 using ..Sphere
-import ..Sphere: latlon, colataz, cartvec
+import ..Sphere: latlon, unsafe_colataz, cartvec
 
 const Vec3{T} = SVector{3,T} where T
 
@@ -253,6 +253,50 @@ function export_pixelization(pix::RADecPixelization)
                             "dec" => collect(pix.dec),
                             "order" => pix.roworder ? "row" : "col"
                            )
+end
+
+"""
+    pointing(pix::AbstractPixelization)
+
+Returns a `Vector` of `SVector{3}` unit-vectors pointing to the centers of the pixels
+described by `pix`.
+"""
+function pointing end
+
+function pointing(pix::ArbitraryPixelization)
+    return pix.rvecs
+end
+
+function pointing(pix::HealpixPixelization)
+    nside = pix.nside
+    pixels = pix.pixels
+    rvec = similar(pixels, Vec3{float(eltype(pixels))})
+    @inbounds for ii in eachindex(pix.pixels)
+        rvec[ii] = Healpix.unsafe_pix2vec(nside, pixels[ii])
+    end
+    return rvec
+end
+
+function pointing(pix::RADecPixelization)
+    n = length(pix.ra) * length(pix.dec)
+    T = eltype(pix.ra)
+    rvec = Vector{Vec3{T}}(undef, n)
+    if pix.roworder
+        kk = 0
+        @inbounds for δ in pix.dec
+            @simd ivdep for λ in pix.ra
+                rvec[kk+=1] = cartvec(unsafe_colataz(δ, λ))
+            end
+        end
+    else
+        kk = 0
+        @inbounds for λ in pix.ra
+            @simd ivdep for δ in pix.dec
+                rvec[kk+=1] = cartvec(unsafe_colataz(δ, λ))
+            end
+        end
+    end
+    return rvec
 end
 
 end
