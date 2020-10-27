@@ -18,9 +18,12 @@ export
     ang2pix, vec2pix,
     UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
+@static if VERSION < v"1.6.0-DEV.292"
+    using Compat # Compat@3.23 for sincospi()
+end
 using Base: @propagate_inbounds
 using StaticArrays
-import ..sincospi, ..unchecked_sqrt
+import ..unchecked_sqrt
 
 """
     const UNSEEN = -1.6375e+30
