@@ -16,25 +16,28 @@ const pixr = Dict{String,Any}(
         )
 # LHS is some very simple indexing scheme
 const pixl = Int64.(collect(1:4))
+const fields = "T"
 
 const base = abspath(joinpath(@__DIR__, ".."))
 
 module TestJLD
     using JLD, SparseArrays
-    import ..R, ..pixr, ..pixl, ..base
+    import ..R, ..fields, ..pixr, ..pixl, ..base
     jldopen(joinpath(base, "obsmat_sparse.jld"), "w") do file
         write(file, "R", R)
         write(file, "pixels_right", pixr)
         write(file, "pixels_left", pixl)
+        write(file, "fields", fields)
     end
 end
 
 module TestJLD2
     using JLD2
-    import ..R, ..pixr, ..pixl, ..base
+    import ..R, ..fields, ..pixr, ..pixl, ..base
     jldopen(joinpath(base, "obsmat_sparse.jld2"), "w") do file
         write(file, "R", R)
         write(file, "pixels_right", pixr)
         write(file, "pixels_left", pixl)
+        write(file, "fields", fields)
     end
 end

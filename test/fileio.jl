@@ -14,6 +14,14 @@ const pixr_ref = Dict{String,Any}(
         "sub" => Dict{String,Any}("extra" => Int8(1))
         )
 const pixl_ref = collect(1:4)
+const meta_ref = (;
+                  fields = "T",
+                  pixels_right = pixr_ref,
+                  pixels_left = pixl_ref
+                 )
+const meta_nothing = map(_ -> nothing, meta_ref)
+const meta_nonexist = map(_ -> "doesntexist", meta_ref)
+
 const pathbase = joinpath(@__DIR__, "testdata")
 
 CMB.Files.READ_OBSMAT_MMAP[] = false
@@ -24,85 +32,80 @@ CMB.Files.READ_OBSMAT_MMAP[] = false
         !isdefined(Main, :JLD) && @eval Main using JLD
         source = joinpath(pathbase, "obsmat_sparse.jld")
 
-        obsmat = read_obsmat(source)
-        @test obsmat.R isa SparseMatrixCSC
-        @test obsmat.R == obsmat_ref
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(source)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
 
         # pixel descriptors are optional so ignore non-existent names
-        obsmat = read_obsmat(source, pixr = "right", pixl = "left")
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nonexist...)
+        @test all(ismissing, meta)
         # can also explicitly say they should not be read
-        obsmat = read_obsmat(source, pixr = nothing, pixl = nothing)
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nothing...)
+        @test all(ismissing, meta)
+
+        # Also valid to explicitly specify not loading the actual matrix (so that the
+        # pixel descriptions can be loaded first for pre-processing, for example)
+        R, meta = read_obsmat(source, name = nothing)
+        @test ismissing(R)
+        @test meta == meta_ref
+        # but it's an error to request a matrix name which doesn't exist or is invalid
+        @test_throws ErrorException read_obsmat(source, name = "R_dne")
     end
 
     @testset "Julia JLD2" begin
         source = joinpath(pathbase, "obsmat_sparse.jld2")
 
-        obsmat = read_obsmat(source)
-        @test obsmat.R isa SparseMatrixCSC
-        @test obsmat.R == obsmat_ref
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(source)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
 
         # pixel descriptors are optional so ignore non-existent names
-        obsmat = read_obsmat(source, pixr = "right", pixl = "left")
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nonexist...)
+        @test all(ismissing, meta)
         # can also explicitly say they should not be read
-        obsmat = read_obsmat(source, pixr = nothing, pixl = nothing)
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nothing...)
+        @test all(ismissing, meta)
+
+        # Also valid to explicitly specify not loading the actual matrix (so that the
+        # pixel descriptions can be loaded first for pre-processing, for example)
+        R, meta = read_obsmat(source, name = nothing)
+        @test ismissing(R)
+        @test meta == meta_ref
+        # but it's an error to request a matrix name which doesn't exist or is invalid
+        @test_throws KeyError read_obsmat(source, name = "R_dne")
     end
 
     @testset "Python h5sparse" begin
         cscpath = joinpath(pathbase, "obsmat_sparse_pycsc.h5")
         csrpath = joinpath(pathbase, "obsmat_sparse_pycsr.h5")
 
-        obsmat = read_obsmat(cscpath)
-        @test obsmat.R isa SparseMatrixCSC
-        @test obsmat.R == obsmat_ref
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(cscpath)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
 
         # pixel descriptors are optional so ignore non-existent names
-        obsmat = read_obsmat(cscpath, pixr = "right", pixl = "left")
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(cscpath; meta_nonexist...)
+        @test all(ismissing, meta)
         # can also explicitly say they should not be read
-        obsmat = read_obsmat(cscpath, pixr = nothing, pixl = nothing)
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(cscpath; meta_nothing...)
+        @test all(ismissing, meta)
 
         # Also valid to explicitly specify not loading the actual matrix (so that the
         # pixel descriptions can be loaded first for pre-processing, for example)
-        obsmat = read_obsmat(cscpath, name = nothing)
-        @test ismissing(obsmat.R)
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(cscpath, name = nothing)
+        @test ismissing(R)
+        @test meta == meta_ref
         # but it's an error to request a matrix name which doesn't exist or is invalid
         @test_throws ErrorException(match"does not exist") read_obsmat(cscpath, name = "R_dne")
         @test_throws ErrorException(match"is not a group") read_obsmat(cscpath, name = "R/indices")
 
-        obsmat = read_obsmat(csrpath)
-        @test obsmat.R isa SparseMatrixCSC
-        @test obsmat.R == obsmat_ref
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(csrpath)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
 
         # Construct variations of a valid matrix to test error conditions
         function testerror(prepfn, testmsg)
@@ -147,43 +150,46 @@ CMB.Files.READ_OBSMAT_MMAP[] = false
     @testset "Matlab" begin
         source = joinpath(pathbase, "obsmat_sparse.mat")
 
-        obsmat = read_obsmat(source)
-        @test obsmat.R isa SparseMatrixCSC
-        @test obsmat.R == obsmat_ref
-
-        @test obsmat.pixr isa Dict
-        @test obsmat.pixr == pixr_ref
-        @test obsmat.pixl isa Vector
-        @test obsmat.pixl == pixl_ref
+        R, meta = read_obsmat(source)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
 
         # pixel descriptors are optional so ignore non-existent names
-        obsmat = read_obsmat(source, pixr = "right", pixl = "left")
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nonexist...)
+        @test all(ismissing, meta)
         # can also explicitly say they should not be read
-        obsmat = read_obsmat(source, pixr = nothing, pixl = nothing)
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(source; meta_nothing...)
+        @test all(ismissing, meta)
+
+        # Also valid to explicitly specify not loading the actual matrix (so that the
+        # pixel descriptions can be loaded first for pre-processing, for example)
+        R, meta = read_obsmat(source, name = nothing)
+        @test ismissing(R)
+        @test meta == meta_ref
+        # but it's an error to request a matrix name which doesn't exist or is invalid
+        @test_throws ErrorException read_obsmat(source, name = "R_dne")
     end
 end
 
 @testset "Writing observing matrices" begin
     mktemp() do path, io
-        write_obsmat(path, obsmat_ref, pixr_ref, pixl_ref)
+        write_obsmat(path, obsmat_ref; meta_ref...)
         flush(io)
         @test HDF5.ishdf5(path)
-        @test read_obsmat(path) == (; R = obsmat_ref, pixr = pixr_ref, pixl = pixl_ref)
+        R, meta = read_obsmat(path)
+        @test R == obsmat_ref
+        @test meta == meta_ref
     end
 
     mktemp() do path, io
-        # write observing matrix file without pixel descriptions
+        # write observing matrix file without metadata
         write_obsmat(path, obsmat_ref)
         flush(io)
         @test HDF5.ishdf5(path)
-        obsmat = read_obsmat(path)
-        @test obsmat.R == obsmat_ref
-        @test ismissing(obsmat.pixr)
-        @test ismissing(obsmat.pixl)
+        R, meta = read_obsmat(path)
+        @test R == obsmat_ref
+        @test all(ismissing, meta)
     end
 end
 
@@ -191,10 +197,10 @@ end
     # Check that the reference matrix is memory mappable. The matrix requires no
     # padding (for either Int32 or Int64 indices).
     mktemp() do path, io
-        write_obsmat(path, obsmat_ref, Int[], Int[])
+        write_obsmat(path, obsmat_ref)
         flush(io)
-        obsmat = read_obsmat(path, mmap = Val(true))
-        @test obsmat.R == obsmat_ref
+        R, meta = read_obsmat(path, mmap = Val(true))
+        @test R == obsmat_ref
     end
 
     # Construct matrix which requires padding --- Int16 pointers for a 6x4 matrix with
@@ -203,10 +209,10 @@ end
     mktemp() do path, io
         R′ = convert(SparseMatrixCSC{Float64,Int16}, obsmat_ref')
         @test sizeof(rowvals(R′)) + sizeof(SparseArrays.getcolptr(R′)) == 20
-        write_obsmat(path, R′, Int[], Int[])
+        write_obsmat(path, R′)
         flush(io)
-        obsmat = read_obsmat(path, mmap = Val(true))
-        @test obsmat.R == R′
+        R, meta = read_obsmat(path, mmap = Val(true))
+        @test R == R′
     end
 
     # Cannot mmap a non-CSC matrix

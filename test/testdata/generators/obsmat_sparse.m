@@ -9,10 +9,11 @@ function obsmat_sparse()
   pixels_right.index = int64(reshape(0:5, [], 1));
   pixels_right.sub.extra = int8(1);
   pixels_left = int64(reshape(1:4, [], 1));
+  fields = 'T';
 
   [fdir,fname,fext] = fileparts(mfilename('fullpath'));
   [pdir,~,~] = fileparts(fdir);
 
   savename = fullfile(pdir, 'obsmat_sparse.mat');
-  save(savename, '-v7.3', 'R', 'pixels_right', 'pixels_left');
+  save(savename, '-v7.3', 'R', 'pixels_right', 'pixels_left', 'fields');
 end

@@ -49,8 +49,9 @@ by the global `Ref` [`READ_OBSMAT_MMAP`](@ref).
 """
 function read_obsmat(file::File{format"HDF5"};
                      name::Union{String,Nothing} = "R",
-                     pixr::Union{String,Nothing} = "pixels_right",
-                     pixl::Union{String,Nothing} = "pixels_left",
+                     fields::Union{String,Nothing} = "fields",
+                     pixels_right::Union{String,Nothing} = "pixels_right",
+                     pixels_left::Union{String,Nothing} = "pixels_left",
                      mmap::Union{Bool,Val{true},Val{false}} = Val(READ_OBSMAT_MMAP[]))
     hfile = h5open(FileIO.filename(file), "r")
     try
@@ -69,12 +70,17 @@ function read_obsmat(file::File{format"HDF5"};
             R = missing
         end
 
-        pixelsr = (pixr !== nothing && exists(hfile, pixr)) ?
-                _read(hfile[pixr]) : missing
-        pixelsl = (pixl !== nothing && exists(hfile, pixl)) ?
-                _read(hfile[pixl]) : missing
-
-        return (; R = R, pixr = pixelsr, pixl = pixelsl)
+        @inline function _missing_read(name)
+            name === nothing && return missing
+            !exists(hfile, name) && return missing
+            return _read(hfile[name])
+        end
+        metadata = (;
+                    fields = _missing_read(fields),
+                    pixels_right = _missing_read(pixels_right),
+                    pixels_left = _missing_read(pixels_left)
+                   )
+        return R, metadata
     finally
         close(hfile)
     end
@@ -195,25 +201,30 @@ else
 end
 
 """
-    write_obsmat(filename::String, obsmat::SparseMatrixCSC, pixr = missing, pixl = missing;
-                 obsmat_name::String = "R", pixr_name::String = "pixels_right",
-                 pixl_name::String = "pixels_left")
+    write_obsmat(filename::String, obsmat::SparseMatrixCSC;
+                 obsmat_name::String = "R",
+                 fields = missing, fields_name::String = "fields",
+                 pixels_right = missing, pixels_right_name::String = "pixels_right",
+                 pixels_left  = missing, pixels_left_name::String  = "pixels_left")
 
 Write an observing matrix `obsmat` to the HDF5 file `filename`. If the file exists, it will
 be overwritten completely (to ensure proper data alignment required for memory mapping),
-otherwise it will be created. Pixelization descriptions `pixr` and `pixl` may also be
+otherwise it will be created.
+
+Additional metadata — pixelization descriptions `pixels_right` and `pixels_left` and an
+annotation of the Stokes field the observing matrix applies to `fields` —  may also be
 provided; for a `missing` value, the description will not be written to disk.
 
-The HDF5 dataset and group names of the observing matrix and pixelization descriptions can
-be changed from their defaults by setting the `obsmat_name`, `pixr_name`, and `pixl_name`
-keywords which effect the `obsmat`, `pixr`, and `pixl` storage locations, respectively.
+The HDF5 dataset and group names of the observing matrix and metadata can
+be changed from their defaults by setting the associated `*_name` keywords which effect.
 
 **See also:** [`read_obsmat`](@ref)
 """
-function write_obsmat(filename, obsmat::SparseMatrixCSC, pixr = missing, pixl = missing;
+function write_obsmat(filename, obsmat::SparseMatrixCSC;
                       obsmat_name::String = "R",
-                      pixr_name::String = "pixels_right",
-                      pixl_name::String = "pixels_left")
+                      fields = missing, fields_name::String = "fields",
+                      pixels_right = missing, pixels_right_name::String = "pixels_right",
+                      pixels_left  = missing, pixels_left_name::String  = "pixels_left")
     indptr  = getcolptr(obsmat)
     indices = rowvals(obsmat)
     data    = nonzeros(obsmat)
@@ -240,14 +251,20 @@ function write_obsmat(filename, obsmat::SparseMatrixCSC, pixr = missing, pixl = 
         a_write(hfile, "creator", "CMB.jl (https://github.com/jmert/CMB.jl)")
         a_write(hfile, "description", "sparse observing matrix")
 
-        # Write the (optional) pixelization information
-        if !ismissing(pixr) && !isnothing(pixr)
-            o_pixr = _write(groot, pixr_name, pixr)
-            a_write(o_pixr, "description", "pixelization of acted-upon map vector (right-hand side of matrix-vector multiplication)")
+        # Write the (optional) metadata
+        if !ismissing(fields) && !isnothing(fields)
+            o_fields = _write(groot, fields_name, fields)
+            a_write(o_fields, "description", "the Stokes fields to which the observing matrix applies")
         end
-        if !ismissing(pixl) && !isnothing(pixl)
-            o_pixl = _write(groot, pixl_name, pixl)
-            a_write(o_pixl, "description", "pixelization of resultant map vector (left-hand side of matrix-vector multiplication)")
+        if !ismissing(pixels_right) && !isnothing(pixels_right)
+            o_pixels_right = _write(groot, pixels_right_name, pixels_right)
+            a_write(o_pixels_right, "description",
+                    "pixelization of acted-upon map vector (right-hand side of matrix-vector multiplication)")
+        end
+        if !ismissing(pixels_left) && !isnothing(pixels_left)
+            o_pixels_left = _write(groot, pixels_left_name, pixels_left)
+            a_write(o_pixels_left, "description",
+                    "pixelization of resultant map vector (left-hand side of matrix-vector multiplication)")
         end
         close(groot)
     end

@@ -72,12 +72,17 @@ For repeated computation, the first format should be preferred due to its suppor
     and MATLAB because the internal data structures use 0-indexed pointers which are
     incompatible with Julia's use of 1-indexing.
 
-The return is a `NamedTuple` with the following fields:
-- `R` — the `SparseMatrixCSC` observing matrix ``\mat R``.
-- `pixr` — a description of the "right-hand side" map pixelization, i.e. the pixelization of
-  a map-vector ``\mat{\hat m}`` for which the product ``\mat R \mat{\hat m}`` is defined.
-- `pixl` — a description of the "left-hand side" map pixelization, i.e. the pixelization of
-  the resultant map-vector ``\mat{\tilde m} = \mat R \mat{\hat m}``.
+The return is a tuple, first the observing matrix ``\mat R`` and second a `NamedTuple`
+of metadata with the following fields:
+
+- `fields` — a description of the Stokes fields for which the observing matrix applies —
+  e.g. the value `"QU"` signals that ``\mat R`` is the block matrix
+  ``[\mat{R_{QQ}} \mat{R_{QU}}; \mat{R_{UQ}} \mat{R_{UU}}]``.
+- `pixels_right` — a description of the "right-hand side" map pixelization, i.e. the
+  pixelization of a map-vector ``\mat{\hat m}`` for which the product
+  ``\mat R \mat{\hat m}`` is defined.
+- `pixels_left` — a description of the "left-hand side" map pixelization, i.e. the
+  pixelization of the resultant map-vector ``\mat{\tilde m} = \mat R \mat{\hat m}``.
 
 The pixelization descriptions are in general data-format and situation specific.
 For the HDF5 backend, the pixelization description may be any "native" `HDF5.jl` data

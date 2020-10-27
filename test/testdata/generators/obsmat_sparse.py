@@ -14,6 +14,7 @@ pixr = {"type": "dummy_pixels",
         "sub": {"extra": 1}
        }
 pixl = np.arange(1, 5, dtype=np.int64)
+fields = "T"
 
 base = path.Path(__file__).resolve().parent.parent
 
@@ -34,6 +35,7 @@ with h5sparse.File(csc_mixed, "w") as f:
             indptr_dtype = np.int64, indices_dtype = np.int32)
     _write_dict_or_any(f, "pixels_right", pixr)
     _write_dict_or_any(f, "pixels_left", pixl)
+    f.create_dataset("fields", data = fields)
 
 # Generate another CSC matrix, but this time force the index types to match.
 csc_uniform = base.joinpath("obsmat_sparse_pycsc_i32i32f64.h5")
@@ -42,6 +44,7 @@ with h5sparse.File(csc_uniform, "w") as f:
             indptr_dtype = np.int32, indices_dtype = np.int32)
     _write_dict_or_any(f, "pixels_right", pixr)
     _write_dict_or_any(f, "pixels_left", pixl)
+    f.create_dataset("fields", data = fields)
 
 # Give the default case a simple name.
 csc_simple = base.joinpath("obsmat_sparse_pycsc.h5")
@@ -53,3 +56,4 @@ with h5sparse.File(base.joinpath("obsmat_sparse_pycsr.h5"), "w") as f:
     f.create_dataset("R", data = sparse.csr_matrix(Rdense))
     _write_dict_or_any(f, "pixels_right", pixr)
     _write_dict_or_any(f, "pixels_left", pixl)
+    f.create_dataset("fields", data = fields)
