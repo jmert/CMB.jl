@@ -10,45 +10,32 @@ import UnixMmap
 export read_obsmat, write_obsmat
 
 """
-    read_obsmat(filename::String; keywords...)
+    R, metadata = read_obsmat(filename::String; keywords...)
 
-Read a sparse observing matrix and the corresponding pixelization descriptors from
-`filename`. The return value is a `NamedTuple` with the following fields:
+Read a sparse observing matrix `R` and the corresponding metadata `metadata` from
+`filename`. The metadata data will include the following fields:
 
-- `R`: the sparse observing matrix ``R``.
-- `pixr`: either `missing` or a description of the "right-hand side" pixelization format
-  of the observing matrix — i.e. the pixelization of a map vector ``v`` for which the
-  matrix-vector multiplication ``R v`` is defined.
-- `pixl`: either `missing` or a description of the "left-hand side" pixelication format
-  of the observing matrix — i.e. the pixelization of a map vector ``w`` which results
-  from the matrix-vector multiplication ``w = R v``.
+- `fields`: a description of the Stokes fields for which the observing matrix applies —
+  e.g. the value "QU" signals that `R` is the block matrix `[R_QQ R_QU; R_UQ R_UU]`.
+- `pixels_right`: a description of the "right-hand side" pixelization format of the
+  observing matrix — i.e. the pixelization of a map vector ``v`` for which the matrix-vector
+  multiplication ``R v`` is defined.
+- `pixels_left`: a description of the "left-hand side" pixelication format of the observing
+  matrix — i.e. the pixelization of a map vector ``w`` which results from the matrix-vector
+  multiplication ``w = R v``.
 
-The pixel descriptions `pixr` and `pixl` are loaded from the datasets named by the keyword
-arguments of the same name, if available. If the named dataset exists, then it is loaded
-and returned. (The data type is format- and situation-specific.) It is not an error for the
-named dataset to not exist, and the field will be returned with the value `missing`.
+The metadata fields are loaded from datasets named by keyword arguments of the same name.
+Any keyword set to `nothing` indicates that the corresponding data should not be loaded.
+The data types are format- and situation-specific. It is not an error for the named dataset
+to not exist, and if the dataset does not exist, the field of the metadata named tuple will
+be filled with the value `missing`.
+
+The observing matrix dataset within the data file is given by the keyword `name` and
+defaults to `"R"`. It is an error for the named dataset to not exist (if not `nothing`).
 
 **See also:** [`write_obsmat`](@ref)
 
 # Extended help
-
-## Keywords
-
-The following keywords identify the specific data structures or fields within the
-given data file that correspond to the observing matrix and pixelization data structures
-or fields, and they are available on all backends.
-Additional keywords may be supported on a backend-specific basis.
-
-- `name`: Name of the observing matrix ``R``. Defaults to `"R"`.
-- `pixr`: Name of the data structure or field describing the right-hand side
-  pixelization format. Defaults to `"pixels_right"`.
-- `pixl`: Name of the data structure or field describing the "left-hand side"
-  pixelization format. Defaults to `"pixels_right"`.
-
-In all cases, the field names may be `nothing` to indicate the corresponding data should
-not be loaded, and the corresponding field in the returned named tuple will have the
-value `missing`. It is an error for `name` to point to a non-existent field, whereas the
-pixel descriptions will silently ignore an invalid name and just return `missing` instead.
 
 ## Backends
 
@@ -92,16 +79,28 @@ function __init__()
         """
         function read_obsmat(file::File{format"JLD"};
                              name::Union{String,Nothing} = "R",
-                             pixr::Union{String,Nothing} = "pixels_right",
-                             pixl::Union{String,Nothing} = "pixels_left")
+                             fields::Union{String,Nothing} = "fields",
+                             pixels_right::Union{String,Nothing} = "pixels_right",
+                             pixels_left::Union{String,Nothing} = "pixels_left")
             hid = JLD.jldopen(FileIO.filename(file))
+            @inline function _missing_read(name)
+                name === nothing && return missing
+                !exists(hid, name) && return missing
+                return read(hid[name])
+            end
             try
-                R = name !== nothing ? read(hid, name) : missing
-                pixelsr = (pixr !== nothing && exists(hid, pixr)) ?
-                        read(hid, pixr) : missing
-                pixelsl = (pixr !== nothing && exists(hid, pixl)) ?
-                        read(hid, pixl) : missing
-                return (; R = R, pixr = pixelsr, pixl = pixelsl)
+                if name === nothing
+                    R = missing
+                else
+                    !exists(hid, name) && error("Error reading /", name)
+                    R = read(hid, name)
+                end
+                metadata = (;
+                            fields = _missing_read(fields),
+                            pixels_right = _missing_read(pixels_right),
+                            pixels_left = _missing_read(pixels_left)
+                           )
+                return R, metadata
             finally
                 close(hid)
             end
@@ -118,16 +117,23 @@ function __init__()
         """
         function read_obsmat(file::File{format"JLD2"};
                              name::Union{String,Nothing} = "R",
-                             pixr::Union{String,Nothing} = "pixels_right",
-                             pixl::Union{String,Nothing} = "pixels_left")
+                             fields::Union{String,Nothing} = "fields",
+                             pixels_right::Union{String,Nothing} = "pixels_right",
+                             pixels_left::Union{String,Nothing} = "pixels_left")
             hid = JLD2.jldopen(FileIO.filename(file))
+            @inline function _missing_read(name)
+                name === nothing && return missing
+                !haskey(hid, name) && return missing
+                return hid[name]
+            end
             try
-                R = name !== nothing ? read(hid, name) : missing
-                pixelsr = (pixr !== nothing && haskey(hid, pixr)) ?
-                        read(hid, pixr) : missing
-                pixelsl = (pixr !== nothing && haskey(hid, pixl)) ?
-                        read(hid, pixl) : missing
-                return (; R = R, pixr = pixelsr, pixl = pixelsl)
+                R = name !== nothing ? hid[name] : missing
+                metadata = (;
+                            fields = _missing_read(fields),
+                            pixels_right = _missing_read(pixels_right),
+                            pixels_left = _missing_read(pixels_left)
+                           )
+                return R, metadata
             finally
                 close(hid)
             end
@@ -166,22 +172,30 @@ function __init__()
         """
         function read_obsmat(file::File{format"MAT"};
                              name::Union{String,Nothing} = "R",
-                             pixr::Union{String,Nothing} = "pixels_right",
-                             pixl::Union{String,Nothing} = "pixels_left")
+                             fields::Union{String,Nothing} = "fields",
+                             pixels_right::Union{String,Nothing} = "pixels_right",
+                             pixels_left::Union{String,Nothing} = "pixels_left")
             hid = matopen(FileIO.filename(file))
+            @inline function _missing_read(name)
+                name === nothing && return missing
+                !exists(hid, name) && return missing
+                return read(hid, name)
+            end
             try
-                R = name !== nothing ? read(hid, name) : missing
-                if pixr !== nothing && exists(hid, pixr)
-                    pixelsr = _mat2vec(read(hid, pixr))
+                if name === nothing
+                    R = missing
                 else
-                    pixelsr = missing
+                    !exists(hid, name) && error("Error reading /", name)
+                    R = read(hid, name)
                 end
-                if pixl !== nothing && exists(hid, pixl)
-                    pixelsl = _mat2vec(read(hid, pixl))
-                else
-                    pixelsl = missing
-                end
-                return (; R = R, pixr = pixelsr, pixl = pixelsl)
+                fields = _missing_read(fields)
+                fields = fields isa Char ? join(fields) : fields
+                metadata = (;
+                            fields = fields,
+                            pixels_right = _mat2vec(_missing_read(pixels_right)),
+                            pixels_left = _mat2vec(_missing_read(pixels_left))
+                           )
+                return R, metadata
             finally
                 close(hid)
             end
