@@ -11,14 +11,18 @@ end
     using SparseArrays
     using CMB: quadprod
     (m, n) = (10, 25)
-    i = 7
+    i, j = 7, 3
     A = sprand(T, m, n, 0.5)
-    b = rand(T, n)
-    Bc = sparse(collect(1:n), fill(i,n), b, n, n)
-    Br = sparse(fill(i,n), collect(1:n), b, n, n)
 
-    @test A * Bc * A' == quadprod(A, b, i, :col)
-    @test @inferred(quadprod(A, b, i, :col)) isa SparseMatrixCSC
-    @test A * Br * A' ≈  quadprod(A, b, i, :row)
-    @test @inferred(quadprod(A, b, i, :row)) isa SparseMatrixCSC
+    # single vector
+    b = rand(T, n)
+    B = sparse(collect(1:n), fill(i,n), b, n, n)
+    @test A * B * A' == quadprod(A, b, i)
+    @test @inferred(quadprod(A, b, i)) isa SparseMatrixCSC{T, Int}
+
+    # block of columns
+    b = rand(T, n, j)
+    B[:,i:i+j-1] .= b
+    @test A * B * A' == quadprod(A, b, i)
+    @test @inferred(quadprod(A, b, i)) isa SparseMatrixCSC{T, Int}
 end
