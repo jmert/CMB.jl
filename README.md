@@ -44,8 +44,8 @@ julia> using CMB
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://jmert.github.io/CMB.jl/dev
 
-[ci-img]: https://github.com/jmert/CMB.jl/actions
-[ci-url]: https://github.com/jmert/CMB.jl/workflows/CI/badge.svg
+[ci-img]: https://github.com/jmert/CMB.jl/workflows/CI/badge.svg
+[ci-url]: https://github.com/jmert/CMB.jl/actions
 
 [codecov-img]: https://codecov.io/gh/jmert/CMB.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/jmert/CMB.jl
