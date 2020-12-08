@@ -56,11 +56,11 @@ function read_obsmat(file::File{format"HDF5"};
     hfile = h5open(FileIO.filename(file), "r")
     try
         if name !== nothing
-            if !exists(hfile, name)
+            if !haskey(hfile, name)
                 error(name, " does not exist in ", HDF5.file(hfile))
             end
             group = hfile[name]
-            if !isa(group, HDF5Group)
+            if !isa(group, HDF5.Group)
                 error(HDF5.name(group), " is not a group in ", HDF5.file(hfile))
             end
 
@@ -72,7 +72,7 @@ function read_obsmat(file::File{format"HDF5"};
 
         @inline function _missing_read(name)
             name === nothing && return missing
-            !exists(hfile, name) && return missing
+            !haskey(hfile, name) && return missing
             return _read(hfile[name])
         end
         metadata = (;
@@ -86,7 +86,7 @@ function read_obsmat(file::File{format"HDF5"};
     end
 end
 
-function _read_obsmat(group::HDF5Group,
+function _read_obsmat(group::HDF5.Group,
                       mmap::Union{Val{true},Val{false}} = Val(READ_OBSMAT_MMAP[]))
     @noinline throw_msg(obj, msg) = error(HDF5.name(obj), " ", msg, " in ", HDF5.file(obj))
     @inline function matchname(names, choices, errmsg)
@@ -98,9 +98,9 @@ function _read_obsmat(group::HDF5Group,
 
     usemmap = mmap === Val{true}()
 
-    meta = attrs(group)
-    attribs = map(lowercase, names(meta))
-    dsetnames = map(lowercase, names(group))
+    meta = attributes(group)
+    attribs = map(lowercase, keys(meta))
+    dsetnames = map(lowercase, keys(group))
 
     formatfld = matchname(FORMAT_ATTR_NAMES, attribs, "does not have a recognized sparse format attribute")
     shapefld  = matchname(SHAPE_ATTR_NAMES,  attribs, "does not have a recognized matrix shape attribute")
@@ -158,40 +158,41 @@ function _read_obsmat(group::HDF5Group,
     return R
 end
 
-function _read(d::Union{HDF5Group,HDF5Dataset})
-    if d isa HDF5Dataset
+function _read(d::Union{HDF5.Group,HDF5.Dataset})
+    if d isa HDF5.Dataset
         return read(d)
     else
-        return Dict{String,Any}(k => _read(d[k]) for k in names(d))
+        return Dict{String,Any}(k => _read(d[k]) for k in keys(d))
     end
 end
 
-function _write(parent::HDF5Group, name::String, d::Any)
+function _write(parent::HDF5.Group, name::String, d::Any)
     if d isa Dict
-        hobj = g_create(parent, name)
+        hobj = create_group(parent, name)
         for (k, v) in d
             _write(hobj, k, v)
         end
     else
-        hobj = d_create(parent, name, datatype(d), dataspace(d))
-        write(hobj, d)
+        dtype = datatype(d)
+        hobj = create_dataset(parent, name, dtype, dataspace(d))
+        write_dataset(hobj, dtype, d)
     end
     return hobj
 end
 
 @static if Sys.isunix()
     # To gain access to the Unix mmap flags, we make our own version `HDF5.readmmap`.
-    function read_mmap(dset::HDF5Dataset)
-        iscontiguous(dset) || error("Cannot mmap discontiguous dataset")
+    function read_mmap(dset::HDF5.Dataset)
+        HDF5.iscontiguous(dset) || error("Cannot mmap discontiguous dataset")
 
-        AT = HDF5.hdf5_to_julia(dset)
-        ismmappable(AT) || error("Cannot mmap datasets of type ", AT)
+        AT = HDF5.get_jl_type(dset)
+        HDF5.ismmappable(AT) || error("Cannot mmap datasets of type ", AT)
         offset = HDF5.h5d_get_offset(dset)
 
         io = open(HDF5.filename(dset), read = true)
 
         flags = READ_OBSMAT_MMAP_FLAGS[]
-        data = UnixMmap.mmap(io, AT, size(dset); offset = offset,
+        data = UnixMmap.mmap(io, Array{AT}, size(dset); offset = offset,
                              flags = flags, prot = UnixMmap.PROT_READ)
         UnixMmap.madvise!(data, UnixMmap.MADV_WILLNEED)
         return data
@@ -233,38 +234,42 @@ function write_obsmat(filename, obsmat::SparseMatrixCSC;
     TV = eltype(data)
     align = max(datatype_alignment.((TI, TV))...)
 
-    h5open(filename, "w", "alignment", (0, align)) do hfile
+    h5open(filename, "w"; alignment = (0, align)) do hfile
         # Write the sparse matrix
-        g = g_create(hfile, obsmat_name)
+        g = create_group(hfile, obsmat_name)
         EARLY = HDF5.H5D_ALLOC_TIME_EARLY
-        d_indptr  = d_create(g, "indptr",  datatype(TI), dataspace(size(indptr)),  "alloc_time", EARLY)
-        d_indices = d_create(g, "indices", datatype(TI), dataspace(size(indices)), "alloc_time", EARLY)
-        d_data    = d_create(g, "data",    datatype(TV), dataspace(size(data)),    "alloc_time", EARLY)
-        write(d_indptr, indptr)
-        write(d_indices, indices)
-        write(d_data, data)
-        a_write(g, "format", "csc")
-        a_write(g, "shape", [size(obsmat)...])
-        a_write(g, "description", "sparse matrix stored in CSC format")
+        g["indptr",  alloc_time = EARLY] = indptr
+        g["indices", alloc_time = EARLY] = indices
+        g["data",    alloc_time = EARLY] = data
+        a = attributes(g)
+        a["format"] = "csc"
+        a["shape"] = [size(obsmat)...]
+        a["description"] = "sparse matrix stored in CSC format"
+        close(g)
 
-        groot = root(hfile)
-        a_write(hfile, "creator", "CMB.jl (https://github.com/jmert/CMB.jl)")
-        a_write(hfile, "description", "sparse observing matrix")
+        groot = HDF5.root(hfile)
+        a = attributes(hfile)
+        a["creator"] = "CMB.jl (https://github.com/jmert/CMB.jl)"
+        a["description"] = "sparse observing matrix"
 
         # Write the (optional) metadata
         if !ismissing(fields) && !isnothing(fields)
             o_fields = _write(groot, fields_name, fields)
-            a_write(o_fields, "description", "the Stokes fields to which the observing matrix applies")
+            a = attributes(o_fields)
+            a["description"] = "the Stokes fields to which the observing matrix applies"
+            close(o_fields)
         end
         if !ismissing(pixels_right) && !isnothing(pixels_right)
             o_pixels_right = _write(groot, pixels_right_name, pixels_right)
-            a_write(o_pixels_right, "description",
-                    "pixelization of acted-upon map vector (right-hand side of matrix-vector multiplication)")
+            a = attributes(o_pixels_right)
+            a["description",] = "pixelization of acted-upon map vector (right-hand side of matrix-vector multiplication)"
+            close(o_pixels_right)
         end
         if !ismissing(pixels_left) && !isnothing(pixels_left)
             o_pixels_left = _write(groot, pixels_left_name, pixels_left)
-            a_write(o_pixels_left, "description",
-                    "pixelization of resultant map vector (left-hand side of matrix-vector multiplication)")
+            a = attributes(o_pixels_left)
+            a["description"] = "pixelization of resultant map vector (left-hand side of matrix-vector multiplication)"
+            close(o_pixels_left)
         end
         close(groot)
     end

@@ -20,6 +20,7 @@ const fields = "T"
 
 const base = abspath(joinpath(@__DIR__, ".."))
 
+#=
 module TestJLD
     using JLD, SparseArrays
     import ..R, ..fields, ..pixr, ..pixl, ..base
@@ -30,6 +31,7 @@ module TestJLD
         write(file, "fields", fields)
     end
 end
+=#
 
 module TestJLD2
     using JLD2
