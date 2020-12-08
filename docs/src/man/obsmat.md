@@ -58,11 +58,8 @@ following formats are supported:
 3. MATLAB save files.
    Requires explicitly loading [`MAT.jl`](https://github.com/JuliaIO/MAT.jl) first.
 
-4. Julia sparse matrices saved to an HDF5 file in the `JLD` format.
-   Requires explicitly loading [`JLD.jl`](https://github.com/JuliaIO/JLD.jl) first.
-
-5. Julia sparse matrices saved to an HDF5 file in the `JLD2` format.
-   Requires explicitly loading [`JLD2.jl`](https://github.com/JuliaIO/JLD.jl) first.
+4. Julia sparse matrices saved to an HDF5 file in the `JLD2` format.
+   Requires explicitly loading [`JLD2.jl`](https://github.com/JuliaIO/JLD2.jl) first.
 
 For repeated computation, the first format should be preferred due to its support for
 [memory mapping](@ref obsmat_mmap) the matrix from disk.[^1]
