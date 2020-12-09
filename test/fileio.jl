@@ -1,4 +1,4 @@
-import HDF5, MAT, JLD2
+import HDF5, MAT, JLD, JLD2
 using SparseArrays
 
 const obsmat_ref = sparse(
@@ -27,6 +27,32 @@ const pathbase = joinpath(@__DIR__, "testdata")
 CMB.Files.READ_OBSMAT_MMAP[] = false
 
 @testset "Reading observing matrices" begin
+    @testset "Julia JLD" begin
+        !isdefined(Main, :SparseArrays) && @eval Main using SparseArrays
+        !isdefined(Main, :JLD) && @eval Main using JLD
+        source = joinpath(pathbase, "obsmat_sparse.jld")
+
+        R, meta = read_obsmat(source)
+        @test R isa SparseMatrixCSC
+        @test R == obsmat_ref
+        @test meta == meta_ref
+
+        # pixel descriptors are optional so ignore non-existent names
+        R, meta = read_obsmat(source; meta_nonexist...)
+        @test all(ismissing, meta)
+        # can also explicitly say they should not be read
+        R, meta = read_obsmat(source; meta_nothing...)
+        @test all(ismissing, meta)
+
+        # Also valid to explicitly specify not loading the actual matrix (so that the
+        # pixel descriptions can be loaded first for pre-processing, for example)
+        R, meta = read_obsmat(source, name = nothing)
+        @test ismissing(R)
+        @test meta == meta_ref
+        # but it's an error to request a matrix name which doesn't exist or is invalid
+        @test_throws ErrorException read_obsmat(source, name = "R_dne")
+    end
+
     @testset "Julia JLD2" begin
         source = joinpath(pathbase, "obsmat_sparse.jld2")
 

@@ -46,14 +46,14 @@ See [`write_obsmat`](@ref) for writing a native HDF5 file to disk.
 Importing observing matrices from the following additional data formats is supported
 via `Requires.jl`, which requires the user to first load the extra backend of choice.
 
-- `JLD2`-flavored HDF5 files with `JLD2.jl`.
+- `JLD` and `JLD2`-flavored HDF5 files with `JLD.jl` and `JLD2.jl`, respectively.
 - MATLAB v5, v6, v7, and v7.3 save files with `MAT.jl`.
 - `scipy.sparse` CSC and CSR matrices saved to HDF5 files with `h5sparse`. This case
   is supported without needing to load any extra packages.
 
 The pixelization descriptions are imported as data format specific types. For instance,
 all formats support loading strings and simple numerical scalars or arrays. Additionally,
-the JLD2 format can load named datasets as arbitrary Julia types, MATLAB structs
+JLD and JLD2 formats can load named datasets as arbitrary Julia types, MATLAB structs
 are deserialized as `Dict`s, and named HDF5 groups are read as (nested) `Dict`s.
 """
 function read_obsmat(filename::String; kws...)
@@ -68,6 +68,44 @@ function __init__()
         READ_OBSMAT_MMAP_FLAGS[] |= UnixMmap.MAP_POPULATE
     end
 
+    @require JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8" begin
+        using .JLD
+        """
+            read_obsmat(file::FileIO.File{format"JLD"}; keywords...)
+
+        Reads an observing matrix and pixelization descriptors from a JLD-formatted HDF5 file.
+        This function is conditionally included via `Requires.jl` and requires the user to
+        `import JLD` or `using JLD` first.
+        """
+        function read_obsmat(file::File{format"JLD"};
+                             name::Union{String,Nothing} = "R",
+                             fields::Union{String,Nothing} = "fields",
+                             pixels_right::Union{String,Nothing} = "pixels_right",
+                             pixels_left::Union{String,Nothing} = "pixels_left")
+            hid = JLD.jldopen(FileIO.filename(file))
+            @inline function _missing_read(name)
+                name === nothing && return missing
+                !exists(hid, name) && return missing
+                return read(hid[name])
+            end
+            try
+                if name === nothing
+                    R = missing
+                else
+                    !exists(hid, name) && error("Error reading /", name)
+                    R = read(hid, name)
+                end
+                metadata = (;
+                            fields = _missing_read(fields),
+                            pixels_right = _missing_read(pixels_right),
+                            pixels_left = _missing_read(pixels_left)
+                           )
+                return R, metadata
+            finally
+                close(hid)
+            end
+        end
+    end
     @require JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819" begin
         using .JLD2
         """

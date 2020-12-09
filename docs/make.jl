@@ -1,6 +1,6 @@
 using Documenter, CMB
 # To get the `@require`d-conditional functions
-import JLD2, MAT
+import JLD, JLD2, MAT
 
 doctest = "--fix"  in ARGS ? :fix :
           "--test" in ARGS ? true : false
