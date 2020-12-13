@@ -4,7 +4,7 @@ export AbstractPixelization, ArbitraryPixelization, HealpixPixelization, RADecPi
        parse_pixelization, export_pixelization, pointing
 
 @static if VERSION < v"1.6.0-DEV.1083"
-    using Compat # Compat@v3.18 for reinterpret(reshape, ...)
+    import Compat # Compat@v3.18 for reinterpret(reshape, ...)
 end
 using StaticArrays
 using ..Healpix

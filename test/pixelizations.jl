@@ -1,5 +1,5 @@
 @static if VERSION < v"1.6.0-DEV.1083"
-    using Compat # requires v3.18 for reinterpret(reshape, ...)
+    import Compat # requires v3.18 for reinterpret(reshape, ...)
 end
 import .Sphere: colataz, cartvec
 import .Pixelizations: Vec3
