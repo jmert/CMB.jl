@@ -19,7 +19,7 @@ export
     UNSEEN, ishealpixok, checkhealpix, InvalidNside, InvalidPixel
 
 @static if VERSION < v"1.6.0-DEV.292"
-    using Compat # Compat@3.23 for sincospi()
+    import Compat: sincospi # Compat@v3.23
 end
 using Base: @propagate_inbounds
 using StaticArrays

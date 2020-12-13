@@ -6,7 +6,9 @@ module SphericalHarmonics
 using ..Legendre
 using FFTW
 using LinearAlgebra: mul!
-import ..cispi
+@static if VERSION < v"1.6.0-DEV.1591"
+    using Compat: cispi # Compat@v3.25
+end
 
 function centered_range(start, stop, length)
     rng = range(start, stop, length=length+1)

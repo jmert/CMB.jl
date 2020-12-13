@@ -1,20 +1,5 @@
-@static if VERSION < v"1.6.0-DEV.292"
-    using Compat # Compat@v3.23 for sincospi()
-end
 using SparseArrays
 using SparseArrays: AbstractSparseMatrix
-
-# COV_EXCL_START
-
-# TODO: When JuliaLang/julia#35792 is merged, replace with explicit version bounds
-@static if isdefined(Base, :cispi)
-    using Base: cispi
-else
-    cispi(z::Real) = complex(reverse(sincospi(z))...)
-    cispi(z::Complex) = ((s, c) = sincospi(z); complex(real(c) - imag(s), imag(c) + real(s)))
-end
-
-# COV_EXCL_STOP
 
 # Version of sqrt() which skips the domain (x < 0) check for the IEEE floating point types.
 # For nonstandard number types, just fall back to a regular sqrt() since eliminating the
