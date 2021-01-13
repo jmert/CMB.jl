@@ -1,7 +1,7 @@
 name = "CMB"
 uuid = "592991c5-7c29-5f04-aea2-6d9f924ef2a1"
 author = ["Justin Willmert <justin@willmert.me>"]
-version = "0.2.5-dev"
+version = "0.2.5"
 
 [deps]
 BitFlags = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
@@ -18,14 +18,15 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UnixMmap = "674b2976-56af-439b-a2b1-837be4a3d087"
 
 [compat]
+BitFlags = "0.1"
 Compat = "3.25"
 FFTW = "1"
 FileIO = "1"
-HDF5 = "0.14.0"
+HDF5 = "0.14, 0.15"
 Legendre = "0.2.1"
-Reexport = "0.2"
+Reexport = "0.2, 1"
 Requires = "1"
-StaticArrays = "0.11, 0.12"
+StaticArrays = "0.11, 0.12, 1"
 UnixMmap = "0.1"
 julia = "1.3"
 

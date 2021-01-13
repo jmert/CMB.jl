@@ -46,8 +46,8 @@ See [`write_obsmat`](@ref) for writing a native HDF5 file to disk.
 Importing observing matrices from the following additional data formats is supported
 via `Requires.jl`, which requires the user to first load the extra backend of choice.
 
-- `JLD` and `JLD2`-flavored HDF5 files with `JLD.jl` and `JLD2.jl`, respectively.
-- MATLAB v5, v6, v7, and v7.3 save files with `MAT.jl`.
+- `JLD` and `JLD2`-flavored HDF5 files with `JLD.jl` (v0.12+) and `JLD2.jl`, respectively.
+- MATLAB v5, v6, v7, and v7.3 save files with `MAT.jl` (v0.10+).
 - `scipy.sparse` CSC and CSR matrices saved to HDF5 files with `h5sparse`. This case
   is supported without needing to load any extra packages.
 
@@ -85,14 +85,14 @@ function __init__()
             hid = JLD.jldopen(FileIO.filename(file))
             @inline function _missing_read(name)
                 name === nothing && return missing
-                !exists(hid, name) && return missing
+                !haskey(hid, name) && return missing
                 return read(hid[name])
             end
             try
                 if name === nothing
                     R = missing
                 else
-                    !exists(hid, name) && error("Error reading /", name)
+                    !haskey(hid, name) && error("Error reading /", name)
                     R = read(hid, name)
                 end
                 metadata = (;
@@ -178,14 +178,14 @@ function __init__()
             hid = matopen(FileIO.filename(file))
             @inline function _missing_read(name)
                 name === nothing && return missing
-                !exists(hid, name) && return missing
+                !haskey(hid, name) && return missing
                 return read(hid, name)
             end
             try
                 if name === nothing
                     R = missing
                 else
-                    !exists(hid, name) && error("Error reading /", name)
+                    !haskey(hid, name) && error("Error reading /", name)
                     R = read(hid, name)
                 end
                 fields = _missing_read(fields)
