@@ -18,6 +18,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UnixMmap = "674b2976-56af-439b-a2b1-837be4a3d087"
 
 [compat]
+BitFlags = "0.1"
 Compat = "3.25"
 FFTW = "1"
 FileIO = "1"
