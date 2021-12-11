@@ -323,7 +323,7 @@ The point on the sphere is given as a unit vector `r`.
     axis (i.e. 0° N, 180° W):
     ```jldoctest
     julia> reckon([0.0, 0.0, 1.0], π/2, 0.0)
-    3-element StaticArrays.SArray{Tuple{3},Float64,1,3} with indices SOneTo(3):
+    3-element StaticArrays.SVector{3, Float64} with indices SOneTo(3):
      -1.0
       0.0
       6.123233995736766e-17

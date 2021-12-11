@@ -52,7 +52,7 @@ julia> latlon(θ, ϕ)                 # colat-az to lat-lon
 (44.97531, -93.23471)
 
 julia> r = cartvec(θ, ϕ)            # colat-az to unit vector
-3-element StaticArrays.SArray{Tuple{3},Float64,1,3} with indices SOneTo(3):
+3-element StaticArrays.SVector{3, Float64} with indices SOneTo(3):
  -0.03991664732478908
  -0.7062843499648845
   0.7068020078218715
@@ -148,7 +148,7 @@ Given the angular distance `σ` and bearing `α₁` from before, we can reconstr
 julia> using LinearAlgebra: dot
 
 julia> reckon(r₁, σ, α₁)
-3-element StaticArrays.SArray{Tuple{3},Float64,1,3} with indices SOneTo(3):
+3-element StaticArrays.SVector{3, Float64} with indices SOneTo(3):
  0.3289121239720345
  0.11296169792358199
  0.937580113647056
