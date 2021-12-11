@@ -99,11 +99,11 @@ the angle ``\alpha_{ij}`` in Figure 1.
 <figcaption style="font-size:smaller; text-align:left; font-style: normal;">
 ```
 **Figure 1:** Example showing the angular separation ``\sigma_{ij}`` and bearing
-angle ``\alpha_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The great
+angle ``\alpha_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The green
 arc indicates the great circle path passing between both coordinates, and the
 blue arc is the meridian which passes through ``r_i``. Only the bearing angle
 at ``r_i`` is shown; a second bearing angle ``\alpha_{ji}`` at ``r_j`` also exists
-(and is in general different that ``\alpha_{ij}``) but is not shown.
+(and is in general different than ``\alpha_{ij}``) but is not shown.
 The additional vectors ``\hat{n}_i^*`` and ``\hat{n}_{ij}`` are used to
 derive the distance and bearing angle calculations and can be ignored.
 
