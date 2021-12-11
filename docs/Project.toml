@@ -7,4 +7,4 @@ JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
 
 [compat]
-Documenter = "0.25.2"
+Documenter = "0.25.2, 0.26, 0.27"

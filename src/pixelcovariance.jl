@@ -7,8 +7,8 @@ import ..Sphere: bearing2, cosdistance
 import ..Healpix: pix2vec
 import ..unchecked_sqrt
 
-using Legendre
-using Legendre: unsafe_legendre!
+import ..Legendre
+using ..Legendre
 using StaticArrays
 
 import Base: @propagate_inbounds, checkindex, checkbounds_indices, OneTo, Slice
@@ -140,7 +140,7 @@ end
     fill!(@view(F[Is..., OneTo(2), :]), zero(T))
 
     # Fill with the P^2_ℓ(x) terms initially
-    unsafe_legendre!(legwork, P, lmax, 2, x)
+    Legendre.unsafe_legendre!(legwork, P, lmax, 2, x)
     # Calculate the F12 and F22 terms using P^2_ℓ
     for ll in 2:lmax
         η = coeff_η(T, ll)
@@ -175,7 +175,7 @@ end
         end
     end
     # Replace with P^0_ℓ(x) terms
-    unsafe_legendre!(legwork, P, lmax, 0, x)
+    Legendre.unsafe_legendre!(legwork, P, lmax, 0, x)
     # Then calculate the F10 terms
     for ll in 2:lmax
         lm1 = convert(T, ll) - one(T)

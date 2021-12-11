@@ -71,7 +71,7 @@ In this simplified case, the 6 unique covariances are
 for ``z_{ij} = \cos(\sigma_{ij})`` and some fiducial spectrum ``C_\ell``.
 The polarization weighting functions are simple functions of the ``P_\ell`` and
 ``P_\ell^2``
-[associated Legendre polynomials](https://jmert.github.io/Legendre.jl/stable/),
+[associated Legendre polynomials](https://jmert.github.io/AssociatedLegendrePolynomials.jl/stable/),
 ```math
 \begin{align}
     \covF{00} &\equiv (2\ell + 1) P_\ell(z_{ij})
