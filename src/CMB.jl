@@ -1,5 +1,6 @@
 module CMB
     import Reexport.@reexport
+    import Compat.@compat # Compat@v3.21 for @compat import Mod as NewName
 
     include("numerics.jl")
     include("conventions.jl")
@@ -7,7 +8,10 @@ module CMB
     include("sphere.jl")
     @reexport using .Sphere
 
-    @reexport using Legendre
+    @compat import AssociatedLegendrePolynomials as Legendre
+    @reexport using .Legendre
+    export Legendre
+
     include("sphericalharmonics.jl")
     @reexport using .SphericalHarmonics
 
