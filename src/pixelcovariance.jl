@@ -295,14 +295,18 @@ function PixelCovWork{T}(lmax::Int, norm::AbstractLegendreNorm = LegendreUnitNor
 end
 Base.eltype(::PixelCovWork{T}) where {T} = T
 
-function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
+function unsafe_pixelcovariance!(norm::AbstractLegendreNorm,
                                  cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
                                  fields::Field, polconv::Convention = IAUConv)
-    work = workornorm isa PixelCovWork ? workornorm : begin
-            T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
-            lmax = size(Cl, 1) - 1
-            PixelCovWork{T}(lmax, workornorm)
-        end
+    T = promote_type(eltype(norm), eltype(cov), eltype(first(pix)))
+    lmax = size(Cl, 1) - 1
+    work = PixelCovWork{T}(lmax, norm)
+    unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, fields, polconv)
+    return cov
+end
+function unsafe_pixelcovariance!(work::PixelCovWork,
+                                 cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
+                                 fields::Field, polconv::Convention = IAUConv)
     @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields, polconv)
     return cov
 end
