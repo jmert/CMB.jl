@@ -108,12 +108,8 @@ function unsafe_Fweights!(workornorm::Union{AbstractLegendreNorm,FweightsWork}, 
         x′ = x
         F′ = F
     end
-    if workornorm isa AbstractLegendreNorm
-        work = FweightsWork(workornorm, F′, x′)
-        @inbounds _Fweights_impl!(work, F′, lmax, x′)
-    else
-        @inbounds _Fweights_impl!(workornorm, F′, lmax, x′)
-    end
+    work = workornorm isa FweightsWork ? workornorm : FweightsWork(workornorm, F′, x′)
+    @inbounds _Fweights_impl!(work, F′, lmax, x′)
     return F
 end
 
@@ -240,7 +236,7 @@ function pixelcovariance(pix::PointsVector, Cl::AbstractMatrix, fields::Field,
     cov = zeros(T, npix, npix, field_count(fields))
     lmax = size(Cl, 1) - 1
     work = PixelCovWork{T}(lmax, LegendreUnitNorm())
-    @inbounds unsafe_pixelcovariance!(work, cov, pix, OneTo(npix), Cl, fields, polconv)
+    unsafe_pixelcovariance!(work, cov, pix, OneTo(npix), Cl, fields, polconv)
 
     nr, nc = length(frows), length(fcols)
     return reshape(permutedims(reshape(cov, npix, npix, nr, nc), (1,3,2,4)), nr*npix, nc*npix)
@@ -302,14 +298,12 @@ Base.eltype(::PixelCovWork{T}) where {T} = T
 function unsafe_pixelcovariance!(workornorm::Union{AbstractLegendreNorm,PixelCovWork},
                                  cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
                                  fields::Field, polconv::Convention = IAUConv)
-    if workornorm isa AbstractLegendreNorm
-        T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
-        lmax = size(Cl, 1) - 1
-        work = PixelCovWork{T}(lmax, workornorm)
-        @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields, polconv)
-    else
-        @inbounds _pixelcovariance_impl!(workornorm, cov, pix, pixind, Cl, fields, polconv)
-    end
+    work = workornorm isa PixelCovWork ? workornorm : begin
+            T = promote_type(eltype(workornorm), eltype(cov), eltype(first(pix)))
+            lmax = size(Cl, 1) - 1
+            PixelCovWork{T}(lmax, workornorm)
+        end
+    @inbounds _pixelcovariance_impl!(work, cov, pix, pixind, Cl, fields, polconv)
     return cov
 end
 
