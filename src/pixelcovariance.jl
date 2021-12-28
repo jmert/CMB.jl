@@ -120,7 +120,7 @@ end
 @propagate_inbounds function _Fweights_impl!(work::FweightsWork, F, lmax, z)
     # Use a local isapprox function instead of Base.isapprox. We get far fewer instructions with
     # this implementation. (Probably related to the keyword-argument penalty?)
-    local @inline ≈(x, y) = @fastmath x==y || abs(x-y) < eps(one(y))
+    local @inline ≈(x, y) = x==y || abs(x-y) < eps(one(y))
 
     P  = work.P
     x  = work.x
