@@ -214,15 +214,12 @@ end
         # Check equality before allocations to ensure the methods have been compiled.
         @test unsafe_pixelcovariance!(norm, copy(cov), pix, pixind, Cl, allfields) ==
                 unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, allfields)
-
         # Lower bound on allocations required
         nb  = sizeof(eltype(first(pix))) * nbufs_FweightsWork
         nb += sizeof(eltype(first(pix))) * 4 * (lmax + 1)
         @test nb <= @allocated unsafe_pixelcovariance!(norm, cov, pix, pixind, Cl, allfields)
-
-        # Currently broken, even on v1.5 --- haven't figured out where the allocations are
-        # happening
-        @test_broken nb > @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, allfields)
+        # Pre-allocated version doesn't allocate
+        @test 0 == @allocated unsafe_pixelcovariance!(work, cov, pix, pixind, Cl, allfields)
     end
 
     @testset "Positive-definite covariance" begin
