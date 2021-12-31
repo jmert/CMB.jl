@@ -284,9 +284,9 @@ function pixelcovariance!(cov, pix::PointsVector, pixind, Cl::AbstractMatrix,
     return unsafe_pixelcovariance!(LegendreUnitNorm(), cov, pix, pixind, Cl, fields, polconv)
 end
 
-struct PixelCovWork{T,N,V}
+struct PixelCovWork{T,W<:FweightsWork{T}}
     F::Matrix{T}
-    Fwork::FweightsWork{T,N,V}
+    Fwork::W
 end
 function PixelCovWork{T}(lmax::Int, norm::AbstractLegendreNorm = LegendreUnitNorm()) where {T}
     F = Matrix{T}(undef, lmax+1, 4)
