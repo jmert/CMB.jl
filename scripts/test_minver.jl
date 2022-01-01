@@ -10,13 +10,20 @@ end
 function minimize_versions()
     # Read project file and extract the compat entries
     proj = parsefile(joinpath(@__DIR__, "..", "Project.toml"))
-    compat = proj["compat"]
+    deps = get(proj, "deps", Dict{String,Any}())
+    compat = get(proj, "compat", Dict{String,Any}())
+    extras = get(proj, "extras", Dict{String,Any}())
 
     # Transform the semver strings to Pkg's VersionSpec, and then from those extract the
     # minimum bound and set each key to the minimum string.
     map!(semver_spec, values(compat))
     for (proj, vers) in compat
         isempty(vers.ranges) && continue
+        if !(proj in keys(deps)) && (proj in keys(extras))
+            @info "Skipping extra compat bound for package $proj"
+            delete!(compat, proj)
+            continue
+        end
         v = VersionRange(vers.ranges[1].lower)
         compat[proj] = sprint(print, v)
     end
