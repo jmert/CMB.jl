@@ -42,8 +42,8 @@ be imported into a scope by `using` the parent module (e.g. to access all of the
 covariance field constants, use `using CMB.PixelCovariance.CovarianceFields`.
 
 ```@docs
-CMB.PixelCovariance.PolarizationConventions.Convention
-CMB.PixelCovariance.CovarianceFields.Field
-CMB.PixelCovariance.CovarianceFields.TPol
-CMB.PixelCovariance.CovarianceFields.Pol
+CMB.PolarizationConventions.Convention
+CMB.StokesCrossFields.Field
+CMB.StokesCrossFields.TPol
+CMB.StokesCrossFields.Pol
 ```
