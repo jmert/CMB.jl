@@ -507,7 +507,7 @@ Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length 
     z = r[3]
     ϕ = atan(r[2], r[1])
     ϕ += ifelse(ϕ < zero(ϕ), 2oftype(ϕ, π), zero(ϕ))
-    return unsafe_zphi2pix(nside, z, ϕ)
+    return unsafe_zphi2pix(nside, promote(z, ϕ)...)
 end
 
 """
