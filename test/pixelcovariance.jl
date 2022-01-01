@@ -387,9 +387,27 @@ end
         off  = first(axes(pix′, 1)) - first(axes(pix, 1))
         cov′ = reshape(copy(cov), ax, 9)
 
+        # Change of axes should have no impact on the numerical result, but with at least
+        # v1.7 we observe this test is sensitive to whether code coverage tracking is
+        # enabled or not.
         pixelcovariance!(cov, pix, pixind, Cl, allfields)
         pixelcovariance!(cov′, pix′, pixind+off, Cl, allfields)
-        @test cov == parent(cov′)
+        if Base.JLOptions().code_coverage == 0
+            # Code coverage not enabled — require equality
+            @test cov == parent(cov′)
+        else
+            # Code coverage in effect
+            if cov == parent(cov′)
+                # Not impacted, so record normal sucess
+                @test cov == parent(cov′)
+            else
+                # Impacted, so no check for at least approximate equality.
+                # (Include equality case as a broken test to signal that this branch was
+                # taken.)
+                @test_broken cov == parent(cov′)
+                @test cov ≈ parent(cov′)
+            end
+        end
 
         # First dimension axis of cov and pix must agree
         @test_throws DimensionMismatch pixelcovariance!(cov′, pix, pixind, Cl, allfields)
