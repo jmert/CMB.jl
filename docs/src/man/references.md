@@ -41,11 +41,11 @@
     to work. Instead, the implementation here is derived from the system of equations:
     ```math
       \begin{align*}
-        z_p(ϕ, k_p) &= \frac{2}{3} - \frac{2k_p}{3N_{\mathrm{side}}}
-            + \frac{8ϕ}{3π}
+        z_p(\phi, k_p) &= \frac{2}{3} - \frac{2k_p}{3N_{\mathrm{side}}}
+            + \frac{8\phi}{3\pi}
         \\
-        z_m(ϕ, k_m) &= -\frac{2}{3} + \frac{2k_m}{3N_{\mathrm{side}}}
-            - \frac{8ϕ}{3π}
+        z_m(\phi, k_m) &= -\frac{2}{3} + \frac{2k_m}{3N_{\mathrm{side}}}
+            - \frac{8\phi}{3\pi}
       \end{align*}
     ```
 
