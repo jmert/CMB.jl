@@ -182,8 +182,9 @@ end
         @test fn(4, BigInt(0)) == fn(BigInt(4), BigInt(0))
         @test fn(BigInt(4), 0) == fn(BigInt(4), BigInt(0))
     end
-    @test ang2pix(4, 1f0, 1e0) == ang2pix(4, 1e0, 1e0)
-    @test ang2pix(4, 1e0, 1f0) == ang2pix(4, 1e0, 1e0)
+    @test ang2pix(4, 1f0, 1e0) === ang2pix(4, 1e0, 1e0)
+    @test ang2pix(4, 1e0, 1f0) === ang2pix(4, 1e0, 1e0)
+    @test vec2pix(4, Int[1, 0, 0]) === vec2pix(4, Float64[1, 0, 0])
 end
 
 @testset "Accuracy of pix2vec" begin
