@@ -23,14 +23,14 @@ This library is **not** registered in Julia's [General registry][General.jl],
 so the package must be installed either by cloning it directly:
 
 ```
-(@v1.4) pkg> add https://github.com/jmert/CMB.jl
+(@v1.7) pkg> add https://github.com/jmert/CMB.jl
 ```
 
 or by making use of my [personal registry][Registry.jl]:
 
 ```
-(@v1.4) pkg> registry add https://github.com/jmert/Registry.jl
-(@v1.4) pkg> add CMB
+(@v1.7) pkg> registry add https://github.com/jmert/Registry.jl
+(@v1.7) pkg> add CMB
 ```
 
 After installing, just load like any other Julia package:
