@@ -141,9 +141,9 @@ function __init__()
     end
 
     @require MAT = "23992714-dd62-5051-b70f-ba57cb901cac" begin
-        # FileIO doesn't define a MAT format, so do it ourselves
-        add_format(format"MAT", FileIO.detecthdf5, [".mat"], [:MAT])
         using .MAT
+        # FileIO doesn't define a MAT format, so do it ourselves
+        add_format(format"MAT", FileIO.detecthdf5, [".mat"], [MAT])
 
         # Because Matlab doesn't have vectors, we're forced to try to infer a vector
         # from a matrix based on its size. ಠ_ಠ Gahh!!!
