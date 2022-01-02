@@ -395,18 +395,15 @@ end
         if Base.JLOptions().code_coverage == 0
             # Code coverage not enabled — require equality
             @test cov == parent(cov′)
+        elseif cov == parent(cov′)
+            # Code coverage in effect, but not impacted so record as normal success
+            @test cov == parent(cov′)
         else
-            # Code coverage in effect
-            if cov == parent(cov′)
-                # Not impacted, so record normal sucess
-                @test cov == parent(cov′)
-            else
-                # Impacted, so no check for at least approximate equality.
-                # (Include equality case as a broken test to signal that this branch was
-                # taken.)
-                @test_broken cov == parent(cov′)
-                @test cov ≈ parent(cov′)
-            end
+            # Impacted, so now check for at least approximate equality.
+            # (Include equality case as a broken test to signal that this branch was
+            # taken.)
+            @test_broken cov == parent(cov′)
+            @test cov ≈ parent(cov′)
         end
 
         # First dimension axis of cov and pix must agree
