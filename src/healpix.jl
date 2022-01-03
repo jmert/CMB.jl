@@ -291,8 +291,8 @@ pix2ringidx(nside, p) = pix2ringidx(promote(nside, p)...)
 """
     z = pix2z(nside, p)
 
-Computes the cosine of the colatitude `z` for the given pixel `p`, where `nside` is the
-Nside resolution factor.
+Computes the cosine of the colatitude ``z = \\cos(θ)`` for the given pixel `p`, where
+`nside` is the Nside resolution factor.
 """
 function pix2z(nside::I, p::I) where I<:Integer
     checkhealpix(nside, p)
@@ -301,7 +301,7 @@ end
 pix2z(nside, p) = pix2z(promote(nside, p)...)
 
 """
-    (θ,ϕ) = unsafe_pix2z(nside, p)
+    z = unsafe_pix2z(nside, p)
 
 Like [`pix2z`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
@@ -345,13 +345,13 @@ end
 """
     θ = pix2theta(nside, p)
 
-Computes the colatitude `θ` for the given pixel `p`, where `nside` is the Nside resolution
+Computes the colatitude ``θ`` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
 pix2theta(nside, p) = acos(pix2z(promote(nside, p)...))
 
 """
-    (θ,ϕ) = unsafe_pix2theta(nside, p)
+    θ = unsafe_pix2theta(nside, p)
 
 Like [`pix2theta`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
@@ -361,7 +361,7 @@ unsafe_pix2theta(nside, p) = acos(unsafe_pix2z(promote(nside, p)...))
 """
     ϕ = pix2phi(nside, p)
 
-Computes the azimuth `ϕ` for the given pixel `p`, where `nside` is the Nside resolution
+Computes the azimuth ``ϕ`` for the given pixel `p`, where `nside` is the Nside resolution
 factor.
 """
 function pix2phi(nside::I, p::I) where I<:Integer
@@ -371,7 +371,7 @@ end
 pix2phi(nside, p) = pix2phi(promote(nside, p)...)
 
 """
-    (θ,ϕ) = unsafe_pix2phi(nside, p)
+    ϕ = unsafe_pix2phi(nside, p)
 
 Like [`pix2phi`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
@@ -409,7 +409,7 @@ end
 """
     (θ,ϕ) = pix2ang(nside, p)
 
-Computes the colatitude and azimuth pair `(θ,ϕ)` for the given pixel `p`, where
+Computes the colatitude and azimuth pair ``(θ,ϕ)`` for the given pixel `p`, where
 `nside` is the Nside resolution factor.
 """
 function pix2ang(nside::I, p::I) where {I<:Integer}
@@ -433,7 +433,7 @@ end
 """
     r = pix2vec(nside, p)
 
-Computes the unit vector `r` pointing to the pixel center of the given pixel `p`, where
+Computes the unit vector ``r`` pointing to the pixel center of the given pixel `p`, where
 `nside` is the Nside resolution factor.
 """
 function pix2vec(nside::I, p::I) where I<:Integer
@@ -443,7 +443,7 @@ end
 pix2vec(nside, p) = pix2vec(promote(nside, p)...)
 
 """
-    (θ,ϕ) = unsafe_pix2vec(nside, p)
+    r = unsafe_pix2vec(nside, p)
 
 Like [`pix2vec`](@ref) but does not call [`checkhealpix`](@ref) to check `nside` and pixel
 index validity.
@@ -465,7 +465,7 @@ end
     p = ang2pix(nside, θ, ϕ)
 
 Computes the HEALPix pixel index `p` which contains the point ``(θ,ϕ)`` given by the
-colatitude `θ` and azimuth `ϕ`, where `nside` is the Nside resolution factor.
+colatitude ``θ`` and azimuth ``ϕ``, where `nside` is the Nside resolution factor.
 """
 function ang2pix(nside::Integer, θ::F, ϕ::F) where {F}
     checkhealpix(nside)
@@ -479,7 +479,7 @@ ang2pix(nside::Integer, θ, ϕ) = ang2pix(nside, promote(θ, ϕ)...)
     p = vec2pix(nside, r)
 
 Computes the HEALPix pixel index `p` which contains the point at the end of the unit
-vector `r`, where `nside` is the Nside resolution factor.
+vector ``r``, where `nside` is the Nside resolution factor.
 """
 function vec2pix(nside::Integer, r)
     checkhealpix(nside)
@@ -491,7 +491,7 @@ end
     p = unsafe_ang2pix(nside, θ, ϕ)
 
 Like [`ang2pix`](@ref) but neither calls [`checkhealpix`](@ref) to check the validity of
-`nside` nor checks the domain of the spherical coordinates `θ` and `ϕ`.
+`nside` nor checks the domain of the spherical coordinates ``θ`` and ``ϕ``.
 """
 function unsafe_ang2pix(nside::Integer, θ, ϕ)
     z = cos(θ)
@@ -501,7 +501,7 @@ end
 """
     p = unsafe_vec2pix(nside, r)
 
-Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length of `r`.
+Like [`vec2pix`](@ref) but does not check the validity of the `nside` or length of ``r``.
 """
 @propagate_inbounds function unsafe_vec2pix(nside::Integer, r)
     z = r[3]
@@ -513,7 +513,8 @@ end
 """
     p = unsafe_zphi2pix(nside, z, ϕ)
 
-Like [`unsafe_ang2pix`](@ref) but uses the value ``z = \\cos(θ)`` instead.
+Like [`unsafe_ang2pix`](@ref) but takes the value ``z = \\cos(θ)`` instead of the colatitude
+``θ``.
 """
 function unsafe_zphi2pix(nside::I, z::F, ϕ::F) where {I<:Integer, F}
     z′ = abs(z)

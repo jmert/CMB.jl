@@ -44,7 +44,7 @@ const ẑ = SVector(0, 0, 1)
     r = cartvec(θ, ϕ)
     r = cartvec((θ, ϕ))
 
-Converts the colatitude-azimuth pair `(θ, ϕ)` to a Cartesian unit vector `r`.
+Converts the colatitude-azimuth pair ``(θ, ϕ)`` to a Cartesian unit vector ``r``.
 """
 function cartvec(θ, ϕ)
     sθ, cθ = sincos(float(θ))
@@ -56,7 +56,7 @@ end
 """
     θ, ϕ = colataz(r)
 
-Converts the Cartesian unit vector `r` to a colatitude-azimuth pair `(θ, ϕ)` in radians.
+Converts the Cartesian unit vector ``r`` to a colatitude-azimuth pair ``(θ, ϕ)`` in radians.
 """
 function colataz(r::SVector{3})
     θ = acos(r[3])
@@ -68,8 +68,8 @@ end
     θ, ϕ = colataz(δ, λ)
     θ, ϕ = colataz((δ, λ))
 
-Converts the latitude-longitude pair `(δ, λ)` in degrees to colatitude-azimuth `(θ, ϕ)` in
-radians.
+Converts the latitude-longitude pair ``(δ, λ)`` in degrees to colatitude-azimuth ``(θ, ϕ)``
+in radians.
 """
 function colataz(δ, λ)
     θ, ϕ = unsafe_colataz(δ, λ)
@@ -88,7 +88,7 @@ end
 """
     δ, λ = latlon(r)
 
-Converts the Cartesian unit vector `r` to a latitude-longitude pair `(δ, λ)` in degrees.
+Converts the Cartesian unit vector ``r`` to a latitude-longitude pair ``(δ, λ)`` in degrees.
 """
 function latlon(r::SVector{3})
     δ = asind(r[3])
@@ -100,8 +100,8 @@ end
     δ, λ = latlon(θ, ϕ)
     δ, λ = latlon((θ, ϕ))
 
-Converts the colatitude-azimuth pair `(θ, ϕ)` in radians to latitude-longitude `(δ, λ)` in
-radians.
+Converts the colatitude-azimuth pair ``(θ, ϕ)`` in radians to latitude-longitude ``(δ, λ)``
+in radians.
 """
 function latlon(θ, ϕ)
     θ′, ϕ′ = promote(float(θ), float(ϕ))
@@ -303,8 +303,8 @@ function cosdistance(r₁::AbstractVector, r₂::AbstractVector)
 end
 
 """
-Calculates a position on the sphere a given [`distance`](@ref) (`σ`, in radians) and
-relative [`bearing`](@ref) angle (`α`, in radians) away from a given point (measuring the
+Calculates a position on the sphere a given [`distance`](@ref) (``σ``, in radians) and
+relative [`bearing`](@ref) angle (``α``, in radians) away from a given point (measuring the
 eastward-of-north orientation of the great circle connecting the source and destination
 points with respect to the merdian passing through the source).
 """
@@ -313,11 +313,11 @@ function reckon end
 """
     r′ = reckon(r::AbstractVector, σ, α)
 
-The point on the sphere is given as a unit vector `r`.
+The point on the sphere is given as a unit vector ``r``.
 
 !!! note
-    When `r` points to either the north or south pole, the meridian is defined to be
-    **prime meridian** and the bearing angle `α` is oriented with respect to it.
+    When ``r`` points to either the north or south pole, the meridian is defined to be
+    **prime meridian** and the bearing angle ``α`` is oriented with respect to it.
 
     For example, moving a distance ``π/2`` with no bearing goes to the negative ``x``
     axis (i.e. 0° N, 180° W):
@@ -349,12 +349,12 @@ end
 """
     (θ′, ϕ′) = reckon(θ, ϕ, σ, α)
 
-The point on the sphere is given by the colatitude-azimuth pair (`θ`, `ϕ`), both given
+The point on the sphere is given by the colatitude-azimuth pair ``(θ, ϕ)``, both given
 in radians.
 
 !!! note
-    When `r` points to either the north or south pole, the meridian is defined to be
-    **`θ` meridian**, and the bearing angle `α` is oriented with respect to it.
+    When ``r`` points to either the north or south pole, the meridian is defined to be
+    **``θ`` meridian**, and the bearing angle ``α`` is oriented with respect to it.
 
     For example, moving a distance ``π/2`` with no bearing goes to the equator, with the
     longitude dependent on the input longitude:
