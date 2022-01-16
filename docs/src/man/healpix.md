@@ -17,7 +17,17 @@ to the official C++ library or try using the Python
 [PyCall.jl](https://github.com/JuliaPy/PyCall.jl).
 Additionally, the [Healpix.jl](https://github.com/ziotom78/Healpix.jl) package aims for a
 complete native Julia reimplementation.
-``\newcommand{\Nside}{N_\mathrm{side}}``
+
+```@raw latex
+\providecommand{\Nside}{N_\mathrm{side}}
+```
+```@raw html
+<div style="display:none;">
+\(
+\newcommand{\Nside}{N_\mathrm{side}}
+\)
+</div>
+```
 
 ## Basic pixelization properties
 

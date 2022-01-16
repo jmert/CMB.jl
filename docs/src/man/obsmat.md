@@ -5,14 +5,16 @@ Pages = ["obsmat.md"]
 Depth = 2
 ```
 
+```@raw latex
+\providecommand{\mat}[1]{\symbf{#1}}
+\providecommand{\expv}[1]{\left\langle #1\right\rangle}
+```
 ```@raw html
 <div style="display:none;">
-```
-```math
-\newcommand\mat[1]{\mathbf{#1}}
-\newcommand\expv[1]{\left\langle #1\right\rangle}
-```
-```@raw html
+\(
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\expv}[1]{\left\langle #1\right\rangle}
+\)
 </div>
 ```
 
