@@ -91,13 +91,7 @@ choice is the bearing angle[^1]. It measures the angle between the meridian
 (at one of the points) and the great circle connecting the two, as shown by
 the angle ``\alpha_{ij}`` in Figure 1.
 
-```@raw html
-<figure>
-```
-![sphere angles](sphereangles.svg)
-```@raw html
-<figcaption style="font-size:smaller; text-align:left; font-style: normal;">
-```
+```@figure "sphereangles.svg"; alt = "Shows angles between great circles and meridian between two points"
 **Figure 1:** Example showing the angular separation ``\sigma_{ij}`` and bearing
 angle ``\alpha_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The green
 arc indicates the great circle path passing between both coordinates, and the
@@ -108,9 +102,6 @@ The additional vectors ``\hat{n}_i^*`` and ``\hat{n}_{ij}`` are used to
 derive the distance and bearing angle calculations and can be ignored.
 
 *The figure is reproduced from Appendix E of [J. Willmert](@ref bib-bicepkeck).*
-```@raw html
-</figcaption>
-</figure>
 ```
 
 The [`bearing`](@ref bearing) function calculates the bearing angle at the

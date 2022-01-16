@@ -5,6 +5,7 @@ HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [compat]
 Documenter = "0.25.2, 0.26, 0.27"
