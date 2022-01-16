@@ -34,19 +34,19 @@
   - Erratum: The equatorial-belt longitude ``\phi`` equation (Eq 9) should have the
     ``+1`` outside the modulus:
     ```math
-      s = (i - N_\mathrm{side}) \operatorname{mod} 2 + 1
+    s = (i - N_\mathrm{side}) \operatorname{mod} 2 + 1
     ```
 
   - Erratum: Equation 22 differs in signs from equations A2–A3, and neither could be made
     to work. Instead, the implementation here is derived from the system of equations:
     ```math
-      \begin{align*}
+    \begin{align*}
         z_p(\phi, k_p) &= \frac{2}{3} - \frac{2k_p}{3N_{\mathrm{side}}}
             + \frac{8\phi}{3\pi}
         \\
         z_m(\phi, k_m) &= -\frac{2}{3} + \frac{2k_m}{3N_{\mathrm{side}}}
             - \frac{8\phi}{3\pi}
-      \end{align*}
+    \end{align*}
     ```
 
 ### [Pixel Covariance](@id bib-pixelcovariance)

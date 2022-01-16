@@ -16,10 +16,24 @@ Depth = 2
 The following definitions are a lightly-modified reproduction of Appendix A
 of [Tegmark & Oliveira-Costa (2001)](@ref bib-pixelcovariance).
 
+```@raw latex
+\providecommand{\mat}[1]{\symbf{#1}}
+\providecommand{\expv}[1]{\left\langle #1\right\rangle}
+\providecommand{\covF}[1]{F_\ell^{#1}(z_{ij})}
+\providecommand{\covTT}{\expv{T_i T_j}}
+\providecommand{\covTQ}{\expv{T_i Q_j}}
+\providecommand{\covTU}{\expv{T_i U_j}}
+\providecommand{\covQQ}{\expv{Q_i Q_j}}
+\providecommand{\covQU}{\expv{Q_i U_j}}
+\providecommand{\covUU}{\expv{U_i U_j}}
+\providecommand{\cij}{c_{ij}}
+\providecommand{\sij}{s_{ij}}
+\providecommand{\cji}{c_{ji}}
+\providecommand{\sji}{s_{ji}}
+```
 ```@raw html
 <div style="display:none;">
-```
-```math
+\(
 \newcommand{\mat}[1]{\mathbf{#1}}
 \newcommand{\expv}[1]{\left\langle #1\right\rangle}
 \newcommand{\covF}[1]{F_\ell^{#1}(z_{ij})}
@@ -33,8 +47,7 @@ of [Tegmark & Oliveira-Costa (2001)](@ref bib-pixelcovariance).
 \newcommand{\sij}{s_{ij}}
 \newcommand{\cji}{c_{ji}}
 \newcommand{\sji}{s_{ji}}
-```
-```@raw html
+\)
 </div>
 ```
 
