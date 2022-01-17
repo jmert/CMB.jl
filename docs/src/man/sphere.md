@@ -91,8 +91,12 @@ choice is the bearing angle[^1]. It measures the angle between the meridian
 (at one of the points) and the great circle connecting the two, as shown by
 the angle ``\alpha_{ij}`` in Figure 1.
 
-```@figure "sphereangles.svg"; alt = "Shows angles between great circles and meridian between two points"
-**Figure 1:** Example showing the angular separation ``\sigma_{ij}`` and bearing
+```@figure; htmllabel = "Figure 1:", latexlabel = "fig:sphereangles"
+![Diagram of a sphere with two red vectors pointing to places on the sphere (r_i and r_j).
+The bearing angle α_ij is shown as a short purple arc spanning between the blue and
+green great circles where they intersect at r_i](sphereangles.svg)
+
+Example showing the angular separation ``\sigma_{ij}`` and bearing
 angle ``\alpha_{ij}`` between a pair of coordinates ``r_i`` and ``r_j``. The green
 arc indicates the great circle path passing between both coordinates, and the
 blue arc is the meridian which passes through ``r_i``. Only the bearing angle
