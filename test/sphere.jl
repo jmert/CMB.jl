@@ -137,6 +137,7 @@ end
 
 # Inverse of distance/azimuth is reckon
 @testset "Reckon vectors ($T)" for T in NumTypes
+    Random.seed!(1234)
     local pi = T(π)
     atol = max(eps(1π), eps(T(π)))
 
