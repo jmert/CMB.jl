@@ -11,12 +11,8 @@ DocMeta.setdocmeta!(CMB, :DocTestSetup, :(using CMB); recursive=true)
 
 makedocs(
     format = Documenter.HTML(
-            mathengine = Documenter.MathJax3(
-                    # If and/or when Documenter is updated to do use MathJax ≥v3.2.0,
-                    # this line can be deleted. (See Documenter.jl#174)
-                    url = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-svg.js"
-            ),
-            assets = ["assets/custom.css"],
+        mathengine = Documenter.MathJax3(),
+        assets = ["assets/custom.css"],
     ),
     sitename = "CMB Analysis",
     authors = "Justin Willmert",
