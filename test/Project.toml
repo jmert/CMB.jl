@@ -18,5 +18,5 @@ TestSetExtensions = "98d24dd4-01ad-11ea-1b02-c9a08f80db04"
 
 [compat]
 Documenter = "0.25.2, 0.26, 0.27"
-JLD = "0.12"
-MAT = "0.10"
+JLD = "0.13"
+MAT = "0.10.3"

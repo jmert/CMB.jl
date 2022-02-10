@@ -187,7 +187,7 @@ end
 
         AT = HDF5.get_jl_type(dset)
         HDF5.ismmappable(AT) || error("Cannot mmap datasets of type ", AT)
-        offset = HDF5.h5d_get_offset(dset)
+        offset = HDF5.API.h5d_get_offset(dset)
 
         io = open(HDF5.filename(dset), read = true)
 
@@ -237,10 +237,9 @@ function write_obsmat(filename, obsmat::SparseMatrixCSC;
     h5open(filename, "w"; alignment = (0, align)) do hfile
         # Write the sparse matrix
         g = create_group(hfile, obsmat_name)
-        EARLY = HDF5.H5D_ALLOC_TIME_EARLY
-        g["indptr",  alloc_time = EARLY] = indptr
-        g["indices", alloc_time = EARLY] = indices
-        g["data",    alloc_time = EARLY] = data
+        g["indptr",  alloc_time = :early] = indptr
+        g["indices", alloc_time = :early] = indices
+        g["data",    alloc_time = :early] = data
         a = attributes(g)
         a["format"] = "csc"
         a["shape"] = [size(obsmat)...]

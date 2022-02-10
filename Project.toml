@@ -1,7 +1,7 @@
 name = "CMB"
 uuid = "592991c5-7c29-5f04-aea2-6d9f924ef2a1"
 author = ["Justin Willmert <justin@willmert.me>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 AssociatedLegendrePolynomials = "2119f1ac-fb78-50f5-8cc0-dda848ebdb19"
@@ -23,9 +23,9 @@ BitFlags = "0.1"
 Compat = "3.25"
 FFTW = "1"
 FileIO = "1.6"
-HDF5 = "0.14, 0.15, 0.16"
-JLD = "0.12"
-MAT = "0.10"
+HDF5 = "0.16"
+JLD = "0.13"
+MAT = "0.10.3"
 Reexport = "0.2, 1"
 Requires = "1"
 StaticArrays = "0.11, 0.12, 1"
