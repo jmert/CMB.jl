@@ -55,15 +55,29 @@ function synthesize_reference(alms::AbstractMatrix{C}, θ, ϕ) where {C<:Complex
     return syn
 end
 
-#= TODO: Doesn't work yet --- figure out quadrature weighting
-
 # Similar to above, a brute-force analysis of the given map (with corresponding coordinates
 # (θ, ϕ) for each pixel into the harmonic coefficients up to order lmax and degree mmax.
+#
 # Note that there is no information provided on the area (in terms of the integral's
 # surface area element) of pixels, so that normalization factor is not applied during
 # analysis and must be applied by the caller using information it will have.
-# Again, there are essentially no optimizations made here to make the implementation easier
-# to ensure it is correct, so this should only be used in testing/development.
+#
+# For instance, an ECP grid needs an extra normalization factor of
+#
+#   alms .*= 2π/N_ϕ * π/N_θ
+#        .*= 2π²/N_pix
+#
+# Without quadrature weights, an iterative approach will be necessary to achieve any
+# kind of relative accuracy:
+#
+#   lmax = size(alms, 1) - 1
+#   map = synthesize_ecp(alms, Nθ, Nϕ)
+#   θ, ϕ = make_grid(Nθ, Nϕ)
+#
+#   alms′ = (2π^2 / prod(size(map))) * analyze_reference(map, θ, ϕ, lmax)
+#   map′ = synthesize_ecp(alms′, Nθ, Nϕ)
+#   δalms = (2π^2 / prod(size(map))) * analyze_reference(map - map′, θ, ϕ, lmax)
+#   alms += δalms  # iterative refinement
 function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
     axes(map) == axes(θ) == axes(ϕ) ||
         throw(DimensionMismatch("`map`, `θ`, and `ϕ` must all have the same axes"))
@@ -76,11 +90,11 @@ function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
 
     @inbounds for I in eachindex(map)
         sθ, cθ = sincos(θ[I])
-        λlm!(Λ, lmax, mmax, cθ)               # λ_ℓ^m(cos θ) factors
-        @. Φ = cispi.((0:mmax) .* (-ϕ[I]/π))  # e^{-imϕ} factors
-                                              #   Using cispi(ϕ/π) rather than cis(ϕ) gives
-                                              #   slightly more accurate results for test
-                                              #   healpix rings.
+        λlm!(Λ, lmax, mmax, cθ)             # λ_ℓ^m(cos θ) factors
+        @. Φ = cispi((0:mmax) * (-ϕ[I]/π))  # e^{-imϕ} factors
+                                            #   Using cispi(ϕ/π) rather than cis(ϕ) gives
+                                            #   slightly more accurate results for test
+                                            #   healpix rings.
 
         # Σ_{ℓ = 0}^{ℓmax}
         for ℓ in 0:lmax
@@ -93,7 +107,6 @@ function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
     end
     return alms
 end
-=#
 
 # alias_index(len, i, coeffs) -> (i, coeffs)
 #
