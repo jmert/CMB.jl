@@ -153,8 +153,9 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
     F = plan_brfft(λ₁, nϕ)
     r = Vector{R}(undef, nϕ)
 
-    @inbounds for (j, θ) in enumerate(θr)
+    @inbounds for j in 1:nθh
         j′ = nθ - j + 1
+        θ = θr[j]
         λlm!(Λ, lmax, mmax, cos(θ))
 
         for m in 0:mmax
