@@ -180,6 +180,57 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
     return permutedims(ecp)
 end
 
+# Analyze an equidistant cylindrical map covering the entire sphere.
+# More advanced that `analyze_reference` by including:
+#   * Iso-latitude Legendre optimization
+#   * FFT-based ring synthesis
+#   * Polar-symmetry optimization
+function analyze_ecp(map::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where {R<:Real}
+    C = complex(R)
+    nθ, nϕ = size(map)
+    nϕr = nϕ ÷ 2 + 1 # real-symmetric FFT's Nyquist length (index)
+    nθh = (nθ + 1) ÷ 2 # number of rings in northern hemisphere
+
+    # pixel grid definition for ECP
+    θr = centered_range(R(0.0), R(π), nθ)
+    ϕ₀ = R(π) / nϕ
+    ΔΩ = 2R(π)^2 / (nθ * nϕ)
+
+    alms = fill(zero(C), lmax + 1, mmax + 1)
+    Λ = zeros(R, lmax + 1, mmax + 1)
+    f₁ = Vector{C}(undef, nϕr)  # northern ring
+    f₂ = Vector{C}(undef, nϕr)  # southern ring
+
+    ecp = permutedims(map)  # transpose map so that x-dim has stride 1
+
+    # FFTW plan built for particular alignment/length, so not all @view(ecp[:,j]) are
+    # valid (especially if nϕ is odd). Instead, copy from map to temporary vector and
+    # analyze a fixed array.
+    r = Vector{R}(undef, nϕ)
+    F = plan_rfft(r, 1)
+
+    @inbounds for j in 1:nθh
+        j′ = nθ - j + 1
+        sθ, cθ = sincos(θr[j])
+        λlm!(Λ, lmax, mmax, cθ)
+
+        fill!(f₁, zero(C))
+        mul!(f₁, F, copyto!(r, @view(ecp[:,j])))
+
+        fill!(f₂, zero(C))
+        mul!(f₂, F, copyto!(r, @view(ecp[:,j′])))
+
+        for m in 0:mmax
+            a₁, a₂ = (f₁[m+1], f₂[m+1]) .* (sθ * ΔΩ * cis(m * -ϕ₀))
+            for ℓ in m:lmax
+                c = isodd(ℓ+m) ? a₁ - a₂ : a₁ + a₂
+                alms[ℓ+1,m+1] += c * Λ[ℓ+1,m+1]
+            end
+        end
+    end
+    return alms
+end
+
 synthesize_ring(alms, θ₀, nϕ, ϕ₀) = synthesize_ring(alms, θ₀, ϕ₀, nϕ::Integer, Val(false))
 function synthesize_ring(alms::Matrix{C}, θ₀, ϕ₀, nϕ::Integer,
                          ::Val{pair}) where {C<:Complex, pair}
