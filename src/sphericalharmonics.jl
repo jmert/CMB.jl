@@ -3,7 +3,9 @@ module SphericalHarmonics
 # While under development, do not export these functions
 #export analyze, synthesize
 
-using ..Legendre
+import ..Legendre
+import ..Legendre: λlm!, unsafe_legendre!
+
 using FFTW
 using LinearAlgebra: mul!
 @static if VERSION < v"1.6.0-DEV.1591"
@@ -144,6 +146,7 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
 
     ecp = Matrix{R}(undef, nϕ, nθ) # transposed to have x-dim have stride 1
     Λ = zeros(R, lmax + 1, mmax + 1)
+    Λw = Legendre.Work(λlm!, Λ, zeros(R))
     λ₁ = zeros(C, nϕr)  # northern ring
     λ₂ = zeros(C, nϕr)  # southern ring
 
@@ -156,7 +159,7 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
     @inbounds for j in 1:nθh
         j′ = nθ - j + 1
         θ = θr[j]
-        λlm!(Λ, lmax, mmax, cos(θ))
+        unsafe_legendre!(Λw, Λ, lmax, mmax, cos(θ))
 
         for m in 0:mmax
             acc₁, acc₂ = zero(C), zero(C)
@@ -198,6 +201,7 @@ function analyze_ecp(map::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where 
 
     alms = fill(zero(C), lmax + 1, mmax + 1)
     Λ = zeros(R, lmax + 1, mmax + 1)
+    Λw = Legendre.Work(λlm!, Λ, zero(R))
     f₁ = Vector{C}(undef, nϕr)  # northern ring
     f₂ = Vector{C}(undef, nϕr)  # southern ring
 
@@ -212,7 +216,7 @@ function analyze_ecp(map::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where 
     @inbounds for j in 1:nθh
         j′ = nθ - j + 1
         sθ, cθ = sincos(θr[j])
-        λlm!(Λ, lmax, mmax, cθ)
+        unsafe_legendre!(Λw, Λ, lmax, mmax, cθ)
 
         fill!(f₁, zero(C))
         mul!(f₁, F, copyto!(r, @view(ecp[:,j])))
