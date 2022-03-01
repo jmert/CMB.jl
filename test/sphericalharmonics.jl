@@ -1,6 +1,55 @@
 using CMB.SphericalHarmonics
 using CMB.SphericalHarmonics: centered_range,
-    synthesize_reference, synthesize_ecp, synthesize_ring
+    analyze_reference, synthesize_reference,
+    analyze_ecp, synthesize_ecp,
+    synthesize_ring
+
+import Random
+
+
+"""
+    gen_alms(::Type{T}, lmax::Integer, mmax::Integer = lmax; seed = nothing) where T
+
+Generates random alms up to ``(ℓ,m) = (lmax, mmax)`` of type `complex(T)`. Note that the
+DC (``Y_{00}``) term is not set.
+
+A seed value may be passed as a keyword argument to reset the random number generator before
+generating alms. Values are drawn such that the return values for ``lmax < lmax′`` given
+the same seed will be equal for all ``(ℓ, m)`` where ``ℓ ≤ lmax``.
+"""
+function gen_alms(::Type{T}, lmax::Integer, mmax::Integer = lmax; seed = nothing) where T
+    if seed !== nothing
+        Random.seed!(seed)
+    end
+    alms = zeros(complex(T), lmax + 1, mmax + 1)
+    @inbounds for l in 1:lmax
+        alms[l+1,1] = randn(real(T))
+        alms[l+1,2:l+1] .= randn.(complex(T))
+    end
+    return alms
+end
+
+"""
+    zerotol!(X)
+
+Simple helper to round very small values to zero. This applies both to the absolute value
+or to the real/imaginary components of a complex number.
+"""
+function zerotol!(X)
+    ϵ = sqrt(eps(maximum(abs, X)))
+    @inbounds for ii in eachindex(X)
+        v = X[ii]
+        if abs(v) < ϵ
+            X[ii] = zero(eltype(X))
+        elseif abs(real(v)) < ϵ
+            X[ii] = imag(v)*im
+        elseif abs(imag(v)) < ϵ
+            X[ii] = real(v)
+        end
+    end
+    return X
+end
+
 
 # Define the analytic expressions for the first few spherical harmonics; verify
 # implementations against these.
@@ -21,17 +70,10 @@ n = 50
 # above the Nyquist
 lmax_lo = n ÷ 2 - 1
 lmax_hi = 2n
-alms_lo = zeros(ComplexF64, lmax_lo + 1, lmax_lo + 1)
-alms_hi = zeros(ComplexF64, lmax_hi + 1, lmax_hi + 1)
-for l in 1:lmax_hi
-    alms_hi[l+1,1] = randn()
-    alms_hi[l+1,2:l+1] .= randn.(ComplexF64)
-    if l ≤ lmax_lo
-        alms_lo[l+1,1:l+1] .= alms_hi[l+1,1:l+1]
-    end
-end
+alms_lo = gen_alms(Float64, lmax_lo, seed = 5)
+alms_hi = gen_alms(Float64, lmax_hi, seed = 5)
 
-# Generate complex fields from running real-only analysis on real and imaginary
+# Generate complex fields from running real-only synthesis on real and imaginary
 # components separately.
 function synthesize_reference_complex(ℓ, m, θ, ϕ, T::Type = Float64)
     alms = zeros(Complex{T}, ℓ + 1, m + 1)
@@ -48,6 +90,41 @@ function synthesize_reference_complex(ℓ, m, θ, ϕ, T::Type = Float64)
     ref ./= m == 0 ? 1 : 2
     return ref
 end
+
+# Because of the disparity between analysis as integration of a field and summation over
+# a discrete map, a single round of analyzing any given map suffers from non-floating
+# point errors. By iterating and repeatedly analyzing the residual between input and
+# analyze+(re)synthesize, the harmonic coefficient slowly converge to what we'd get if
+# we had much higher resolution input maps.
+#
+# Generically, this is a problem that falls under the umbrella of "quadrature weights", but
+# that's a complex topic that we bypass by just brute-force converging our solution.
+function analyze_reference_complex_iter(map, θ, ϕ, lmax, mmax)
+    R = eltype(θ)
+    tol = sqrt(eps(maximum(abs, map)))
+    # norm is the correct normalization for an ECP pixelization
+    norm = 2R(π)^2 / length(θ)
+
+    function iter(ecp)
+        local alms
+        alms = norm .* analyze_reference(ecp, θ, ϕ, lmax, mmax)
+        for ii in 2:10  # allow up to 10 iterations before bailing
+            ecp′ = synthesize_reference(alms, θ, ϕ)
+            δecp = ecp - ecp′
+            # check for convergence
+            if maximum(abs, δecp) < tol
+                break
+            end
+            alms .+= norm .* analyze_reference(δecp, θ, ϕ, lmax, mmax)
+        end
+        return alms
+    end
+    # analyze each of real and imaginary parts separately since the routines require
+    # real inputs.
+    alms = iter(real.(map)) .+ im .* iter(imag.(map))
+    return zerotol!(alms)
+end
+
 @testset "Analytic checks — synthesis (reference)" begin
     # Validates the baseline reference implementation
     @test Y00.(θ, ϕ) ≈ synthesize_reference_complex(0, 0, θ, ϕ)
@@ -59,6 +136,16 @@ end
 end
 
 @testset "Analytic checks — analysis (reference)" begin
+    # Validates the baseline reference implementation
+    lmax, mmax = 10, 3  # beyond Y22 just as a mild check of any obvious problems
+    analyze(Y) = analyze_reference_complex_iter(Y.(θ, ϕ), θ, ϕ, lmax, mmax)
+    expect(ℓ, m) = setindex!(zeros(complex(eltype(θ)), lmax+1, mmax+1), 1.0, ℓ+1, m+1)
+    @test analyze(Y00) ≈ expect(0, 0)
+    @test analyze(Y10) ≈ expect(1, 0)
+    @test analyze(Y11) ≈ expect(1, 1)
+    @test analyze(Y20) ≈ expect(2, 0)
+    @test analyze(Y21) ≈ expect(2, 1)
+    @test analyze(Y22) ≈ expect(2, 2)
 end
 
 @testset "Round trip synthesis/analysis (reference)" begin
