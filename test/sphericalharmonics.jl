@@ -66,13 +66,6 @@ n = 50
 θ′ = repeat(centered_range(0.0, 1.0π, n+1), 1, 2n+1)
 ϕ′ = repeat(centered_range(0.0, 2.0π, 2n+1)', n+1, 1)
 
-# two sets of alms: one that is bandlimited below map Nyquist, and one that extends well
-# above the Nyquist
-lmax_lo = n ÷ 2 - 1
-lmax_hi = 2n
-alms_lo = gen_alms(Float64, lmax_lo, seed = 5)
-alms_hi = gen_alms(Float64, lmax_hi, seed = 5)
-
 # Generate complex fields from running real-only synthesis on real and imaginary
 # components separately.
 function synthesize_reference_complex(ℓ, m, θ, ϕ, T::Type = Float64)
@@ -148,8 +141,6 @@ end
     @test analyze(Y22) ≈ expect(2, 2)
 end
 
-@testset "Round trip synthesis/analysis (reference)" begin
-end
 
 function synthesize_ecp_complex(ℓ, m, nθ, nϕ, T::Type = Float64)
     alms = zeros(Complex{T}, ℓ + 1, m + 1)
@@ -219,6 +210,13 @@ end
     @test analyze(Y22) ≈ expect(2, 2)
 end
 
+
+# two sets of alms: one that is bandlimited below map Nyquist, and one that extends well
+# above the Nyquist
+lmax_lo = n ÷ 2 - 1
+lmax_hi = 2n
+alms_lo = gen_alms(Float64, lmax_lo, seed = 5)
+alms_hi = gen_alms(Float64, lmax_hi, seed = 5)
 
 @testset "Aliased ring synthesis" begin
     # Checks that the fast FFT algorithm correctly includes the effects of aliasing
