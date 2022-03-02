@@ -166,6 +166,30 @@ function synthesize_ecp_complex(ℓ, m, nθ, nϕ, T::Type = Float64)
     ref ./= m == 0 ? 1 : 2
     return ref
 end
+
+function analyze_ecp_complex_iter(map, lmax, mmax)
+    nθ, nϕ = size(map)
+    tol = sqrt(eps(maximum(abs, map)))
+    function iter(ecp)
+        local alms
+        alms = analyze_ecp(ecp, lmax, mmax)
+        for ii in 2:10  # allow up to 10 iterations before bailing
+            ecp′ = synthesize_ecp(alms, nθ, nϕ)
+            δecp = ecp - ecp′
+            # check for convergence
+            if maximum(abs, δecp) < tol
+                break
+            end
+            alms .+= analyze_ecp(δecp, lmax, mmax)
+        end
+        return alms
+    end
+    # analyze each of real and imaginary parts separately since the routines require
+    # real inputs.
+    alms = iter(real.(map)) .+ im .* iter(imag.(map))
+    return zerotol!(alms)
+end
+
 @testset "Analytic checks — synthesis (Fast ECP)" begin
     # Validates the optimizations:
     #   * Iso-latitude sharing Legendre polynomials
@@ -178,6 +202,23 @@ end
     @test Y21.(θ, ϕ) ≈ synthesize_ecp_complex(2, 1, n, 2n)
     @test Y22.(θ, ϕ) ≈ synthesize_ecp_complex(2, 2, n, 2n)
 end
+
+@testset "Analytic checks — analysis (Fast ECP)" begin
+    # Validates the optimizations:
+    #   * Iso-latitude sharing Legendre polynomials
+    #   * Ring-pair synthesis via polar symmetry
+    #   * FFT-based ϕ synthesis
+    lmax, mmax = 10, 3  # beyond Y22 just as a mild check of any obvious problems
+    analyze(Y) = analyze_ecp_complex_iter(Y.(θ, ϕ), lmax, mmax)
+    expect(ℓ, m) = setindex!(zeros(complex(eltype(θ)), lmax+1, mmax+1), 1.0, ℓ+1, m+1)
+    @test analyze(Y00) ≈ expect(0, 0)
+    @test analyze(Y10) ≈ expect(1, 0)
+    @test analyze(Y11) ≈ expect(1, 1)
+    @test analyze(Y20) ≈ expect(2, 0)
+    @test analyze(Y21) ≈ expect(2, 1)
+    @test analyze(Y22) ≈ expect(2, 2)
+end
+
 
 @testset "Aliased ring synthesis" begin
     # Checks that the fast FFT algorithm correctly includes the effects of aliasing
