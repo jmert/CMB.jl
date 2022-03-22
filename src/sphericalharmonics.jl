@@ -110,23 +110,41 @@ function analyze_reference(map, θ, ϕ, lmax::Integer, mmax::Integer = lmax)
     return alms
 end
 
-# alias_index(len, i, coeffs) -> (i, coeffs)
-#
-# Aliases the given 0-indexed `i` for a periodic FFT frequency axis of length `len`, with an
-# additional aliasing to below the Nyquist frequency approprate for use in a real-only
-# [irfft()] transform. `coeffs` may be modified based on the output aliased index to
-# appropriate account for multiplicity factors or complex conjugation.
-@inline function alias_index(len, i, coeffs)
+"""
+    alias_index(len::Int, m::Int) -> (i::Int, isconj::Bool, isnyq::Bool)
+
+Aliases the given 0-indexed `m` for a periodic FFT frequency axis of length `len` --- with
+an additional aliasing to below the Nyquist frequency approprate for use in a real-only
+[`irfft()`] transform --- to the new index `i`.
+
+To handle symmetries of the FFT, the flags `isconj` and `isnyq` indicate if the Fourier
+coefficients at `i` should be conjugated or real-doubled (i.e. `c = complex(2real(c))`),
+respectively.
+"""
+@inline function alias_index(len::Int, i::Int)
+    isconj, isnyq = false, false
     nyq = max(1, len ÷ 2)
-    i < nyq && return (i, coeffs)
+    i < nyq && return (i, isconj, isnyq)
     i = mod(i, len)
     if i > nyq
         i = len - i
-        coeffs = conj.(coeffs)
+        isconj = true
     elseif i == 0 || (iseven(len) && i == nyq)
-        coeffs = complex.(2 .* real.(coeffs))
+        isnyq = true
     end
-    return (i, coeffs)
+    return (i, isconj, isnyq)
+end
+
+"""
+    alias_coeffs(coeffs, isconj::Bool, isnyq::Bool) -> coeffs
+
+Helper for [`alias_index`](@ref) which applies the conjugation or pure-real symmetry
+transformations to the Fourier coefficients `coeffs` based on the two flags `isconj` and
+`isnyq`.
+"""
+@inline function alias_coeffs(coeffs, isconj::Bool, isnyq::Bool)
+    return ifelse(isnyq, complex.(2 .* real.(coeffs)),
+                  ifelse(isconj, conj.(coeffs), coeffs))
 end
 
 # Synthesize alms to an equidistant cylindrical grid covering the entire sphere.
@@ -169,7 +187,8 @@ function synthesize_ecp(alms::Matrix{C}, nθ::Integer, nϕ::Integer) where {C<:C
                 acc₂ += isodd(ℓ + m) ? -term : term
             end
             acc₁, acc₂ = (acc₁, acc₂) .* cis(m * ϕ₀)
-            i, (acc₁, acc₂) = alias_index(nϕ, m, (acc₁, acc₂))
+            i, isconj, isnyq = alias_index(nϕ, m)
+            acc₁, acc₂ = alias_coeffs((acc₁, acc₂), isconj, isnyq)
             λ₁[i+1] += acc₁
             λ₂[i+1] += acc₂
         end
@@ -202,13 +221,13 @@ function analyze_ecp(ecp::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where 
     alms = fill(zero(C), lmax + 1, mmax + 1)
     Λ = zeros(R, lmax + 1, mmax + 1)
     Λw = Legendre.Work(λlm!, Λ, zero(R))
-    f₁ = Vector{C}(undef, nϕr)  # northern ring
-    f₂ = Vector{C}(undef, nϕr)  # southern ring
+    f₁ = zeros(C, nϕr)  # northern ring
+    f₂ = zeros(C, nϕr)  # southern ring
 
     # FFTW plan built for particular alignment/length, so not all @view(ecp[:,j]) are
     # valid (especially if nϕ is odd). Instead, copy from map to temporary vector and
     # analyze a fixed array.
-    r = Vector{R}(undef, nϕ)
+    r = zeros(R, nϕ)
     F = plan_rfft(r, 1)
 
     @inbounds for j in 1:nθh
@@ -222,8 +241,11 @@ function analyze_ecp(ecp::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where 
         fill!(f₂, zero(C))
         j′ != j && mul!(f₂, F, copyto!(r, @view(ecp[j′,:])))
 
+        sθΔΩ = sθ * ΔΩ
         for m in 0:mmax
-            a₁, a₂ = (f₁[m+1], f₂[m+1]) .* (sθ * ΔΩ * cis(m * -ϕ₀))
+            i, isconj, isnyq = alias_index(nϕ, m)
+            a₁, a₂ = alias_coeffs((f₁[i+1], f₂[i+1]), isconj, isnyq)
+            a₁, a₂ = (a₁, a₂) .* (sθΔΩ * cis(m * -ϕ₀))
             for ℓ in m:lmax
                 c = isodd(ℓ+m) ? a₁ - a₂ : a₁ + a₂
                 alms[ℓ+1,m+1] += c * Λ[ℓ+1,m+1]
@@ -262,13 +284,11 @@ function synthesize_ring(alms::Matrix{C}, θ₀, ϕ₀, nϕ::Integer,
                 acc₂ += isodd(ℓ + m) ? -term : term
             end
         end
+        i, isconj, isnyq = alias_index(nϕ, m)
         rot = cis(m * ϕ₀)
-        acc₁ *= rot
+        acc₁ = alias_coeffs(acc₁ * rot, isconj, isnyq)
         if pair
-            acc₂ *= rot
-            i, (acc₁, acc₂) = alias_index(nϕ, m, (acc₁, acc₂))
-        else
-            i, acc₁ = alias_index(nϕ, m, acc₁)
+            acc₂ = alias_coeffs(acc₂ * rot, isconj, isnyq)
         end
         λ₁[i+1] += acc₁
         if pair

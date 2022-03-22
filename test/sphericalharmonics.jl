@@ -256,6 +256,20 @@ alms_hi = gen_alms(Float64, lmax_hi, seed = 5)
     @test ref ≈ ecp
 end
 
+@testset "Aliased ring analysis" begin
+    # Checks that the fast FFT algorithm correctly pads the rings if necessary to reach
+    # analyze to high-m.
+    ref = analyze_reference(real.(Y22.(θ, ϕ)), θ, ϕ, lmax_hi) .* (2π^2 / prod(size(θ)));
+    ecp = analyze_ecp(real.(Y22.(θ, ϕ)), lmax_hi);
+    @test ref ≈ ecp
+    # repeat again with one longer index to make sure even and odd cases both handled
+    # correctly.
+    ref = analyze_reference(real.(Y22.(θ′, ϕ′)), θ′, ϕ′, lmax_hi) .* (2π^2 / prod(size(θ′)));
+    ecp = analyze_ecp(real.(Y22.(θ′, ϕ′)), lmax_hi);
+    @test ref ≈ ecp
+end
+
+
 @testset "Equality of ECP and per-ring synthesis" begin
     # Test that the per-ring synthesis constructs equal answers as full ECP grid
     ecp = synthesize_ecp(alms_hi, n, 2n)
