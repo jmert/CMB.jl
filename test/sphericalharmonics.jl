@@ -192,6 +192,13 @@ end
     @test Y20.(θ, ϕ) ≈ synthesize_ecp_complex(2, 0, n, 2n)
     @test Y21.(θ, ϕ) ≈ synthesize_ecp_complex(2, 1, n, 2n)
     @test Y22.(θ, ϕ) ≈ synthesize_ecp_complex(2, 2, n, 2n)
+    # Odd sizes, too
+    @test Y00.(θ′, ϕ′) ≈ synthesize_ecp_complex(0, 0, n+1, 2n+1)
+    @test Y10.(θ′, ϕ′) ≈ synthesize_ecp_complex(1, 0, n+1, 2n+1)
+    @test Y11.(θ′, ϕ′) ≈ synthesize_ecp_complex(1, 1, n+1, 2n+1)
+    @test Y20.(θ′, ϕ′) ≈ synthesize_ecp_complex(2, 0, n+1, 2n+1)
+    @test Y21.(θ′, ϕ′) ≈ synthesize_ecp_complex(2, 1, n+1, 2n+1)
+    @test Y22.(θ′, ϕ′) ≈ synthesize_ecp_complex(2, 2, n+1, 2n+1)
 end
 
 @testset "Analytic checks — analysis (Fast ECP)" begin
@@ -208,6 +215,14 @@ end
     @test analyze(Y20) ≈ expect(2, 0)
     @test analyze(Y21) ≈ expect(2, 1)
     @test analyze(Y22) ≈ expect(2, 2)
+    # Odd sizes, too
+    analyze′(Y) = analyze_ecp_complex_iter(Y.(θ′, ϕ′), lmax, mmax)
+    @test analyze′(Y00) ≈ expect(0, 0)
+    @test analyze′(Y10) ≈ expect(1, 0)
+    @test analyze′(Y11) ≈ expect(1, 1)
+    @test analyze′(Y20) ≈ expect(2, 0)
+    @test analyze′(Y21) ≈ expect(2, 1)
+    @test analyze′(Y22) ≈ expect(2, 2)
 end
 
 

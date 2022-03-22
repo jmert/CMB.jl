@@ -220,7 +220,7 @@ function analyze_ecp(ecp::Matrix{R}, lmax::Integer, mmax::Integer = lmax) where 
         mul!(f₁, F, copyto!(r, @view(ecp[j,:])))
 
         fill!(f₂, zero(C))
-        mul!(f₂, F, copyto!(r, @view(ecp[j′,:])))
+        j′ != j && mul!(f₂, F, copyto!(r, @view(ecp[j′,:])))
 
         for m in 0:mmax
             a₁, a₂ = (f₁[m+1], f₂[m+1]) .* (sθ * ΔΩ * cis(m * -ϕ₀))
