@@ -112,12 +112,12 @@ end
 
 # alias_index(len, i, coeffs) -> (i, coeffs)
 #
-# Aliases the given index `i` for a periodic FFT frequency axis of length `len`, with an
+# Aliases the given 0-indexed `i` for a periodic FFT frequency axis of length `len`, with an
 # additional aliasing to below the Nyquist frequency approprate for use in a real-only
 # [irfft()] transform. `coeffs` may be modified based on the output aliased index to
 # appropriate account for multiplicity factors or complex conjugation.
 @inline function alias_index(len, i, coeffs)
-    nyq = len ÷ 2
+    nyq = max(1, len ÷ 2)
     i < nyq && return (i, coeffs)
     i = mod(i, len)
     if i > nyq

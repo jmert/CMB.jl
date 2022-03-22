@@ -229,6 +229,16 @@ alms_hi = gen_alms(Float64, lmax_hi, seed = 5)
     ref = synthesize_reference(alms_hi, θ′, ϕ′)
     ecp = synthesize_ecp(alms_hi, n+1, 2n+1)
     @test ref ≈ ecp
+    # nϕ == 1 is a special case in aliasing that must be handled appropriately
+    alm00 = ComplexF64[1 0; 0 0]
+    ref = synthesize_reference(alm00, θ[:,1:1], fill(π/1, n, 1))
+    ecp = synthesize_ecp(alm00, n, 1)
+    @test ref == ecp == fill(1/sqrt(4π), n, 1)
+    # make sure nϕ == 2 still works
+    alm11 = ComplexF64[0 0; 0 1im]
+    ref = synthesize_reference(alm11, θ[:,1:2], repeat([π/2 3π/2], n, 1))
+    ecp = synthesize_ecp(alm11, n, 2)
+    @test ref ≈ ecp
 end
 
 @testset "Equality of ECP and per-ring synthesis" begin
