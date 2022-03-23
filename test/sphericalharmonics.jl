@@ -1,8 +1,7 @@
 using CMB.SphericalHarmonics
 using CMB.SphericalHarmonics: centered_range,
     analyze_reference, synthesize_reference,
-    analyze_ecp, synthesize_ecp,
-    synthesize_ring
+    analyze_ecp, synthesize_ecp
 
 import Random
 
@@ -270,20 +269,18 @@ end
 end
 
 
-@testset "Equality of ECP and per-ring synthesis" begin
-    # Test that the per-ring synthesis constructs equal answers as full ECP grid
-    ecp = synthesize_ecp(alms_hi, n, 2n)
-    ecp_r = fill(NaN, n, 2n)
-    ecp_p = fill(NaN, n, 2n)
-    for j in axes(θ, 1)
-        ecp_r[j,:] = synthesize_ring(alms_hi, θ[j,1], ϕ[j,1], 2n, Val(false))
-        if j ≤ (n + 1) ÷ 2
-            j′ = n - j + 1
-            ecp_pairs  = synthesize_ring(alms_hi, θ[j,1], ϕ[j,1], 2n, Val(true))
-            ecp_p[j, :] = ecp_pairs[1]
-            ecp_p[j′,:] = ecp_pairs[2]
-        end
-    end
-    @test ecp ≈ ecp_r
-    @test ecp ≈ ecp_p
+@testset "Equality of ECP reference and per-ring synthesis/analysis" begin
+    import CMB.SphericalHarmonics: map_rings_ecp
+
+    ecp_info = map_rings_ecp(Float64, n, 2n)
+    ecp_ref = synthesize_ecp(alms_hi, n, 2n)
+    ecp_ring = synthesize(ecp_info, alms_hi)
+    @test ecp_ref ≈ mapreduce(transpose, vcat, ecp_ring)
+    @test analyze_ecp(ecp_ref, lmax_hi) ≈ analyze(ecp_info, ecp_ring, lmax_hi)
+
+    ecp_info = map_rings_ecp(Float64, n+1, 2n+1)
+    ecp_ref = synthesize_ecp(alms_hi, n+1, 2n+1)
+    ecp_ring = synthesize(ecp_info, alms_hi)
+    @test ecp_ref ≈ mapreduce(transpose, vcat, ecp_ring)
+    @test analyze_ecp(ecp_ref, lmax_hi) ≈ analyze(ecp_info, ecp_ring, lmax_hi)
 end
