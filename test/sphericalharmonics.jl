@@ -1,10 +1,9 @@
 using CMB.SphericalHarmonics
-using CMB.SphericalHarmonics: centered_range,
-    analyze_reference, synthesize_reference,
-    analyze_ecp, synthesize_ecp
 
 import Random
 
+# import reference implementations to test against
+include("helpers/sphericalharmonics.jl")
 
 """
     gen_alms(::Type{T}, lmax::Integer, mmax::Integer = lmax; seed = nothing) where T
