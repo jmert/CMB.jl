@@ -75,13 +75,12 @@ struct RingInfo{R<:Real}
     cθ::R
 
     """
-    Transformed azimuth of the first pixel in the isolatitude ring ``ϕ₀`` divided by ``π``.
+    Azimuth of the first pixel in the isolatitude ring ``ϕ₀`` divided by ``π``.
     """
     ϕ_π::R
 
     """
-    Coordinate surface area of pixels in the ring, i.e. ``Δθ × Δϕ`` _without_ the factor
-    of ``\\sin(θ)``.
+    Solid angle area of pixels in the ring, i.e. ``sin(θ) × Δθ × Δϕ``.
     """
     ΔΩ::R
 end
@@ -96,34 +95,30 @@ struct MapInfo{R<:Real}
     rings::Vector{RingInfo{R}}
 end
 
-function verify_mapinfo(mapinfo::MapInfo{R}) where R
-    nθ, Ω = 0, zero(R)
+function verify_mapinfo(mapinfo::MapInfo{R}; fullsky::Bool=true) where R
+    nθ, npix, Ω = 0, 0, zero(R)
+    allpairs = true
     for rinfo in mapinfo.rings
+        allpairs &= rinfo.θpair
+        if !allpairs && rinfo.θpair
+            error("""
+                  verification failed: encountered disjoint set of paired and unpaired rings;
+                      expected all paired rings to be listed first, followed by trailing unpaired rings
+                  """)
+        end
         mult = rinfo.θpair ? 2 : 1
-        sθ = sqrt(fma(rinfo.cθ, -rinfo.cθ, one(R)))
         nθ += mult
-        Ω += rinfo.ΔΩ/sθ * rinfo.nϕ * mult
+        npix += rinfo.nϕ
+        Ω += rinfo.ΔΩ * rinfo.nϕ * mult
     end
-    Ω /= R(π)^2
-    nθ == mapinfo.nθ || error("verification failed: counted $nr rings, expected $nθ")
-    Ω ≈ 2 || error("verification failed: got $(round(Ω, sigdigits=3))π² coordinate area, expected 2π²")
+    nθ == mapinfo.nθ || error("verification failed: counted $nθ rings, expected $(mapinfo.nθ)")
+    if fullsky
+        isapprox(Ω, 4R(π), atol = 0.5 * 4π / npix) ||
+            error("verification failed: got $(round(Ω/π, sigdigits=4))π surface area, expected 4π")
+    end
+    return nothing
 end
 
-
-function map_rings_ecp(::Type{R}, nθ::Int, nϕ::Int) where {R <: Real}
-    # rings are symmetric over the equator, so only require half
-    nθh = (nθ + 1) ÷ 2
-    rings = Vector{RingInfo{R}}(undef, nθh)
-    # ϕ offset and ΔΩ are same for all rings
-    ϕ_π = one(R) / nϕ
-    ΔθΔϕ = 2R(π)^2 / (nθ * nϕ)
-    for ii in 1:nθh
-        θpair = !(isodd(nθ) && ii == nθh)
-        sθ, cθ = sincospi(R(2ii - 1) / 2nθ)
-        rings[ii] = RingInfo{R}(θpair, nϕ, cθ, ϕ_π, sθ * ΔθΔϕ)
-    end
-    return MapInfo{R}(nθ, rings)
-end
 
 function _unsafe_accum_phase!(f₁, f₂, alms, Λ, rinfo::RingInfo)
     C = eltype(alms)
@@ -270,6 +265,21 @@ function analyze!(alms, info::MapInfo{R}, maprings::Vector{Vector{R}}) where {R 
         end
     end
     return alms
+end
+
+function ecp_mapinfo(::Type{R}, nθ::Int, nϕ::Int) where {R <: Real}
+    # rings are symmetric over the equator, so only require half
+    nθh = (nθ + 1) ÷ 2
+    rings = Vector{RingInfo{R}}(undef, nθh)
+    # ϕ offset and ΔθΔϕ are same for all rings
+    ϕ_π = one(R) / nϕ
+    ΔθΔϕ = 2R(π)^2 / (nθ * nϕ)
+    for ii in 1:nθh
+        θpair = !(isodd(nθ) && ii == nθh)
+        sθ, cθ = sincospi(R(2ii - 1) / 2nθ)
+        rings[ii] = RingInfo{R}(θpair, nϕ, cθ, ϕ_π, sθ * ΔθΔϕ)
+    end
+    return MapInfo{R}(nθ, rings)
 end
 
 end
