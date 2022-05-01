@@ -57,7 +57,7 @@ end
 Parameters required to describe an isolatitude ring on the sphere compatible with spherical
 harmonic transforms.
 """
-struct RingInfo{R<:Real}
+struct RingInfo{R}
     """
     Offsets (1-indexed) to the first pixel of the isolatitude ring(s) within a
     map array. The first offset in the tuple corresponds to the colatitude ``θ``
@@ -93,20 +93,50 @@ struct RingInfo{R<:Real}
     ΔΩ::R
 end
 
-"""
-    MapInfo{R<:Real}
+abstract type AbstractMapInfo{R} end
 
-Collection of [`RingInfo`](@ref) which describe the pixelization over the unit sphere.
 """
-struct MapInfo{R<:Real}
-    nθ::Int
-    rings::Vector{RingInfo{R}}
+    rings(mapinfo::AbstractMapInfo)
+"""
+function rings end
+
+function mapinfo_counts(mapinfo::AbstractMapInfo)
+    nr, np, nϕ = 0, 0, typemin(Int)
+    for rinfo in rings(mapinfo)
+        o₁, o₂ = rinfo.offset
+        mult = (o₁ != 0) + (o₂ != 0)
+        nr += mult
+        np += mult * rinfo.nϕ
+        nϕ = mult != 0 ? max(nϕ, rinfo.nϕ) : nϕ
+    end
+    return (; nring = nr, npix = np, nϕmax = nϕ)
 end
 
-function verify_mapinfo(mapinfo::MapInfo{R}; fullsky::Bool=true) where R
-    nθ, Ω = 0, zero(R)
+"""
+    nring(mapinfo::AbstractMapInfo)
+
+Number of isolatitude rings described by `mapinfo`.
+"""
+nring(mapinfo::AbstractMapInfo) = mapinfo_counts(mapinfo)[:nring]
+
+"""
+    npix(mapinfo::AbstractMapInfo)
+
+Number of pixels covered by all rings described by `mapinfo`.
+"""
+npix(mapinfo::AbstractMapInfo) = mapinfo_counts(mapinfo)[:npix]
+
+"""
+    nϕmax(mapinfo::AbstractMapInfo)
+
+Number of pixels in the longest isolatitude ring described by `mapinfo`.
+"""
+nϕmax(mapinfo::AbstractMapInfo) = mapinfo_counts(mapinfo)[:nϕmax]
+
+function verify_mapinfo(mapinfo::AbstractMapInfo{R}; fullsky::Bool=true) where R
+    Ω = zero(R)
     pix = BitSet()
-    for rinfo in mapinfo.rings
+    for rinfo in rings(mapinfo)
         mult = 0
         for off in rinfo.offset
             iszero(off) && continue
@@ -117,10 +147,8 @@ function verify_mapinfo(mapinfo::MapInfo{R}; fullsky::Bool=true) where R
             end
             union!(pix, ringpix)
         end
-        nθ += mult
         Ω += rinfo.ΔΩ * rinfo.nϕ * mult
     end
-    nθ == mapinfo.nθ || error("verification failed: counted $nθ rings, expected $(mapinfo.nθ)")
     if fullsky
         npix = length(pix)
         if pix != BitSet(1:npix)
@@ -131,6 +159,19 @@ function verify_mapinfo(mapinfo::MapInfo{R}; fullsky::Bool=true) where R
     end
     return nothing
 end
+
+
+"""
+    MapInfo{R} <: AbstractMapInfo{R}
+
+An arbitrary vector of [`RingInfo`](@ref) which describe the pixelization over the unit
+sphere.
+"""
+struct MapInfo{R} <: AbstractMapInfo{R}
+    rings::Vector{RingInfo{R}}
+end
+
+rings(mapinfo::MapInfo) = mapinfo.rings
 
 
 Base.@propagate_inbounds function _unsafe_accum_phase!(f₁, f₂, alms, Λ, rinfo::RingInfo)
@@ -175,28 +216,23 @@ end
 
 
 """
-    mapbuf = synthesize(info::MapInfo{R}, alms) where {R <: Real}
-    synthesize!(mapbuf::AbstractArray{R}, info::MapInfo{R}, alms) where {R <: Real}
+    mapbuf = synthesize(info::AbstractMapInfo{R}, alms) where {R <: Real}
+    synthesize!(mapbuf::AbstractArray{R}, info::AbstractMapInfo{R}, alms) where {R <: Real}
 
 Perform the spherical harmonic synthesis transform from harmonic coefficients `alms` to
 the map `mapbuf` (pixelized as described by `info`).
 """
-function synthesize(info::MapInfo{R}, alms) where {R <: Real}
-    npix = mapreduce(+, info.rings) do rinfo
-        o₁, o₂ = rinfo.offset
-        (o₁ != 0 ? rinfo.nϕ : 0) + (o₂ != 0 ? rinfo.nϕ : 0)
-    end
-    mapbuf = Vector{R}(undef, npix)
+function synthesize(info::AbstractMapInfo{R}, alms) where {R <: Real}
+    mapbuf = Vector{R}(undef, npix(info))
     return synthesize!(mapbuf, info, alms)
 end
 
 @doc (@doc synthesize)
-function synthesize!(mapbuf::AbstractArray{R}, info::MapInfo{R}, alms) where {R <: Real}
+function synthesize!(mapbuf::AbstractArray{R}, info::AbstractMapInfo{R}, alms) where {R <: Real}
     C = eltype(alms)
     lmax, mmax = size(alms) .- 1
 
-    nθ = info.nθ
-    nϕ_max = mapreduce(r -> r.nϕ, max, info.rings)
+    nϕ_max = nϕmax(info)
     rv = Vector{R}(undef, nϕ_max)
     f₁ = zeros(C, (nϕ_max ÷ 2) + 1)
     f₂ = zeros(C, (nϕ_max ÷ 2) + 1)
@@ -204,7 +240,7 @@ function synthesize!(mapbuf::AbstractArray{R}, info::MapInfo{R}, alms) where {R 
     Λ = zeros(R, lmax + 1, mmax + 1)
     Λw = Legendre.Work(λlm!, Λ, Legendre.Scalar(zero(R)))
 
-    for rinfo in info.rings
+    for rinfo in rings(info)
         unsafe_legendre!(Λw, Λ, lmax, mmax, rinfo.cθ)
 
         o₁, o₂ = rinfo.offset
@@ -237,24 +273,23 @@ function synthesize!(mapbuf::AbstractArray{R}, info::MapInfo{R}, alms) where {R 
 end
 
 """
-    alms = analyze(info::MapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
-    analyze!(alms, info::MapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
+    alms = analyze(info::AbstractMapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
+    analyze!(alms, info::AbstractMapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
 
 Perform the spherical harmonic analysis transform from the map `mapbuf` (pixelized as
 described by `info`) to its harmonic coefficients `alms`.
 """
-function analyze(info::MapInfo{R}, mapbuf::AbstractArray{R}, lmax::Int, mmax::Int = lmax) where {R <: Real}
+function analyze(info::AbstractMapInfo{R}, mapbuf::AbstractArray{R}, lmax::Int, mmax::Int = lmax) where {R <: Real}
     alms = zeros(complex(R), lmax + 1, mmax + 1)
     return analyze!(alms, info, mapbuf)
 end
 
 @doc (@doc analyze)
-function analyze!(alms, info::MapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
+function analyze!(alms, info::AbstractMapInfo{R}, mapbuf::AbstractArray{R}) where {R <: Real}
     C = eltype(alms)
     lmax, mmax = size(alms) .- 1
 
-    nθ = info.nθ
-    nϕ_max = mapreduce(r -> r.nϕ, max, info.rings)
+    nϕ_max = nϕmax(info)
     rv = Vector{R}(undef, nϕ_max)
     f₁ = Vector{C}(undef, (nϕ_max ÷ 2) + 1)
     f₂ = Vector{C}(undef, (nϕ_max ÷ 2) + 1)
@@ -262,7 +297,7 @@ function analyze!(alms, info::MapInfo{R}, mapbuf::AbstractArray{R}) where {R <: 
     Λ = zeros(R, lmax + 1, mmax + 1)
     Λw = Legendre.Work(λlm!, Λ, Legendre.Scalar(zero(R)))
 
-    for rinfo in info.rings
+    for rinfo in rings(info)
         unsafe_legendre!(Λw, Λ, lmax, mmax, rinfo.cθ)
 
         o₁, o₂ = rinfo.offset
@@ -306,7 +341,7 @@ function ecp_mapinfo(::Type{R}, nθ::Int, nϕ::Int) where {R <: Real}
         sθ, cθ = sincospi(R(2ii - 1) / 2nθ)
         rings[ii] = RingInfo{R}(offs, nθ, nϕ, cθ, ϕ_π, sθ * ΔθΔϕ)
     end
-    return MapInfo{R}(nθ, rings)
+    return MapInfo{R}(rings)
 end
 
 end

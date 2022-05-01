@@ -275,7 +275,7 @@ end
     #@test verify_mapinfo(mapinfo) === nothing
 
     # describe bad pixelization with overlapping rings
-    mapinfo_overlap = MapInfo(nθ, copy(mapinfo.rings))
+    mapinfo_overlap = MapInfo(copy(mapinfo.rings))
     #     offsets that causes overlaps
     mapinfo_overlap.rings[1] = let r = mapinfo_overlap.rings[1]
         RingInfo((1, 1), nθ, r.nϕ, r.cθ, r.ϕ_π, r.ΔΩ)
@@ -289,14 +289,9 @@ end
     @test_throws ErrorException("verification failed: overlapping range of pixel rings encountered"
                                ) verify_mapinfo(mapinfo_overlap)
 
-    # delete a ring without changing nθ
-    mapinfo_incomp = MapInfo(nθ, mapinfo.rings[1:end-1])
-    @test_throws ErrorException("verification failed: counted $(nθ-1) rings, expected $nθ"
-                               ) verify_mapinfo(mapinfo_incomp)
-
     #=
     # now with specified number of rings, but "bad" pixel areas
-    mapinfo_partial = MapInfo(nθ - 1, mapinfo.rings[1:end-1])
+    mapinfo_partial = MapInfo(mapinfo.rings[1:end-1])
     @test_throws ErrorException("verification failed: got 3.442π surface area, expected 4π"
                                ) verify_mapinfo(mapinfo_partial)
     # but works if stated as not full sky
