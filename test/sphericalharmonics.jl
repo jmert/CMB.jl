@@ -268,14 +268,14 @@ end
 end
 
 @testset "Constructing standard map ring descriptions" begin
-    import CMB.SphericalHarmonics: MapInfo, RingInfo, ecp_mapinfo, verify_mapinfo
+    import CMB.SphericalHarmonics: MapInfo, RingInfo, verify_mapinfo
 
     nθ = 11
-    mapinfo = ecp_mapinfo(Float64, nθ, 2nθ)
+    mapinfo = ECPMapInfo(nθ, 2nθ)
     #@test verify_mapinfo(mapinfo) === nothing
 
     # describe bad pixelization with overlapping rings
-    mapinfo_overlap = MapInfo(copy(mapinfo.rings))
+    mapinfo_overlap = MapInfo(mapinfo)
     #     offsets that causes overlaps
     mapinfo_overlap.rings[1] = let r = mapinfo_overlap.rings[1]
         RingInfo((1, 1), nθ, r.nϕ, r.cθ, r.ϕ_π, r.ΔΩ)
@@ -300,17 +300,15 @@ end
 end
 
 @testset "Equality of ECP reference and per-ring synthesis/analysis" begin
-    import CMB.SphericalHarmonics: ecp_mapinfo
-
-    ecp_info = ecp_mapinfo(Float64, n, 2n)
+    ecp_info = ECPMapInfo(n, 2n)
     ecp_ref = synthesize_ecp(alms_hi, n, 2n)
-    ecp_map = reshape(synthesize(ecp_info, alms_hi), n, 2n)
+    ecp_map = synthesize(ecp_info, alms_hi)
     @test ecp_ref ≈ ecp_map
     @test analyze_ecp(ecp_ref, lmax_hi) ≈ analyze(ecp_info, ecp_map, lmax_hi)
 
-    ecp_info = ecp_mapinfo(Float64, n+1, 2n+1)
+    ecp_info = ECPMapInfo(n+1, 2n+1)
     ecp_ref = synthesize_ecp(alms_hi, n+1, 2n+1)
-    ecp_map = reshape(synthesize(ecp_info, alms_hi), n+1, 2n+1)
+    ecp_map = synthesize(ecp_info, alms_hi)
     @test ecp_ref ≈ ecp_map
     @test analyze_ecp(ecp_ref, lmax_hi) ≈ analyze(ecp_info, ecp_map, lmax_hi)
 end

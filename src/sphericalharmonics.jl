@@ -1,9 +1,11 @@
 module SphericalHarmonics
 
-export analyze, analyze!, synthesize, synthesize!
+export analyze, analyze!, synthesize, synthesize!,
+       ECPMapInfo, HealpixMapInfo
 
 import ..Legendre
 import ..Legendre: λlm!, unsafe_legendre!
+import ..Healpix
 
 using FFTW
 using LinearAlgebra: mul!
@@ -95,11 +97,6 @@ end
 
 abstract type AbstractMapInfo{R} end
 
-"""
-    rings(mapinfo::AbstractMapInfo)
-"""
-function rings end
-
 function mapinfo_counts(mapinfo::AbstractMapInfo)
     nr, np, nϕ = 0, 0, typemin(Int)
     for rinfo in rings(mapinfo)
@@ -132,6 +129,18 @@ npix(mapinfo::AbstractMapInfo) = mapinfo_counts(mapinfo)[:npix]
 Number of pixels in the longest isolatitude ring described by `mapinfo`.
 """
 nϕmax(mapinfo::AbstractMapInfo) = mapinfo_counts(mapinfo)[:nϕmax]
+
+"""
+    rings(mapinfo::AbstractMapInfo)
+"""
+function rings end
+
+"""
+    buffer(mapinfo::AbstractMapInfo)
+"""
+function buffer(mapinfo::AbstractMapInfo{R}) where {R}
+    return Vector{R}(undef, npix(mapinfo))
+end
 
 function verify_mapinfo(mapinfo::AbstractMapInfo{R}; fullsky::Bool=true) where R
     Ω = zero(R)
@@ -170,8 +179,78 @@ sphere.
 struct MapInfo{R} <: AbstractMapInfo{R}
     rings::Vector{RingInfo{R}}
 end
+MapInfo(mapinfo::AbstractMapInfo) = MapInfo(collect(rings(mapinfo)))
 
 rings(mapinfo::MapInfo) = mapinfo.rings
+
+
+"""
+    ECPMapInfo{R} <: AbstractMapInfo{R}
+
+Description of an Equidistant Cylindrical Projection pixelization, with dimensions
+`nθ × nϕ` in the colatitude/azimuth directions, respectively.
+"""
+struct ECPMapInfo{R} <: AbstractMapInfo{R}
+    nθ::Int
+    nϕ::Int
+end
+ECPMapInfo(nθ, nϕ) = ECPMapInfo{Float64}(Int(nθ), Int(nϕ))
+
+function rings(mapinfo::ECPMapInfo{R}) where {R}
+    nθ, nϕ = mapinfo.nθ, mapinfo.nϕ
+    # rings are symmetric over the equator, so only require half
+    nθh = (nθ + 1) ÷ 2
+    # ϕ offset and ΔθΔϕ are same for all rings
+    ϕ_π = one(R) / nϕ
+    ΔθΔϕ = 2R(π)^2 / (nθ * nϕ)
+    return Base.Generator(1:nθh) do ii
+        o₁ = ii
+        o₂ = nθ - ii + 1
+        offs = (o₁, isodd(nθ) && ii == nθh ? 0 : o₂)
+        sθ, cθ = sincospi(R(2ii - 1) / 2nθ)
+        return RingInfo{R}(offs, nθ, nϕ, cθ, ϕ_π, sθ * ΔθΔϕ)
+    end
+end
+
+function buffer(mapinfo::ECPMapInfo{R}) where {R}
+    return Matrix{R}(undef, mapinfo.nθ, mapinfo.nϕ)
+end
+
+"""
+    HealpixMapInfo{R} <: AbstractMapInfo{R}
+
+Description of a HEALPix pixelization with resolution factor `nside`.
+"""
+struct HealpixMapInfo{R} <: AbstractMapInfo{R}
+    nside::Int
+end
+HealpixMapInfo(nside) = HealpixMapInfo{Float64}(Int(nside))
+
+function rings(mapinfo::HealpixMapInfo{R}) where {R}
+    nside = mapinfo.nside
+    nr, npix = 2nside, 12*nside*nside
+    ΔΩ = 4R(π) / npix
+    ncap = Healpix.nside2npixcap(nside)
+    return Base.Generator(1:nr) do ii
+        if ii < nside
+            p = Healpix.nside2npixcap(ii)
+            nϕ = 4ii
+        else
+            p = ncap + 4 * nside * (ii - nside)
+            nϕ = 4nside
+        end
+        cθ = R(Healpix.pix2z(nside, p))
+        ϕ_π = R(Healpix._pix2phibypi(nside, p))
+        o₁ = p + 1
+        o₂ = ii < 2nside ? npix - nϕ + 1 - p : 0
+        return RingInfo{R}((o₁, o₂), 1, nϕ, cθ, ϕ_π, ΔΩ)
+    end
+end
+
+function buffer(mapinfo::HealpixMapInfo{R}) where {R}
+    nside = mapinfo.nside
+    return Vector{R}(undef, 12 * nside * nside)
+end
 
 
 Base.@propagate_inbounds function _unsafe_accum_phase!(f₁, f₂, alms, Λ, rinfo::RingInfo)
@@ -223,8 +302,7 @@ Perform the spherical harmonic synthesis transform from harmonic coefficients `a
 the map `mapbuf` (pixelized as described by `info`).
 """
 function synthesize(info::AbstractMapInfo{R}, alms) where {R <: Real}
-    mapbuf = Vector{R}(undef, npix(info))
-    return synthesize!(mapbuf, info, alms)
+    return synthesize!(buffer(info), info, alms)
 end
 
 @doc (@doc synthesize)
@@ -325,23 +403,6 @@ function analyze!(alms, info::AbstractMapInfo{R}, mapbuf::AbstractArray{R}) wher
                               Λ, rinfo)
     end
     return alms
-end
-
-function ecp_mapinfo(::Type{R}, nθ::Int, nϕ::Int) where {R <: Real}
-    # rings are symmetric over the equator, so only require half
-    nθh = (nθ + 1) ÷ 2
-    rings = Vector{RingInfo{R}}(undef, nθh)
-    # ϕ offset and ΔθΔϕ are same for all rings
-    ϕ_π = one(R) / nϕ
-    ΔθΔϕ = 2R(π)^2 / (nθ * nϕ)
-    for ii in 1:nθh
-        o₁ = ii
-        o₂ = nθ - ii + 1
-        offs = (o₁, isodd(nθ) && ii == nθh ? 0 : o₂)
-        sθ, cθ = sincospi(R(2ii - 1) / 2nθ)
-        rings[ii] = RingInfo{R}(offs, nθ, nϕ, cθ, ϕ_π, sθ * ΔθΔϕ)
-    end
-    return MapInfo{R}(rings)
 end
 
 end
