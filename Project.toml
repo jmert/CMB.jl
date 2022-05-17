@@ -20,7 +20,7 @@ UnixMmap = "674b2976-56af-439b-a2b1-837be4a3d087"
 [compat]
 AssociatedLegendrePolynomials = "1"
 BitFlags = "0.1"
-Compat = "3.25"
+Compat = "3.25, 4"
 FFTW = "1"
 FileIO = "1.6"
 HDF5 = "0.16"
