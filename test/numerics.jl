@@ -1,5 +1,6 @@
-using Random
+using LinearAlgebra
 using OffsetArrays
+using Random
 using SparseArrays
 
 @testset "Unchecked square root ($T)" for T in [S for S in NumTypes if float(S) <: Base.IEEEFloat]
@@ -110,5 +111,47 @@ end
         fill!(mat, 0.0)
         @test unpacktril!(mat, colsv′) !== nothing  # no error
         @test mat == cols
+    end
+end
+
+
+@testset "Conjugate Gradient Descent" begin
+    import CMB: cg, cg!
+
+    @testset "$T" for T in (Float64, ComplexF64)
+        N = 25
+        rng = Random.MersenneTwister(125)
+        A = let
+            A = rand(rng, T, N, N)
+            A'A + I
+        end
+        b = rand(rng, T, N)
+        x = zeros(T, N)
+        fnA(x) = A * x
+        fnA!(y, x) = mul!(y, A, x)
+
+        x₀ = A \ b
+        epsT = eps(maximum(abs, A))
+        kws = (; reltol = zero(real(T)), abstol = sqrt(epsT))
+
+        # basic solves
+        @test cg(A, b; kws...) ≈ x₀  atol=kws.abstol
+        @test cg(fnA, b; kws...) ≈ x₀  atol=kws.abstol
+        cg!(fill!(x, zero(T)), A, b; kws...)
+        @test x ≈ x₀  atol=kws.abstol
+        cg!(fill!(x, zero(T)), fnA!, b; kws...)
+        @test x ≈ x₀  atol=kws.abstol
+
+        # should converge (w.r.t. absolute error) without any iteration if given the exact
+        # result as the initial condition
+        info = cg!(copy(x₀), A, b, reltol = zero(real(T)), abstol = N * epsT)
+        @test info.converged
+        @test info.iter == 0
+        # exact zero vectors also solve with without divide-by-zero NaNs
+        fill!(x, zero(T))
+        info = cg!(x, A, zeros(T, N))
+        @test info.converged
+        @test info.iter == 0
+        @test all(x .== zero(T))
     end
 end
