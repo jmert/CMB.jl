@@ -170,9 +170,9 @@ julia> pix2ang(nside, 103) .|> rad2deg
 The other common way to represent coordinates on the sphere is via unit vectors.
 The corresponding vector for a given pixel is retrieved with
 [`CMB.Healpix.pix2vec`](@ref).
-```jldoctest healpix
+```jldoctest healpix; setup = (import StaticArrays: SVector)
 julia> pix2vec(nside, 103)
-3-element StaticArrays.SVector{3, Float64} with indices SOneTo(3):
+3-element SVector{3, Float64} with indices SOneTo(3):
   0.9807852804032304
  -0.19509032201612828
   0.0
