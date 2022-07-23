@@ -321,9 +321,9 @@ The point on the sphere is given as a unit vector ``r``.
 
     For example, moving a distance ``π/2`` with no bearing goes to the negative ``x``
     axis (i.e. 0° N, 180° W):
-    ```jldoctest
+    ```jldoctest; setup = (import StaticArrays.SVector)
     julia> reckon([0.0, 0.0, 1.0], π/2, 0.0)
-    3-element StaticArrays.SVector{3, Float64} with indices SOneTo(3):
+    3-element SVector{3, Float64} with indices SOneTo(3):
      -1.0
       0.0
       6.123233995736766e-17
