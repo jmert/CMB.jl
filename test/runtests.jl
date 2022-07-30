@@ -53,6 +53,7 @@ end
     @include "conventions.jl" "Conventions and Definitions"
     @include "sphere.jl" "Spherical functions"
     @include "healpix.jl" "HEALPix functions"
+    @include "sphericalharmonics.jl" "Spherical Harmonics"
     @include "pixelizations.jl" "Pixelizations"
     @include "pixelcovariance.jl" "Pixel Covariance functions"
     @include "fileio.jl" "File I/O"
