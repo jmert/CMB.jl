@@ -12,8 +12,9 @@ module CMB
     @reexport using .Legendre
     export Legendre
 
-    include("sphericalharmonics.jl")
+    @compat import SphericalHarmonicTransforms as SphericalHarmonics
     @reexport using .SphericalHarmonics
+    export SphericalHarmonics
 
     include("healpix.jl")
     @reexport using .Healpix

@@ -14,6 +14,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+SphericalHarmonicTransforms = "b59b3b60-d6a7-4e29-bf1f-fd1ceecb3c6a"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UnixMmap = "674b2976-56af-439b-a2b1-837be4a3d087"
 
