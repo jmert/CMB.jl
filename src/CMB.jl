@@ -8,16 +8,14 @@ module CMB
     include("sphere.jl")
     @reexport using .Sphere
 
+    include("healpix.jl")
+    @reexport using .Healpix
+
     @compat import AssociatedLegendrePolynomials as Legendre
     @reexport using .Legendre
     export Legendre
 
-    @compat import SphericalHarmonicTransforms as SphericalHarmonics
-    @reexport using .SphericalHarmonics
-    export SphericalHarmonics
-
-    include("healpix.jl")
-    @reexport using .Healpix
+    include("sphericalharmonics.jl")
 
     include("pixelizations.jl")
     @reexport using .Pixelizations
