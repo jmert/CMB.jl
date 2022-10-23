@@ -16,7 +16,6 @@ Design goals of this package include:
 ## User Manual and Documentation
 ```@contents
 Pages = [
-    "man/healpix.md",
     "man/sphere.md",
     "man/obsmat.md",
     "man/pixelcov.md",

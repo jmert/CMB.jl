@@ -7,8 +7,7 @@ Depth = 2
 
 A key aspect of computing pixel-pixel covariance is calculating relative
 orientations of the two pixels on the sphere. The [`Sphere`](@ref) module
-implements a few basic spherical functions. For HEALPix-specific calculations,
-see the [`HEALPix` Pixelization](@ref man_healpix) documentation instead.
+implements a few basic spherical functions.
 
 ## [Definitions](@id sphere_defn)
 
