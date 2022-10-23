@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Pixel-pixel Covariance · CMB Analysis</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">CMB Analysis</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">CMB.jl Documentation</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../external/">Re-exported Packages</a></li><li><a class="tocitem" href="../sphere/">Spherical Functions</a></li><li><a class="tocitem" href="../obsmat/">Observing Matrices</a></li><li class="is-active"><a class="tocitem" href>Pixel-pixel Covariance</a><ul class="internal"><li><a class="tocitem" href="#pixelcov_defn"><span>Definition</span></a></li><li><a class="tocitem" href="#pixelcov_theory"><span>Ideal Pixel-Pixel Covariance</span></a></li><li><a class="tocitem" href="#pixelcov_reobs"><span>Reobserved Pixel-Pixel Covariance</span></a></li><li><a class="tocitem" href="#pixelcov_properties"><span>Properties and Symmetries</span></a></li><li><a class="tocitem" href="#pixelcov_details"><span>Mathematical Details</span></a></li></ul></li><li><a class="tocitem" href="../references/">References</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../lib/public/">Public</a></li><li><a class="tocitem" href="../../lib/private/">Private</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li class="is-active"><a href>Pixel-pixel Covariance</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Pixel-pixel Covariance</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/jmert/CMB.jl/blob/master/docs/src/man/pixelcov.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="man_pixelcov"><a class="docs-heading-anchor" href="#man_pixelcov">Pixel-Pixel Covariance</a><a id="man_pixelcov-1"></a><a class="docs-heading-anchor-permalink" href="#man_pixelcov" title="Permalink"></a></h1><ul><li><a href="#man_pixelcov">Pixel-Pixel Covariance</a></li><li class="no-marker"><ul><li><a href="#pixelcov_defn">Definition</a></li><li><a href="#pixelcov_theory">Ideal Pixel-Pixel Covariance</a></li><li><a href="#pixelcov_reobs">Reobserved Pixel-Pixel Covariance</a></li><li><a href="#pixelcov_properties">Properties and Symmetries</a></li><li><a href="#pixelcov_details">Mathematical Details</a></li></ul></li></ul><h2 id="pixelcov_defn"><a class="docs-heading-anchor" href="#pixelcov_defn">Definition</a><a id="pixelcov_defn-1"></a><a class="docs-heading-anchor-permalink" href="#pixelcov_defn" title="Permalink"></a></h2><p>The following definitions are a lightly-modified reproduction of Appendix A of <a href="../references/#bib-pixelcovariance">Tegmark &amp; Oliveira-Costa (2001)</a>.</p><div style="display:none;">
+\(
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\expv}[1]{\left\langle #1\right\rangle}
+\newcommand{\covF}[1]{F_\ell^{#1}(z_{ij})}
+\newcommand{\covTT}{\expv{T_i T_j}}
+\newcommand{\covTQ}{\expv{T_i Q_j}}
+\newcommand{\covTU}{\expv{T_i U_j}}
+\newcommand{\covQQ}{\expv{Q_i Q_j}}
+\newcommand{\covQU}{\expv{Q_i U_j}}
+\newcommand{\covUU}{\expv{U_i U_j}}
+\newcommand{\cij}{c_{ij}}
+\newcommand{\sij}{s_{ij}}
+\newcommand{\cji}{c_{ji}}
+\newcommand{\sji}{s_{ji}}
+\)
+</div><p>The pixel-pixel covariance is best constructed in stages. We start by defining the covariance <span>$\langle X_i Y_j\rangle$</span> between any two Stokes fields <span>$X$</span> and <span>$Y$</span> at pixels <span>$i$</span> and <span>$j$</span> for a local coordinate system where the <span>$Q$</span> axis is pointed along the great circle connection pixel <span>$i$</span> to pixel <span>$j$</span>. In this simplified case, the 6 unique covariances are</p><p class="math-container">\[\begin{align}
+    \covTT &amp;\equiv \frac{1}{4\pi} \sum_\ell C_\ell^{TT} \covF{00}
+        \label{eqn:theorycov:tt}
+    \\
+    \covTQ &amp;\equiv -\frac{1}{4\pi} \sum_\ell C_\ell^{TE} \covF{10}
+        \label{eqn:theorycov:tq}
+    \\
+    \covTU &amp;\equiv -\frac{1}{4\pi} \sum_\ell C_\ell^{TB} \covF{10}
+        \label{eqn:theorycov:tu}
+    \\
+    \covQQ &amp;\equiv \frac{1}{4\pi} \sum_\ell
+        \left[ C_\ell^{EE} \covF{12} - C_\ell^{BB} \covF{22} \right]
+        \label{eqn:theorycov:qq}
+    \\
+    \covUU &amp;\equiv \frac{1}{4\pi} \sum_\ell
+        \left[ C_\ell^{BB} \covF{12} - C_\ell^{EE} \covF{22} \right]
+        \label{eqn:theorycov:uu}
+    \\
+    \covQU &amp;\equiv \frac{1}{4\pi} \sum_\ell
+        C_\ell^{EB} \left[ \covF{12} + \covF{22} \right]
+        \label{eqn:theorycov:qu}
+\end{align}\]</p><p>for <span>$z_{ij} = \cos(\sigma_{ij})$</span> and some fiducial spectrum <span>$C_\ell$</span>. The polarization weighting functions are simple functions of the <span>$P_\ell$</span> and <span>$P_\ell^2$</span> <a href="https://jmert.github.io/AssociatedLegendrePolynomials.jl/stable/">associated Legendre polynomials</a>,</p><p class="math-container">\[\begin{align}
+    \covF{00} &amp;\equiv (2\ell + 1) P_\ell(z_{ij})
+        \label{eqn:theorycov:F00}
+    \\
+    \covF{10} &amp;\equiv \chi_\ell
+        \left[
+        \frac{z_{ij}}{1-z_{ij}^2} P_{\ell-1}(z_{ij}) - \left(
+        \frac{1}{1-z_{ij}^2} + \frac{\ell-1}{2} \right)P_\ell(z_{ij})
+        \right]
+        \label{eqn:theorycov:F10}
+    \\
+    \covF{12} &amp;\equiv \gamma_\ell
+        \left[
+        \frac{\ell+2}{1-z_{ij}^2} z_{ij} P^2_{\ell-1}(z_{ij}) - \left(
+        \frac{\ell-4}{1-z_{ij}^2} + \frac{\ell(\ell-1)}{2} \right)
+        P^2_\ell(z_{ij})
+        \right]
+        \label{eqn:theorycov:F12}
+    \\
+    \covF{22} &amp;\equiv 2\gamma_\ell
+        \left[
+        \frac{\ell+2}{1-z_{ij}^2} P^2_{\ell-1}(z_{ij}) -
+        \frac{\ell-1}{1-z_{ij}^2} z_{ij} P^2_\ell(z_{ij})
+        \right]
+        \label{eqn:theorycov:F22}
+\end{align}\]</p><p>where<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup></p><p class="math-container">\[\begin{align}
+    \chi_\ell &amp;\equiv \frac{2\ell (2\ell + 1)}
+        {\sqrt{(\ell-1)\ell(\ell+1)(\ell+2)}}
+    \\
+    \gamma_\ell &amp;\equiv \frac{2(2\ell + 1)}
+        {(\ell-1)\ell(\ell+1)(\ell+2)}
+\end{align}\]</p><p>For a single pixel-pixel pair, the covariance terms form a symmetric <span>$3 \times 3$</span> matrix <span>$\mat M$</span></p><p class="math-container">\[\begin{align}
+    \mat M(z_{ij}) &amp;= \begin{bmatrix}
+        \covTT &amp; \covTQ &amp; \covTU \\
+        \covTQ &amp; \covQQ &amp; \covQU \\
+        \covTU &amp; \covQU &amp; \covUU
+    \end{bmatrix}
+\end{align}\]</p><p>which is rotated from the local to a global Stokes coordinate system by application of the rotation matrix</p><p class="math-container">\[\begin{align}
+    \mat R(\alpha) &amp;= \begin{bmatrix}
+        1 &amp; 0 &amp; 0 \\
+        0 &amp; \cos(2\alpha) &amp; -\sin(2\alpha) \\
+        0 &amp; \sin(2\alpha) &amp;  \cos(2\alpha)
+    \end{bmatrix}
+\end{align}\]</p><p>where <span>$\alpha$</span> are bearing angles, such that the pixel-pixel covariance <span>${\mat C}_{ij}$</span> in global coordinates is defined by</p><p class="math-container">\[\begin{align}
+    {\mat C}_{ij} &amp;= \mat R(\alpha_{ij}) \mat M(z_{ij}) \mat R(\alpha_{ji})^\top
+        \label{eqn:theorycov:rotate}
+\end{align}\]</p><p>Pay attention to the fact that the left-hand <span>$\mat R$</span> uses the bearing angle <span>$\alpha_{ij}$</span> at pixel <span>$i$</span> whereas the right-hand <span>$\mat R$</span> uses the bearing angle <span>$\alpha_{ji}$</span> at pixel <span>$j$</span>. Also note that these rotations move the covariances into the IAU polarization convention — to move into the <code>HEALPix</code> polarization convention, the rotations both need to be reversed, i.e. <span>$\mat R \leftrightarrow \mat R^\top$</span>.</p><p>The pixel-pixel covariance matrix <span>$\mat C$</span> for some set of pixels is constructed by calculating the terms in <span>${\mat C}_{ij}$</span> for each pair of pixels and filling in the 9 values as the <span>$(i,j)$</span>-th entries of the covariance blocks in <span>$\mat C$</span>. By blocks, we refer to the fact that <span>$\mat C$</span> can be block-decomposed as</p><p class="math-container">\[\begin{align}
+    \mat C &amp;= \begin{bmatrix}
+        \mat C^{TT} &amp; \mat C^{TQ} &amp; \mat C^{TU} \\
+        \mat C^{QT} &amp; \mat C^{QQ} &amp; \mat C^{QU} \\
+        \mat C^{UT} &amp; \mat C^{UQ} &amp; \mat C^{UU}
+    \end{bmatrix}
+\end{align}\]</p><p>For example, if one holds <span>$j$</span> constant and varies <span>$i \in P$</span> across all pixels, then one would form 3 columns of <span>$\mat C$</span>, one in each of the block-columns.</p><p>It is also convenient to define the polarization-only block decompositions of the total covariance matrix as</p><p class="math-container">\[\begin{align}
+    \mat C^{\mathrm{Pol}} &amp;\equiv \begin{bmatrix}
+        \mat C^{QQ} &amp; \mat C^{QU} \\
+        \mat C^{UQ} &amp; \mat C^{UU} \end{bmatrix}
+\end{align}\]</p><h2 id="pixelcov_theory"><a class="docs-heading-anchor" href="#pixelcov_theory">Ideal Pixel-Pixel Covariance</a><a id="pixelcov_theory-1"></a><a class="docs-heading-anchor-permalink" href="#pixelcov_theory" title="Permalink"></a></h2><h2 id="pixelcov_reobs"><a class="docs-heading-anchor" href="#pixelcov_reobs">Reobserved Pixel-Pixel Covariance</a><a id="pixelcov_reobs-1"></a><a class="docs-heading-anchor-permalink" href="#pixelcov_reobs" title="Permalink"></a></h2><h2 id="pixelcov_properties"><a class="docs-heading-anchor" href="#pixelcov_properties">Properties and Symmetries</a><a id="pixelcov_properties-1"></a><a class="docs-heading-anchor-permalink" href="#pixelcov_properties" title="Permalink"></a></h2><ul><li>The entire covariance matrix <span>$\mat C$</span> is symmetric. Therefore the on-diagonal sub-blocks <span>$\mat C^{TT}$</span>, <span>$\mat C^{QQ}$</span>, and <span>$\mat C^{UU}$</span> are individually symmetric as well, and the off-diagonal blocks must be related to one another as<p class="math-container">\[\begin{align*}
+    \mat C^{TQ} &amp;= \left(\mat C^{QT}\right)^\top &amp;
+    \mat C^{TU} &amp;= \left(\mat C^{UT}\right)^\top &amp;
+    \mat C^{QU} &amp;= \left(\mat C^{UQ}\right)^\top
+\end{align*}\]</p>This directly implies the polarization-only matrix <span>$\mat C^{\mathrm{Pol}}$</span> is symmetric as well.</li><li>The covariance matrices <span>$\mat C$</span>, <span>$\mat C^{TT}$</span>, and <span>$\mat C^{\mathrm{Pol}}$</span> are at least positive-semidefinite for appropriate non-zero fiducial input spectra. Positive-definiteness only occurs when there are at least as many non-zero harmonic modes (<span>$C_\ell^{XY} \neq 0$</span> over all spectra <span>$XY$</span>) as there are diagonal elements in the matrix (the number of pixels in the map(s) that the covariance describes).</li><li>The covariance matrices are linear in the fiducial spectra. For example, an <span>$EE$</span>-only covariance matrix <span>$[\mat C]^{EE}$</span> (wherein all <span>$C_\ell = 0$</span> except for <span>$C_\ell^{EE}$</span> which is non-zero somewhere) and an <span>$EB$</span>-only covariance matrix <span>$[\mat C]^{EB}$</span> can be summed to define<p class="math-container">\[\begin{align*}
+    [\mat C]^{EEEB} = [\mat C]^{EE} + [\mat C]^{EB}
+\end{align*}\]</p>which is equivalent to the covariance matrix which would have been produced if the fiducial spectrum had included the both of the <span>$C_\ell^{EE}$</span> and <span>$C_\ell^{EB}$</span> spectra from the start.</li><li>Since the IAU and HEALPix polarization conventions differ by the direction of rotation in <span>$\mat R(\alpha)$</span> which corresponds to a change in the sign of the <span>$\sin$</span> terms (<span>$\sij$</span> and <span>$\sji$</span>), the cosmologically-interesting case where <span>$C_\ell^{EB} = 0$</span> and <span>$C_\ell^{TB} = 0$</span> also simplifies such that the following are also true:<p class="math-container">\[\begin{align*}
+    {\mat C}_{ij,\mathrm{Healpix}}^{TU} &amp;= -{\mat C}_{ij,\mathrm{IAU}}^{TU} &amp;
+    {\mat C}_{ij,\mathrm{Healpix}}^{UT} &amp;= -{\mat C}_{ij,\mathrm{IAU}}^{UT} \\
+    {\mat C}_{ij,\mathrm{Healpix}}^{QU} &amp;= -{\mat C}_{ij,\mathrm{IAU}}^{QU} &amp;
+    {\mat C}_{ij,\mathrm{Healpix}}^{UQ} &amp;= -{\mat C}_{ij,\mathrm{IAU}}^{UQ}
+\end{align*}\]</p>and the remaining block components are unchanged.</li></ul><h2 id="pixelcov_details"><a class="docs-heading-anchor" href="#pixelcov_details">Mathematical Details</a><a id="pixelcov_details-1"></a><a class="docs-heading-anchor-permalink" href="#pixelcov_details" title="Permalink"></a></h2><p>It is often useful to have the fully-expanded expressions for each of the pixel-pixel covariance terms after applying the local-to-global coordinate system rotations. If we define short-cut notation for each of the terms in the rotation matrices as</p><p class="math-container">\[\begin{align*}
+    \mat R(\alpha_{ij}) &amp;\equiv \begin{bmatrix}
+        1 &amp; 0 &amp; 0 \\
+        0 &amp; \cij &amp; -\sij \\
+        0 &amp; \sij &amp;  \cij
+    \end{bmatrix}
+    &amp;
+    \mat R(\alpha_{ji})^\top &amp;\equiv \begin{bmatrix}
+        1 &amp; 0 &amp; 0 \\
+        0 &amp;  \cji &amp; \sji \\
+        0 &amp; -\sji &amp; \cji
+    \end{bmatrix}
+\end{align*}\]</p><p>then expanding Eqn. <span>$\ref{eqn:theorycov:rotate}$</span> explicitly (and grouping the terms by block-columns):</p><p class="math-container">\[\begin{align*}
+    \begin{bmatrix}
+            {\mat C}_{ij}^{TT} \\ {\mat C}_{ij}^{QT} \\ {\mat C}_{ij}^{UT}
+        \end{bmatrix} &amp;= \begin{bmatrix}
+            \covTT \\
+            \covTQ\cij - \covTU\sij \\
+            \covTQ\sij + \covTU\cij
+        \end{bmatrix}
+    \\
+    \begin{bmatrix}
+            {\mat C}_{ij}^{TQ} \\ {\mat C}_{ij}^{QQ} \\ {\mat C}_{ij}^{UQ}
+        \end{bmatrix} &amp;= \begin{bmatrix}
+            \covTQ\cji - \covTU\sji \\
+            \covQQ\cij\cji - \covQU(\cij\sji + \sij\cji) + \covUU\sij\sji \\
+            \covQQ\sij\cji + \covQU(\cij\cji - \sij\sji) - \covUU\cij\sji
+        \end{bmatrix}
+    \\
+    \begin{bmatrix}
+            {\mat C}_{ij}^{TU} \\ {\mat C}_{ij}^{QU} \\ {\mat C}_{ij}^{UU}
+        \end{bmatrix} &amp;= \begin{bmatrix}
+            \covTQ\sji + \covTU\cji \\
+            \covQQ\cij\sji + \covQU(\cij\cji - \sij\sji) - \covUU\sij\cji \\
+            \covQQ\sij\sji + \covQU(\cij\sji + \sij\cji) + \covUU\cij\cji
+        \end{bmatrix}
+\end{align*}\]</p><hr/><h3 id="Footnotes"><a class="docs-heading-anchor" href="#Footnotes">Footnotes</a><a id="Footnotes-1"></a><a class="docs-heading-anchor-permalink" href="#Footnotes" title="Permalink"></a></h3><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a><p>In the limit as <span>$|z| \rightarrow 1$</span> (i.e. as the two points given by pointing vectors are [anti-]parallel), the <span>$\left(1 - z^2\right)^{-1}$</span> terms diverge. The resolution is to special-case the numerical computation and make use of the mathematical limits,</p><p class="math-container">\[\begin{align}
+    \covF{10} &amp;= {}\rlap{\,\,0}
+        \hphantom{\left\{ (-1)^\ell \frac{2\ell+1}{2} \right.}
+        \,\text{as } |z_{ij}| \to 1
+    \\
+    \covF{12} &amp;= \begin{cases}
+            \frac{2\ell+1}{2}            &amp; \text{as } z_{ij} \to +1 \\
+            \frac{2\ell+1}{2}  (-1)^\ell &amp; \text{as } z_{ij} \to -1
+        \end{cases}
+    \\
+    \covF{22} &amp;= \begin{cases}
+            -\frac{2\ell+1}{2}           &amp; \text{as } z_{ij} \to +1 \\
+             \frac{2\ell+1}{2} (-1)^\ell &amp; \text{as } z_{ij} \to -1
+        \end{cases}
+\end{align}\]</p><p>Furthermore, the bearing angle is not well defined for [anti-]parallel points. Thankfully, <span>$\langle Q_i Q_j\rangle = \langle U_i U_j \rangle$</span> and <span>$\langle Q_i U_j \rangle = 0$</span>, so the polarization weights are invariant under rotation; therefore we can take <span>$\alpha = 0$</span> without loss of generality. (See <a href="../references/#bib-pixelcovariance">Tegmark &amp; Oliveira-Costa (2001)</a>.)</p></li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../obsmat/">« Observing Matrices</a><a class="docs-footer-nextpage" href="../references/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Sunday 23 October 2022 20:00">Sunday 23 October 2022</span>. Using Julia version 1.8.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
