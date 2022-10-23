@@ -11,12 +11,6 @@ Modules = [CMB.Sphere]
 Private = false
 ```
 
-## Healpix
-```@autodocs
-Modules = [CMB.Healpix]
-Private = false
-```
-
 ## Pixelizations
 ```@autodocs
 Modules = [CMB.Pixelizations]

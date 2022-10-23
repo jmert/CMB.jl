@@ -8,8 +8,7 @@ module CMB
     include("sphere.jl")
     @reexport using .Sphere
 
-    include("healpix.jl")
-    @reexport using .Healpix
+    @reexport using Healpix
 
     @compat import AssociatedLegendrePolynomials as Legendre
     @reexport using .Legendre

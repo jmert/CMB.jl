@@ -1,9 +1,11 @@
 using Random, SparseArrays
 
-@testset "Unchecked square root ($T)" for T in [S for S in NumTypes if float(S) <: Base.IEEEFloat]
+@testset "Unchecked square root ($T)" for T in [NumTypes..., Int]
     using CMB: unchecked_sqrt
-    @test isnan(unchecked_sqrt(T(-1)))
-    x = rand(T) + 1
+    if T <: Base.IEEEFloat
+        @test isnan(unchecked_sqrt(T(-1)))
+    end
+    x = T(4)
     @test unchecked_sqrt(x) == sqrt(x)
 end
 
