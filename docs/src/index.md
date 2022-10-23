@@ -16,6 +16,7 @@ Design goals of this package include:
 ## User Manual and Documentation
 ```@contents
 Pages = [
+    "man/external.md",
     "man/sphere.md",
     "man/obsmat.md",
     "man/pixelcov.md",
