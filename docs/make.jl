@@ -25,6 +25,7 @@ makedocs(
     pages = [
         "CMB.jl Documentation" => "index.md",
         "Manual" => [
+            "Re-exported Packages" => "man/external.md",
             "Spherical Functions" => "man/sphere.md",
             "Observing Matrices" => "man/obsmat.md",
             "Pixel-pixel Covariance" => "man/pixelcov.md",
